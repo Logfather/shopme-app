@@ -1,0 +1,23 @@
+# Gradle
+.gradle/
+build/
+
+# Local config
+local.properties
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Kotlin
+*.kotlin_module
+
+# Generated
+captures/
+
+# Signing
+*.keystore
+*.jks

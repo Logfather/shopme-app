@@ -1,0 +1,16 @@
+# Gradle
+.gradle
+/build
+
+# Local config
+local.properties
+
+# Firebase
+google-services.json
+
+# Android Studio
+.idea
+*.iml
+
+# Mac
+.DS_Store
