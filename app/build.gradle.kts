@@ -62,6 +62,8 @@ dependencies {
 
     implementation(libs.androidx.compose.runtime.saveable)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.engage.core)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
@@ -85,4 +87,8 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
+
+    implementation(platform("androidx.compose:compose-bom:2024.04.01"))
+
+    implementation("androidx.navigation:navigation-compose:2.7.7")
 }

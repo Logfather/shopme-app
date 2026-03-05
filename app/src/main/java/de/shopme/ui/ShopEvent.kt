@@ -2,6 +2,7 @@ package de.shopme.ui
 
 import android.content.Context
 import de.shopme.data.ShoppingItemEntity
+import de.shopme.domain.model.ShoppingListEntity
 
 sealed class ShopEvent {
 

@@ -11,7 +11,7 @@ import androidx.lifecycle.viewmodel.initializer
 import de.shopme.data.FirestoreShoppingRepository
 import de.shopme.data.auth.FirebaseAuthProvider
 import de.shopme.domain.auth.AuthProvider
-import de.shopme.presentation.ShoppingViewModel
+import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.speech.SpeechController
 import de.shopme.ui.ShopEvent
 import de.shopme.ui.ShopMeApp
