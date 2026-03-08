@@ -1,6 +1,8 @@
-package de.shopme.util
+package de.shopme.core.mapper
 
+import de.shopme.util.CategoryConfig
 import java.text.Normalizer
+import kotlin.collections.iterator
 
 class CategoryMapper(
     config: CategoryConfig

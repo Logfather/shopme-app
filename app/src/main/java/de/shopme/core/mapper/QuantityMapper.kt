@@ -1,4 +1,4 @@
-package de.shopme.util
+package de.shopme.core.mapper
 
 class QuantityMapper(
     private val map: Map<String, String>

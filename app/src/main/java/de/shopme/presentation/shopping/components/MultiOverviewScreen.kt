@@ -5,24 +5,25 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import de.shopme.ui.theme.BrandGreen
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import de.shopme.R
 import de.shopme.domain.model.ShoppingListEntity
-import de.shopme.ui.theme.BrandGreen
 
 @Composable
 fun MultiOverviewScreen(
@@ -33,42 +34,11 @@ fun MultiOverviewScreen(
     onCreateNewList: () -> Unit
 ) {
 
-    if (lists.isEmpty()) {
-
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                Text(
-                    text = "Du hast noch keine Einkaufsliste",
-                    style = MaterialTheme.typography.titleMedium
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                TextButton(
-                    onClick = onCreateNewList
-                ) {
-                    Text("Liste erstellen")
-                }
-            }
-        }
-
-        return
-    }
-
     val customLists =
-        lists.filter { it.isCustom }
-            .sortedBy { it.name }
+        lists.filter { it.storeTypes.isEmpty() }
 
     val storeLists =
-        lists.filter { !it.isCustom }
-            .sortedBy { it.name }
+        lists.filter { it.storeTypes.isNotEmpty() }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -155,66 +125,107 @@ private fun ListRow(
 
     val isActive = list.id == activeListId
 
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onEdit(list) },
-        tonalElevation = if (isActive) 6.dp else 1.dp,
-        shape = MaterialTheme.shapes.medium
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            onDelete(list)
+            true
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Text(
+                    text = "Löschen",
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
     ) {
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            tonalElevation = if (isActive) 6.dp else 1.dp,
+            shape = MaterialTheme.shapes.medium
         ) {
 
-            val icon =
-                list.storeTypes.firstOrNull()?.logoRes
-                    ?: R.drawable.store_icon76
-
-            Image(
-                painter = painterResource(id = icon),
-                contentDescription = list.name,
-                modifier = Modifier.size(36.dp)
-            )
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(
-                modifier = Modifier.weight(1f)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = if (isActive) 6.dp else 2.dp
+                ),
+                colors = CardDefaults.cardColors(
+                    containerColor =
+                        if (isActive)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(16.dp)
             ) {
 
-                Text(
-                    text = list.name,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onEdit(list) }
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
 
-                if (isActive) {
-                    Text(
-                        text = "Aktive Liste",
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                    // grüner Active Indicator
+                    if (isActive) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(BrandGreen)
+                        )
+
+                        Spacer(Modifier.width(10.dp))
+                    }
+
+                    list.storeTypes.firstOrNull()?.let { store ->
+
+                        Image(
+                            painter = painterResource(id = store.logoRes),
+                            contentDescription = store.displayName,
+                            modifier = Modifier.size(40.dp)
+                        )
+
+                        Spacer(Modifier.width(12.dp))
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+
+                        Text(
+                            text = list.name,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Text(
+                            text =
+                                if (isActive)
+                                    "Aktive Liste"
+                                else
+                                    "Tippen zum Öffnen",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-            }
-
-            IconButton(
-                onClick = { onEdit(list) }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Bearbeiten"
-                )
-            }
-
-            IconButton(
-                onClick = { onDelete(list) }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Löschen"
-                )
             }
         }
     }

@@ -1,20 +1,18 @@
-package de.shopme.util
+package de.shopme.core.json
 
 import android.content.Context
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import de.shopme.util.CategoryConfig
 
-fun loadJsonMap(
+fun loadCategoryConfig(
     context: Context,
     fileName: String
-): Map<String, String> {
+): CategoryConfig {
 
     val json = context.assets
         .open(fileName)
         .bufferedReader()
         .use { it.readText() }
 
-    val type = object : TypeToken<Map<String, String>>() {}.type
-
-    return Gson().fromJson(json, type)
+    return Gson().fromJson(json, CategoryConfig::class.java)
 }

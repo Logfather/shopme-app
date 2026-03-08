@@ -1,0 +1,28 @@
+package de.shopme.domain.model
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "items")
+data class ShoppingItemEntity(
+
+    @PrimaryKey
+    val id: String,
+
+    val name: String,
+
+    val quantity: Int,
+
+    val category: String,
+
+    val isChecked: Boolean,
+
+    val version: Int,
+
+    val deletedAt: Long?,
+
+    val createdAt: Long,
+
+    val updatedAt: Long
+
+)

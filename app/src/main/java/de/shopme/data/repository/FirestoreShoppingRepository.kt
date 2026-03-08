@@ -1,15 +1,25 @@
-package de.shopme.data
+package de.shopme.data.repository
 
 import android.util.Log
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import de.shopme.data.mapper.EntityMapper.toDomain
+import de.shopme.domain.model.ShoppingItemEntity
 import de.shopme.domain.model.ShoppingListEntity
 import de.shopme.domain.model.StoreType
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import de.shopme.data.mapper.ShopMapper
+import de.shopme.domain.model.ShoppingItem
 
 class FirestoreShoppingRepository {
 
@@ -19,6 +29,7 @@ class FirestoreShoppingRepository {
     val currentListId: StateFlow<String?> = _currentListId.asStateFlow()
 
     fun setActiveList(listId: String) {
+        if (_currentListId.value == listId) return
         _currentListId.value = listId
     }
 
@@ -44,8 +55,8 @@ class FirestoreShoppingRepository {
     suspend fun createList(
         name: String,
         storeTypes: List<StoreType>,
-        isCustom: Boolean = false
-    ): String{
+        isCustom: Boolean
+    ): String {
 
         val uid = requireUid()
 
@@ -62,7 +73,7 @@ class FirestoreShoppingRepository {
                     "createdAt" to FieldValue.serverTimestamp(),
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
-            )
+            ).await()
 
         } catch (e: Exception) {
             Log.e("CREATE_DEBUG", "Create list failed", e)
@@ -97,13 +108,25 @@ class FirestoreShoppingRepository {
                                 }
                                 ?: emptyList()
 
+                        val createdAt =
+                            document.getTimestamp("createdAt")
+                                ?.toDate()
+                                ?.time ?: System.currentTimeMillis()
+
+                        val updatedAt =
+                            document.getTimestamp("updatedAt")
+                                ?.toDate()
+                                ?.time ?: System.currentTimeMillis()
+
                         ShoppingListEntity(
                             id = document.id,
                             name = document.getString("name") ?: "",
                             ownerId = document.getString("ownerId") ?: "",
                             storeTypes = storeTypes,
-                            isCustom = document.getBoolean("isCustom") ?: false
+                            createdAt = createdAt,
+                            updatedAt = updatedAt
                         )
+
                     } ?: emptyList()
 
                     trySend(lists)
@@ -121,7 +144,7 @@ class FirestoreShoppingRepository {
             .document(listId)
             .collection("items")
 
-    fun observeItems(): Flow<List<ShoppingItemEntity>> =
+    fun observeItems(): Flow<List<ShoppingItem>> =
         _currentListId
             .filterNotNull()
             .flatMapLatest { listId ->
@@ -138,16 +161,32 @@ class FirestoreShoppingRepository {
 
                             val items =
                                 snapshot?.documents?.mapNotNull { doc ->
+
+                                    val createdAt =
+                                        doc.getTimestamp("createdAt")
+                                            ?.toDate()
+                                            ?.time ?: System.currentTimeMillis()
+
+                                    val updatedAt =
+                                        doc.getTimestamp("updatedAt")
+                                            ?.toDate()
+                                            ?.time ?: System.currentTimeMillis()
+
+                                    val deletedAt =
+                                        doc.getTimestamp("deletedAt")
+                                            ?.toDate()
+                                            ?.time
+
                                     ShoppingItemEntity(
                                         id = doc.id,
                                         name = doc.getString("name") ?: return@mapNotNull null,
                                         quantity = (doc.getLong("quantity") ?: 1).toInt(),
                                         category = doc.getString("category") ?: "Sonstiges",
                                         isChecked = doc.getBoolean("isChecked") ?: false,
-                                        deletedAt = doc.getTimestamp("deletedAt"),
-                                        createdAt = doc.getTimestamp("createdAt"),
-                                        updatedAt = doc.getTimestamp("updatedAt"),
-                                        version = (doc.getLong("version") ?: 0).toInt()
+                                        version = (doc.getLong("version") ?: 0).toInt(),
+                                        deletedAt = deletedAt,
+                                        createdAt = createdAt,
+                                        updatedAt = updatedAt
                                     )
                                 } ?: emptyList()
 
@@ -156,6 +195,11 @@ class FirestoreShoppingRepository {
 
                     awaitClose { listener.remove() }
                 }
+
+                    // ENTITY → DOMAIN
+                    .map { entities ->
+                        entities.map(ShopMapper::fromEntity)
+                    }
             }
 
     suspend fun addItem(item: ShoppingItemEntity) {
@@ -180,22 +224,68 @@ class FirestoreShoppingRepository {
             ).await()
     }
 
-    suspend fun updateItem(item: ShoppingItemEntity) {
+    suspend fun updateItem(
+        item: ShoppingItemEntity
+    ) {
 
         val listId = _currentListId.value ?: return
 
-        itemsRef(listId)
-            .document(item.id)
-            .update(
-                mapOf(
-                    "name" to item.name,
-                    "quantity" to item.quantity,
-                    "category" to item.category,
-                    "isChecked" to item.isChecked,
-                    "updatedAt" to FieldValue.serverTimestamp(),
-                    "version" to item.version + 1
-                )
-            ).await()
+        val docRef =
+            itemsRef(listId).document(item.id)
+
+        var attempt = 0
+        val maxRetries = 3
+
+        while (attempt < maxRetries) {
+
+            try {
+
+                firestore.runTransaction { transaction ->
+
+                    val snapshot =
+                        transaction.get(docRef)
+
+                    val serverVersion =
+                        (snapshot.getLong("version") ?: 0).toInt()
+
+                    // ------------------------------
+                    // CONFLICT DETECTION
+                    // ------------------------------
+                    if (serverVersion != item.version) {
+                        throw IllegalStateException("Conflict detected")
+                    }
+
+                    // ------------------------------
+                    // UPDATE
+                    // ------------------------------
+                    transaction.update(
+                        docRef,
+                        mapOf(
+                            "name" to item.name,
+                            "quantity" to item.quantity,
+                            "category" to item.category,
+                            "isChecked" to item.isChecked,
+                            "updatedAt" to FieldValue.serverTimestamp(),
+                            "version" to serverVersion + 1
+                        )
+                    )
+
+                }.await()
+
+                return
+
+            } catch (e: Exception) {
+
+                attempt++
+
+                if (attempt >= maxRetries) {
+                    throw e
+                }
+
+                // kurzer Backoff
+                kotlinx.coroutines.delay(50L * attempt)
+            }
+        }
     }
 
     suspend fun softDelete(itemId: String) {

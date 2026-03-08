@@ -1,4 +1,4 @@
-package de.shopme.data
+package de.shopme.data.datasource.repository
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit

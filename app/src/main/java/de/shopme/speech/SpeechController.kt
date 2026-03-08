@@ -3,7 +3,9 @@ package de.shopme.speech
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.speech.*
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.flow.MutableStateFlow

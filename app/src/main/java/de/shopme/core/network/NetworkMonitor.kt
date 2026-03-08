@@ -1,4 +1,4 @@
-package de.shopme.util
+package de.shopme.core.network
 
 import android.content.Context
 import android.net.ConnectivityManager

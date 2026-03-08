@@ -27,6 +27,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 private fun normalizeListName(input: String): String {
 
@@ -119,8 +121,11 @@ fun StoreSelectionDialog(
         text = {
 
             Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            ){
 
                 // =============================
                 // CUSTOM LISTS (oben anzeigen)

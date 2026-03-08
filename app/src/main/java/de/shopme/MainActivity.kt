@@ -8,15 +8,22 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
-import de.shopme.data.FirestoreShoppingRepository
+import de.shopme.data.repository.FirestoreShoppingRepository
 import de.shopme.data.auth.FirebaseAuthProvider
 import de.shopme.domain.auth.AuthProvider
 import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.speech.SpeechController
-import de.shopme.ui.ShopEvent
-import de.shopme.ui.ShopMeApp
+import de.shopme.presentation.event.ShopEvent
+import de.shopme.ui.app.ShopMeApp
 import de.shopme.ui.theme.ShopMeTheme
-import de.shopme.util.*
+import de.shopme.core.json.loadCategoryConfig
+import de.shopme.core.json.loadJsonMap
+import de.shopme.core.mapper.CategoryMapper
+import de.shopme.core.mapper.QuantityMapper
+import de.shopme.core.network.NetworkMonitor
+import de.shopme.domain.usecase.CreateListUseCase
+import de.shopme.domain.usecase.DeleteListUseCase
+import de.shopme.domain.usecase.SetActiveListUseCase
 
 class MainActivity : ComponentActivity() {
 
@@ -51,17 +58,30 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val factory = remember {
+
+                    val createListUseCase = CreateListUseCase(repository)
+                    val deleteListUseCase = DeleteListUseCase(repository)
+                    val setActiveListUseCase = SetActiveListUseCase(repository)
+
                     androidx.lifecycle.viewmodel.viewModelFactory {
+
                         initializer {
+
                             ShoppingViewModel(
+                                createListUseCase = createListUseCase,
+                                deleteListUseCase = deleteListUseCase,
+                                setActiveListUseCase = setActiveListUseCase,
                                 repository = repository,
                                 quantityMapper = quantityMapper,
                                 categoryMapper = categoryMapper,
                                 networkMonitor = networkMonitor,
                                 authProvider = authProvider
                             )
+
                         }
+
                     }
+
                 }
 
                 val vm: ShoppingViewModel = viewModel(factory = factory)

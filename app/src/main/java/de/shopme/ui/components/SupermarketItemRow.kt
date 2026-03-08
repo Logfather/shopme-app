@@ -1,5 +1,4 @@
 package de.shopme.ui.components
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -11,11 +10,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import de.shopme.data.ShoppingItemEntity
+import de.shopme.domain.model.ShoppingItem
 
 @Composable
 fun SupermarketItemRow(
-    item: ShoppingItemEntity,
+    item: ShoppingItem,
     categoryColor: Color,
     onToggle: () -> Unit,
     onDelete: () -> Unit,
@@ -25,7 +24,6 @@ fun SupermarketItemRow(
     val brandOlive = MaterialTheme.colorScheme.secondary
     val anthracite = Color(0xFF2B2B2B)
 
-    // 🔥 Edit-Modus rein aus Domain-State ableiten
     val isEditing = !item.isChecked
 
     var textFieldValue by remember(item.id) {
@@ -54,7 +52,6 @@ fun SupermarketItemRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
 
-        // Kategorie-Farbmarker
         Box(
             modifier = Modifier
                 .width(6.dp)
@@ -74,10 +71,6 @@ fun SupermarketItemRow(
         Spacer(Modifier.width(12.dp))
 
         if (isEditing) {
-
-            // =========================
-            // EDIT MODE
-            // =========================
 
             TextField(
                 value = textFieldValue,
@@ -103,17 +96,13 @@ fun SupermarketItemRow(
             TextButton(
                 onClick = {
                     onEdit(textFieldValue.text)
-                    onToggle()   // 🔥 automatisch wieder "checked"
+                    onToggle()
                 }
             ) {
                 Text("Fertig", color = Color.Black)
             }
 
         } else {
-
-            // =========================
-            // NORMAL MODE
-            // =========================
 
             Text(
                 text = item.name,

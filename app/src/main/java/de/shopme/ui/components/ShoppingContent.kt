@@ -1,5 +1,4 @@
 package de.shopme.ui.components
-
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -26,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.speech.SpeechController
-import de.shopme.ui.ShopEvent
+import de.shopme.presentation.event.ShopEvent
 import de.shopme.ui.theme.AppButtonDefaults
 import de.shopme.ui.theme.CategoryColors
 
@@ -36,7 +35,6 @@ fun ListHeader(
     listName: String,
     itemCount: Int
 ) {
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -47,27 +45,21 @@ fun ListHeader(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Image(
                 painter = painterResource(storeLogo),
                 contentDescription = null,
                 modifier = Modifier.size(42.dp)
             )
-
             Spacer(Modifier.width(12.dp))
-
             Column {
-
                 Text(
                     text = listName,
                     style = MaterialTheme.typography.titleMedium
                 )
-
                 Text(
                     text = "$itemCount Artikel",
                     style = MaterialTheme.typography.labelMedium,
@@ -77,6 +69,7 @@ fun ListHeader(
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShoppingContent(
@@ -85,16 +78,21 @@ fun ShoppingContent(
 ) {
 
     val groupedItems by vm.groupedItems.collectAsStateWithLifecycle()
+
     val categoryEntries = remember(groupedItems) {
         groupedItems.entries.toList()
     }
+
     val categories = remember(groupedItems) { groupedItems.keys.toList() }
+
     val listening by speechController.isListening.collectAsStateWithLifecycle()
 
     var text by rememberSaveable { mutableStateOf("") }
 
     val keyboardController = LocalSoftwareKeyboardController.current
+
     val listState = rememberLazyListState()
+
     val context = LocalContext.current
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -108,10 +106,6 @@ fun ShoppingContent(
     ) {
 
         Spacer(Modifier.height(16.dp))
-
-        // =============================
-        // Eingabezeile
-        // =============================
 
         Row(verticalAlignment = Alignment.CenterVertically) {
 
@@ -152,10 +146,6 @@ fun ShoppingContent(
 
         Spacer(Modifier.height(24.dp))
 
-        // =============================
-        // Liste
-        // =============================
-
         LazyColumn(
             modifier = Modifier.weight(1f),
             state = listState
@@ -173,7 +163,6 @@ fun ShoppingContent(
                     CategoryColors[category]
                         ?: MaterialTheme.colorScheme.onSurfaceVariant
 
-                // ⭐ Kategorie Header
                 Text(
                     text = category,
                     color = categoryColor,
@@ -213,6 +202,7 @@ fun ShoppingContent(
                         enableDismissFromStartToEnd = false,
                         enableDismissFromEndToStart = true
                     ) {
+
                         SupermarketItemRow(
                             item = item,
                             categoryColor = categoryColor,
@@ -228,6 +218,7 @@ fun ShoppingContent(
                                 )
                             }
                         )
+
                     }
                 }
 
