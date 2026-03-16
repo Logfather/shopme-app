@@ -3,37 +3,26 @@ package de.shopme.presentation.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import de.shopme.data.repository.FirestoreShoppingRepository
-import de.shopme.domain.model.ShoppingItem
-import de.shopme.domain.model.ShoppingItemEntity
-import de.shopme.domain.auth.AuthProvider
-import de.shopme.domain.model.ShoppingListEntity
-import de.shopme.domain.model.StoreType
-import de.shopme.presentation.shopping.ShoppingUiState
-import de.shopme.presentation.event.ShopEvent
-import de.shopme.core.mapper.CategoryMapper
 import de.shopme.core.network.NetworkMonitor
-import de.shopme.core.mapper.QuantityMapper
+import de.shopme.data.mapper.EntityMapper.toDomain
+import de.shopme.data.mapper.EntityMapper.toEntity
+import de.shopme.data.repository.FirestoreShoppingRepository
+import de.shopme.domain.auth.AuthProvider
+import de.shopme.domain.model.*
+import de.shopme.domain.service.CategoryMapper
+import de.shopme.domain.service.QuantityMapper
+import de.shopme.domain.service.SpeechItemParser
 import de.shopme.domain.usecase.CreateListUseCase
 import de.shopme.domain.usecase.DeleteListUseCase
 import de.shopme.domain.usecase.SetActiveListUseCase
 import de.shopme.presentation.action.ShoppingAction
-import de.shopme.presentation.shopping.ShoppingViewState
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import de.shopme.presentation.effect.UIEffect
+import de.shopme.presentation.event.ShopEvent
+import de.shopme.presentation.reducer.reduce
+import de.shopme.presentation.state.*
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.UUID
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import de.shopme.presentation.reducer.reduce
-import de.shopme.presentation.effect.UIEffect
 
 class ShoppingViewModel(
     private val createListUseCase: CreateListUseCase,
@@ -44,187 +33,51 @@ class ShoppingViewModel(
     private val categoryMapper: CategoryMapper,
     private val networkMonitor: NetworkMonitor,
     private val authProvider: AuthProvider,
+    private val speechItemParser: SpeechItemParser
 ) : ViewModel() {
 
     // ------------------------------------------------------------
-    // BASE STATE
+    // STATE
     // ------------------------------------------------------------
 
-    private val _userLists =
-        MutableStateFlow<List<ShoppingListEntity>>(emptyList())
+    private val _state = MutableStateFlow(ShoppingState())
+    val state: StateFlow<ShoppingState> = _state.asStateFlow()
 
-    val userLists: StateFlow<List<ShoppingListEntity>> =
-        _userLists.asStateFlow()
+    private val _showWelcomeDialog = MutableStateFlow(true)
+    val showWelcomeDialog: StateFlow<Boolean> = _showWelcomeDialog.asStateFlow()
 
-    private val _uiState =
-        MutableStateFlow<ShoppingUiState>(ShoppingUiState.Loading)
-
-    val uiState: StateFlow<ShoppingUiState> =
-        _uiState.asStateFlow()
-
-    private val _showWelcomeDialog =
-        MutableStateFlow(true)
-
-    val showWelcomeDialog: StateFlow<Boolean> =
-        _showWelcomeDialog.asStateFlow()
-
-    private val _effects =
-        MutableSharedFlow<UIEffect>()
-
-    val effects: SharedFlow<UIEffect> =
-        _effects
+    private val _effects = MutableSharedFlow<UIEffect>()
+    val effects: SharedFlow<UIEffect> = _effects
 
     // ------------------------------------------------------------
-    // DERIVED STATE
+    // VIEW STATE
     // ------------------------------------------------------------
-
-    val activeList: StateFlow<ShoppingListEntity?> =
-        combine(
-            repository.currentListId,
-            userLists
-        ) { currentId, lists ->
-            lists.firstOrNull { it.id == currentId }
-        }.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            null
-        )
-
-    // ------------------------------------------------------------
-    // ITEMS
-    // ------------------------------------------------------------
-
-    private val _uiItems =
-        MutableStateFlow<List<ShoppingItem>>(emptyList())
-
-    val uiItems: StateFlow<List<ShoppingItem>> =
-        _uiItems.asStateFlow()
-
-    val groupedItems: StateFlow<Map<String, List<ShoppingItem>>> =
-        uiItems
-            .map { items ->
-                items
-                    .filter { it.deletedAt == null }
-                    .groupBy { it.category }
-            }
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                emptyMap()
-            )
 
     val viewState: StateFlow<ShoppingViewState> =
-        combine(
-            combine(
-                uiState,
-                userLists,
-                activeList
-            ) { state, lists, active ->
-                Triple(state, lists, active)
-            },
-            combine(
-                groupedItems,
-                showWelcomeDialog
-            ) { items, welcome ->
-                Pair(items, welcome)
-            }
-        ) { left, right ->
+        combine(state, showWelcomeDialog) { s, welcome ->
 
-            val (state, lists, active) = left
-            val (items, welcome) = right
+            val active =
+                s.lists.firstOrNull { it.id == s.activeListId }
+
+            val grouped =
+                s.items
+                    .filter { it.deletedAt == null }
+                    .groupBy { it.category }
 
             ShoppingViewState(
-                uiState = state,
-                lists = lists,
+                uiState = s.screenMode,
+                lists = s.lists,
                 activeList = active,
-                groupedItems = items,
+                groupedItems = grouped,
                 showWelcomeDialog = welcome,
-                showStoreSelectionDialog = state is ShoppingUiState.MultiSelect
+                showStoreSelectionDialog =
+                    s.screenMode is ShoppingScreenMode.MultiSelect
             )
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             ShoppingViewState()
         )
-
-    // ------------------------------------------------------------
-    // INIT
-    // ------------------------------------------------------------
-
-    init {
-        observeInitialState()
-        observeActiveListGuard()
-    }
-
-    val existingStores: StateFlow<List<StoreType>> =
-        userLists
-            .map { lists ->
-                lists
-                    .flatMap { it.storeTypes }
-                    .distinct()
-            }
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                emptyList()
-            )
-
-    private fun observeInitialState() {
-        viewModelScope.launch {
-            combine(
-                repository.currentListId,
-                _userLists
-            ) { currentId, lists ->
-                currentId to lists
-            }.collect { (currentId, lists) ->
-
-                if (_uiState.value != ShoppingUiState.Loading) return@collect
-
-                when {
-
-                    lists.isEmpty() -> {
-                        transitionTo(ShoppingUiState.MultiOverview)
-                    }
-
-                    currentId != null &&
-                            lists.any { it.id == currentId } -> {
-                        transitionTo(ShoppingUiState.Normal)
-                    }
-
-                    else -> {
-                        transitionTo(ShoppingUiState.MultiOverview)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun observeActiveListGuard() {
-        viewModelScope.launch {
-            activeList.collect { list ->
-                if (_uiState.value == ShoppingUiState.Normal && list == null) {
-                    transitionTo(ShoppingUiState.MultiOverview)
-                }
-            }
-        }
-    }
-
-    private fun transitionTo(newState: ShoppingUiState) {
-
-        when (newState) {
-
-            ShoppingUiState.Normal ->
-                check(activeList.value != null)
-
-            ShoppingUiState.MultiOverview -> Unit
-
-            is ShoppingUiState.MultiSelect -> Unit
-
-            ShoppingUiState.Loading -> Unit
-        }
-
-        _uiState.value = newState
-    }
 
     // ------------------------------------------------------------
     // BOOTSTRAP
@@ -234,221 +87,198 @@ class ShoppingViewModel(
         deepLinkListId: String?,
         deepLinkInviteId: String?
     ) {
-
         viewModelScope.launch {
 
             authProvider.ensureAuthenticated()
 
+            val uid = authProvider.currentUserId()
+                ?: return@launch
+
             repository.ensureUserDocument()
 
-            launch {
-
-                repository.observeListsForUser()
-                    .collect { lists ->
-
-                        _userLists.value = lists
-
-                        Log.d(
-                            "FLOW_DEBUG",
-                            "observeListsForUser emitted: ${lists.size}"
-                        )
-
-                        if (
-                            repository.currentListId.value == null &&
-                            lists.isNotEmpty()
-                        ) {
-                            setActiveListUseCase(lists.first().id)
-                        }
-                    }
-            }
-
-            launch {
-
-                uiState
-                    .flatMapLatest { state ->
-
-                        if (state is ShoppingUiState.Normal) {
-
-                            repository.observeItems()
-
-                        } else {
-
-                            flowOf(emptyList())
-
-                        }
-                    }
-                    .collect { items ->
-
-                        _uiItems.value = items
-
-                    }
-            }
+            launch { observeLists(uid) }
+            launch { observeItems() }
         }
     }
 
-    // ------------------------------------------------------------
-    // MULTISTORE FLOW
-    // ------------------------------------------------------------
+    private suspend fun observeLists(uid: String) {
 
-    fun startMultiStoreCreation() {
+        repository.observeListsForUser(uid)
+            .collect { lists ->
 
-        transitionTo(
-            ShoppingUiState.MultiSelect(existingStores.value.toList())
-        )
-    }
+                val domainLists =
+                    lists.map { it.toDomain() }
 
-    fun toggleStore(store: StoreType) {
-
-        val state = _uiState.value
-
-        if (state is ShoppingUiState.MultiSelect) {
-
-            val updated =
-                state.selectedStores.toMutableList().apply {
-                    if (contains(store)) remove(store)
-                    else add(store)
-                }
-
-            _uiState.value =
-                ShoppingUiState.MultiSelect(updated)
-        }
-    }
-
-    fun confirmStoreSelection(customLists: List<String>) {
-
-        val state = _uiState.value
-
-        if (state is ShoppingUiState.MultiSelect) {
-
-            if (state.selectedStores.isNotEmpty()) {
-                createAllLists(state.selectedStores)
-            }
-
-            viewModelScope.launch {
-
-                customLists.forEach { name ->
-
-                    createListUseCase(
-                        name = name,
-                        storeTypes = emptyList(),
-                        isCustom = true
+                _state.update { current ->
+                    current.copy(
+                        lists = domainLists,
+                        activeListId =
+                            if (domainLists.any { it.id == current.activeListId })
+                                current.activeListId
+                            else
+                                null
                     )
                 }
-            }
-        }
-    }
 
-    fun createListForStore(store: StoreType) {
+                if (domainLists.isEmpty()) {
 
-        viewModelScope.launch {
+                    _showWelcomeDialog.value = true
 
-            val listName = "${store.displayName} Einkauf"
-
-            createListUseCase(
-                name = listName,
-                storeTypes = listOf(store),
-                isCustom = false
-            )
-
-            val state = _uiState.value
-
-            if (state is ShoppingUiState.MultiSelect) {
-
-                val remaining =
-                    state.selectedStores.toMutableList().apply {
-                        remove(store)
+                    _state.update {
+                        it.copy(
+                            screenMode =
+                                ShoppingScreenMode.MultiOverview
+                        )
                     }
-
-                if (remaining.isEmpty()) {
-
-                    transitionTo(ShoppingUiState.MultiOverview)
 
                 } else {
 
-                    _uiState.value =
-                        ShoppingUiState.MultiSelect(remaining)
+                    _showWelcomeDialog.value = false
                 }
             }
+    }
+
+    private suspend fun observeItems() {
+
+        state
+            .map { it.activeListId }
+            .distinctUntilChanged()
+            .flatMapLatest { id ->
+                if (id != null)
+                    repository.observeItems()
+                else
+                    flowOf(emptyList())
+            }
+            .collect { items ->
+
+                _state.update {
+                    it.copy(items = items)
+                }
+            }
+    }
+
+    // ------------------------------------------------------------
+    // REDUCER
+    // ------------------------------------------------------------
+
+    fun dispatch(action: ShoppingAction) {
+
+        val result =
+            de.shopme.presentation.reducer.reduce(
+                state = _state.value,
+                screenMode = _state.value.screenMode,
+                action = action
+            )
+
+        _state.value = result.state
+
+        result.effects.forEach { effect ->
+            handleEffect(effect)
         }
     }
 
-    fun createAllLists(stores: List<StoreType>) {
+    private fun handleEffect(effect: UIEffect) {
 
-        if (stores.isEmpty()) return
+        when (effect) {
 
-        Log.d("CREATE_FLOW", "createAllLists() called")
+            is UIEffect.CreateLists -> {
+
+                confirmStoreSelection(
+                    stores = effect.stores,
+                    customLists = effect.customLists
+                )
+            }
+
+            is UIEffect.DeleteList ->
+                deleteList(effect.list.toDomain())
+
+            is UIEffect.ShowSnackbar ->
+                viewModelScope.launch {
+                    _effects.emit(effect)
+                }
+
+            UIEffect.ShowWelcomeDialog ->
+                _showWelcomeDialog.value = true
+
+            UIEffect.HideWelcomeDialog ->
+                _showWelcomeDialog.value = false
+        }
+    }
+
+    // ------------------------------------------------------------
+    // LIST MANAGEMENT
+    // ------------------------------------------------------------
+
+    private fun setActiveList(listId: String) {
 
         viewModelScope.launch {
 
-            val storesToCreate =
-                stores.filter { it !in existingStores.value }
+            setActiveListUseCase(listId)
+            repository.setActiveList(listId)
 
-            var lastCreatedListId: String? = null
-
-            for (store in storesToCreate) {
-
-                val listName = "${store.displayName} Einkauf"
-
-                val newListId =
-                    createListUseCase(
-                        name = listName,
-                        storeTypes = listOf(store),
-                        isCustom = false
-                    )
-
-                lastCreatedListId = newListId
+            _state.update {
+                it.copy(activeListId = listId)
             }
-
-            lastCreatedListId?.let {
-                setActiveListUseCase(it)
-            }
-
-            _effects.emit(
-                UIEffect.ShowSnackbar("Listen wurden erstellt")
-            )
-
-            transitionTo(ShoppingUiState.MultiOverview)
         }
     }
 
-    fun addMoreStores() {
-        dispatch(ShoppingAction.StartMultiStoreCreation)
+    fun editList(list: ShoppingList) {
+
+        setActiveList(list.id)
+
+        _state.update {
+            it.copy(screenMode = ShoppingScreenMode.Normal)
+        }
     }
 
-    fun cancelMultiCreation() {
-        dispatch(ShoppingAction.CancelMultiCreation)
-    }
+    fun deleteList(list: ShoppingList) {
 
-    fun editList(list: ShoppingListEntity) {
-        setActiveList(list)
-        transitionTo(ShoppingUiState.Normal)
-    }
-
-    fun deleteList(list: ShoppingListEntity) {
         viewModelScope.launch {
             deleteListUseCase(list.id)
         }
     }
 
-    // ------------------------------------------------------------
-    // EVENTS
-    // ------------------------------------------------------------
+    private fun confirmStoreSelection(
+        stores: List<StoreType>,
+        customLists: List<String>
+    ) {
+        Log.d("STORE_DEBUG", "Stores=$stores  Custom=$customLists")
+        viewModelScope.launch {
 
-    fun onEvent(event: ShopEvent) {
+            var lastCreatedId: String? = null
 
-        when (event) {
+            stores.forEach { store ->
 
-            is ShopEvent.AddItem -> addItemInternal(event.name)
+                lastCreatedId =
+                    createListUseCase(
+                        name = store.displayName,
+                        storeTypes = listOf(store),
+                        isCustom = false
+                    )
+            }
 
-            is ShopEvent.ToggleItem -> toggleItemInternal(event.item)
+            customLists.forEach { name ->
 
-            is ShopEvent.DeleteItem -> deleteItemInternal(event.item)
+                lastCreatedId =
+                    createListUseCase(
+                        name = name,
+                        storeTypes = emptyList(),
+                        isCustom = true
+                    )
+            }
 
-            ShopEvent.ClearAll -> clearAllInternal()
+            lastCreatedId?.let { id ->
 
-            is ShopEvent.UpdateItem -> updateItemOptimistic(event.item, event.newName)
+                setActiveListUseCase(id)
+                repository.setActiveList(id)
 
-            else -> Unit
+                _state.update {
+                    it.copy(
+                        activeListId = id,
+                        screenMode = ShoppingScreenMode.MultiOverview
+                    )
+                }
+            }
         }
     }
 
@@ -456,24 +286,53 @@ class ShoppingViewModel(
     // ITEM LOGIC
     // ------------------------------------------------------------
 
-    private fun addItemInternal(name: String) {
+    fun onEvent(event: ShopEvent) {
+
+        val result =
+            de.shopme.presentation.reducer.reduce(
+                state = _state.value,
+                screenMode = _state.value.screenMode,
+                event = event
+            )
+
+        _state.value = result.state
+
+        when (event) {
+
+            is ShopEvent.Item.Add ->
+                addItem(event.name)
+
+            is ShopEvent.Speech.AddItemFromSpeech ->
+                addItem(event.text)
+
+            is ShopEvent.Item.Toggle ->
+                toggleItem(event.item)
+
+            is ShopEvent.Item.Delete ->
+                deleteItem(event.item)
+
+            else -> Unit
+        }
+    }
+
+    private fun addItem(name: String) {
 
         if (name.isBlank()) return
 
         viewModelScope.launch {
 
-            val normalizedName =
+            val normalized =
                 quantityMapper.normalize(name)
 
-            val mappedCategory =
-                categoryMapper.resolve(normalizedName)
+            val category =
+                categoryMapper.resolve(normalized)
 
             val item =
                 ShoppingItemEntity(
                     id = UUID.randomUUID().toString(),
-                    name = normalizedName,
+                    name = normalized,
                     quantity = 1,
-                    category = mappedCategory,
+                    category = category,
                     isChecked = true,
                     version = 0,
                     deletedAt = null,
@@ -481,70 +340,77 @@ class ShoppingViewModel(
                     updatedAt = System.currentTimeMillis()
                 )
 
+            val listId =
+                state.value.activeListId ?: return@launch
+
             repository.addItem(item)
+            repository.incrementItemCount(listId)
         }
     }
 
-    private fun toggleItemInternal(item: ShoppingItem) {
+    private fun toggleItem(item: ShoppingItem) {
 
         viewModelScope.launch {
 
             repository.updateItem(
-                item.toEntity().copy(isChecked = !item.isChecked)
+                item.toEntity().copy(
+                    isChecked = !item.isChecked
+                )
             )
         }
     }
 
-    private fun deleteItemInternal(item: ShoppingItem) {
+    private fun deleteItem(item: ShoppingItem) {
 
         viewModelScope.launch {
+
+            val listId =
+                state.value.activeListId ?: return@launch
 
             repository.softDelete(item.id)
+            repository.decrementItemCount(listId)
         }
     }
 
-    private fun clearAllInternal() {
+    // ------------------------------------------------------------
+    // SPEECH
+    // ------------------------------------------------------------
 
-        viewModelScope.launch {
+    fun addItemsFromSpeech(text: String) {
 
-            repository.clearAll()
-        }
+        speechItemParser.parseSpeech(text)
+            .forEach { parsed ->
+
+                repeat(parsed.quantity) {
+
+                    onEvent(
+                        ShopEvent.Item.Add(parsed.name)
+                    )
+                }
+            }
     }
 
-    private fun updateItemOptimistic(
-        item: ShoppingItem,
-        newName: String
-    ) {
-        if (newName.isBlank()) return
+    // ------------------------------------------------------------
+    // MULTI STORE FLOW
+    // ------------------------------------------------------------
 
-        viewModelScope.launch {
+    fun toggleStore(store: StoreType) {
 
-            repository.updateItem(
-                item.toEntity().copy(name = newName)
+        val mode = state.value.screenMode
+
+        if (mode !is ShoppingScreenMode.MultiSelect) return
+
+        val updated =
+            if (store in mode.selectedStores)
+                mode.selectedStores - store
+            else
+                mode.selectedStores + store
+
+        _state.update {
+            it.copy(
+                screenMode =
+                    ShoppingScreenMode.MultiSelect(updated)
             )
-
-        }
-    }
-
-    private fun handleSideEffects(action: ShoppingAction) {
-
-        when (action) {
-
-            is ShoppingAction.ConfirmStores -> {
-
-                viewModelScope.launch {
-                    confirmStoreSelection(action.customLists)
-                }
-            }
-
-            is ShoppingAction.DeleteList -> {
-
-                viewModelScope.launch {
-                    deleteList(action.list)
-                }
-            }
-
-            else -> Unit
         }
     }
 
@@ -552,36 +418,18 @@ class ShoppingViewModel(
         _showWelcomeDialog.value = false
     }
 
-    fun setActiveList(list: ShoppingListEntity) {
+    fun startMultiStoreCreation() {
 
-        viewModelScope.launch {
+        val existingStores =
+            state.value.lists
+                .flatMap { it.storeTypes }
+                .distinct()
 
-            setActiveListUseCase(list.id)
+        _state.update {
+            it.copy(
+                screenMode =
+                    ShoppingScreenMode.MultiSelect(existingStores)
+            )
         }
     }
-
-    fun dispatch(action: ShoppingAction) {
-
-        val currentState = _uiState.value
-
-        val newState =
-            reduce(currentState, action)
-
-        _uiState.value = newState
-
-        handleSideEffects(action)
-    }
-
-    private fun ShoppingItem.toEntity(): ShoppingItemEntity =
-        ShoppingItemEntity(
-            id = id,
-            name = name,
-            quantity = quantity,
-            category = category,
-            isChecked = isChecked,
-            version = version,
-            deletedAt = deletedAt,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-        )
 }

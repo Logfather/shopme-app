@@ -1,7 +1,7 @@
 package de.shopme.data.sync
 
 import com.google.firebase.firestore.FirebaseFirestore
-import de.shopme.data.local.ListDao
+import de.shopme.data.datasource.room.ListDao
 import de.shopme.domain.model.ShoppingListEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

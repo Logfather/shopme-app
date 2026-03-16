@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.engage.core)
+    implementation(libs.androidx.material3)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 

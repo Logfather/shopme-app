@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
-import de.shopme.data.mapper.ShopMapper
 import de.shopme.domain.model.ShoppingItem
 
 class FirestoreShoppingRepository {
@@ -31,6 +30,29 @@ class FirestoreShoppingRepository {
     fun setActiveList(listId: String) {
         if (_currentListId.value == listId) return
         _currentListId.value = listId
+    }
+
+    suspend fun incrementItemCount(listId: String) {
+
+        firestore
+            .collection("lists")
+            .document(listId)
+            .update(
+                "itemCount",
+                FieldValue.increment(1)
+            )
+    }
+
+
+    suspend fun decrementItemCount(listId: String) {
+
+        firestore
+            .collection("lists")
+            .document(listId)
+            .update(
+                "itemCount",
+                FieldValue.increment(-1)
+            )
     }
 
     // ============================================================
@@ -69,6 +91,7 @@ class FirestoreShoppingRepository {
                     "name" to name,
                     "ownerId" to uid,
                     "storeTypes" to storeTypes.map { it.name },
+                    "itemCount" to 0,
                     "isCustom" to isCustom,
                     "createdAt" to FieldValue.serverTimestamp(),
                     "updatedAt" to FieldValue.serverTimestamp()
@@ -83,10 +106,8 @@ class FirestoreShoppingRepository {
         return newListRef.id
     }
 
-    fun observeListsForUser(): Flow<List<ShoppingListEntity>> =
+    fun observeListsForUser(uid: String): Flow<List<ShoppingListEntity>> =
         callbackFlow {
-
-            val uid = requireUid()
 
             val listener = firestore
                 .collection("lists")
@@ -94,7 +115,7 @@ class FirestoreShoppingRepository {
                 .addSnapshotListener { snapshot, error ->
 
                     if (error != null) {
-                        close(error)
+                        Log.e("Firestore", "Listener error", error)
                         return@addSnapshotListener
                     }
 
@@ -109,27 +130,34 @@ class FirestoreShoppingRepository {
                                 ?: emptyList()
 
                         val createdAt =
-                            document.getTimestamp("createdAt")
-                                ?.toDate()
-                                ?.time ?: System.currentTimeMillis()
+                            when (val value = document.get("createdAt")) {
+                                is com.google.firebase.Timestamp -> value.toDate().time
+                                is Long -> value
+                                else -> System.currentTimeMillis()
+                            }
 
                         val updatedAt =
-                            document.getTimestamp("updatedAt")
-                                ?.toDate()
-                                ?.time ?: System.currentTimeMillis()
+                            when (val value = document.get("updatedAt")) {
+                                is com.google.firebase.Timestamp -> value.toDate().time
+                                is Long -> value
+                                else -> System.currentTimeMillis()
+                            }
+
+                        val itemCount = (document.getLong("itemCount") ?: 0).toInt()
 
                         ShoppingListEntity(
                             id = document.id,
                             name = document.getString("name") ?: "",
                             ownerId = document.getString("ownerId") ?: "",
                             storeTypes = storeTypes,
+                            itemCount = itemCount,
                             createdAt = createdAt,
                             updatedAt = updatedAt
                         )
 
                     } ?: emptyList()
 
-                    trySend(lists)
+                    trySend(lists).isSuccess
                 }
 
             awaitClose { listener.remove() }
@@ -150,12 +178,22 @@ class FirestoreShoppingRepository {
             .flatMapLatest { listId ->
                 callbackFlow {
 
+                    val uid = requireUid()
+
                     val listener = itemsRef(listId)
+                        .whereEqualTo("ownerId", uid)
                         .whereEqualTo("deletedAt", null)
                         .addSnapshotListener { snapshot, error ->
 
                             if (error != null) {
-                                close(error)
+                                Log.e("Firestore", "Items listener failed", error)
+                                return@addSnapshotListener
+                            }
+
+                            if (snapshot == null) return@addSnapshotListener
+
+                            if (error != null) {
+                                Log.e("Firestore", "Items listener failed", error)
                                 return@addSnapshotListener
                             }
 
@@ -163,19 +201,25 @@ class FirestoreShoppingRepository {
                                 snapshot?.documents?.mapNotNull { doc ->
 
                                     val createdAt =
-                                        doc.getTimestamp("createdAt")
-                                            ?.toDate()
-                                            ?.time ?: System.currentTimeMillis()
+                                        when (val value = doc.get("createdAt")) {
+                                            is com.google.firebase.Timestamp -> value.toDate().time
+                                            is Long -> value
+                                            else -> System.currentTimeMillis()
+                                        }
 
                                     val updatedAt =
-                                        doc.getTimestamp("updatedAt")
-                                            ?.toDate()
-                                            ?.time ?: System.currentTimeMillis()
+                                        when (val value = doc.get("updatedAt")) {
+                                            is com.google.firebase.Timestamp -> value.toDate().time
+                                            is Long -> value
+                                            else -> System.currentTimeMillis()
+                                        }
 
                                     val deletedAt =
-                                        doc.getTimestamp("deletedAt")
-                                            ?.toDate()
-                                            ?.time
+                                        when (val value = doc.get("deletedAt")) {
+                                            is com.google.firebase.Timestamp -> value.toDate().time
+                                            is Long -> value
+                                            else -> null
+                                        }
 
                                     ShoppingItemEntity(
                                         id = doc.id,
@@ -190,7 +234,7 @@ class FirestoreShoppingRepository {
                                     )
                                 } ?: emptyList()
 
-                            trySend(items)
+                            trySend(items).isSuccess
                         }
 
                     awaitClose { listener.remove() }
@@ -198,7 +242,7 @@ class FirestoreShoppingRepository {
 
                     // ENTITY → DOMAIN
                     .map { entities ->
-                        entities.map(ShopMapper::fromEntity)
+                        entities.map { it.toDomain() }
                     }
             }
 
@@ -215,11 +259,11 @@ class FirestoreShoppingRepository {
                     "quantity" to item.quantity,
                     "category" to item.category,
                     "isChecked" to item.isChecked,
-                    "deletedAt" to null,
-                    "ownerId" to uid,
-                    "createdAt" to FieldValue.serverTimestamp(),
-                    "updatedAt" to FieldValue.serverTimestamp(),
-                    "version" to 0
+                    "version" to item.version,
+                    "deletedAt" to item.deletedAt,
+                    "createdAt" to item.createdAt,
+                    "updatedAt" to item.updatedAt,
+                    "ownerId" to uid     // ← wichtig
                 )
             ).await()
     }
@@ -252,7 +296,8 @@ class FirestoreShoppingRepository {
                     // CONFLICT DETECTION
                     // ------------------------------
                     if (serverVersion != item.version) {
-                        throw IllegalStateException("Conflict detected")
+                        Log.w("FIRESTORE_CONFLICT", "Version conflict for ${item.id}")
+                        return@runTransaction null
                     }
 
                     // ------------------------------

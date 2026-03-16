@@ -17,7 +17,8 @@ fun ListsScreen(
     onListSelected: (String) -> Unit
 ) {
 
-    val lists by vm.userLists.collectAsStateWithLifecycle()
+    val state by vm.state.collectAsStateWithLifecycle()
+    val lists = state.lists
 
     LazyColumn {
 

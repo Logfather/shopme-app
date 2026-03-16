@@ -5,7 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Divider
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
@@ -29,6 +29,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import de.shopme.ui.illustration.icons.shopicons.StoreIcon
 
 private fun normalizeListName(input: String): String {
 
@@ -92,8 +93,7 @@ fun StoreSelectionDialog(
             TextButton(
                 onClick = {
 
-                    val name =
-                        customListName.text.trim()
+                    val name = customListName.text.trim()
 
                     var lists = customLists
 
@@ -102,6 +102,8 @@ fun StoreSelectionDialog(
                     }
 
                     onConfirm(lists)
+
+                    //onDismiss()
                 }
             ) {
                 Text("Erstellen")
@@ -153,9 +155,10 @@ fun StoreSelectionDialog(
                             modifier = Modifier.weight(1f)
                         )
 
-                        RadioButton(
-                            selected = true,
-                            onClick = null
+                        Checkbox(
+                            checked = true,
+                            onCheckedChange = null,
+                            enabled = false
                         )
                     }
                 }
@@ -163,6 +166,7 @@ fun StoreSelectionDialog(
                 // =============================
                 // BUTTON: Eigene Liste hinzufügen
                 // =============================
+
 
                 Row(
                     modifier = Modifier
@@ -284,19 +288,13 @@ fun StoreSelectionDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(
-                                enabled = !alreadyExists
-                            ) {
-                                onToggle(store)
-                            }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
 
-                        Image(
-                            painter = painterResource(id = store.logoRes),
-                            contentDescription = store.displayName,
-                            modifier = Modifier.size(40.dp)
+                        StoreIcon(
+                            store = store,
+                            modifier = Modifier.size(24.dp)
                         )
 
                         Spacer(modifier = Modifier.width(12.dp))
@@ -312,10 +310,10 @@ fun StoreSelectionDialog(
                             }
                         }
 
-                        RadioButton(
-                            selected = selectedStores.contains(store),
-                            onClick = if (alreadyExists) null else {
-                                { onToggle(store) }
+                        Checkbox(
+                            checked = selectedStores.contains(store),
+                            onCheckedChange = {
+                                onToggle(store)
                             },
                             enabled = !alreadyExists
                         )

@@ -1,36 +1,35 @@
 package de.shopme.presentation.shopping.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
-import de.shopme.ui.theme.BrandGreen
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import de.shopme.domain.model.ShoppingListEntity
+import de.shopme.domain.model.ShoppingList
+import de.shopme.ui.illustration.icons.shopicons.StoreIcon
+import de.shopme.ui.theme.BrandGreen
+import de.shopme.ui.theme.BrandOlive
+import de.shopme.presentation.state.ShoppingViewState
 
 @Composable
 fun MultiOverviewScreen(
-    lists: List<ShoppingListEntity>,
+    viewState: ShoppingViewState,
+    lists: List<ShoppingList>,
     activeListId: String?,
-    onEdit: (ShoppingListEntity) -> Unit,
-    onDelete: (ShoppingListEntity) -> Unit,
+    onEdit: (ShoppingList) -> Unit,
+    onDelete: (ShoppingList) -> Unit,
     onCreateNewList: () -> Unit
 ) {
 
@@ -42,12 +41,8 @@ fun MultiOverviewScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        contentPadding = PaddingValues(vertical = 6.dp)
     ) {
-
-        // =========================
-        // CUSTOM LISTS
-        // =========================
 
         if (customLists.isNotEmpty()) {
 
@@ -68,11 +63,13 @@ fun MultiOverviewScreen(
             items(customLists) { list ->
 
                 ListRow(
+                    viewState = viewState,
                     list = list,
                     activeListId = activeListId,
                     onEdit = onEdit,
                     onDelete = onDelete
                 )
+
             }
 
             item {
@@ -82,15 +79,11 @@ fun MultiOverviewScreen(
             }
         }
 
-        // =========================
-        // STORE LISTS
-        // =========================
-
         if (storeLists.isNotEmpty()) {
 
             item {
                 Surface(
-                    color = BrandGreen,
+                    color = BrandOlive,
                     modifier = Modifier.fillMaxWidth(),
                     tonalElevation = 2.dp
                 ) {
@@ -105,6 +98,7 @@ fun MultiOverviewScreen(
             items(storeLists) { list ->
 
                 ListRow(
+                    viewState = viewState,
                     list = list,
                     activeListId = activeListId,
                     onEdit = onEdit,
@@ -117,10 +111,11 @@ fun MultiOverviewScreen(
 
 @Composable
 private fun ListRow(
-    list: ShoppingListEntity,
+    viewState: ShoppingViewState,
+    list: ShoppingList,
     activeListId: String?,
-    onEdit: (ShoppingListEntity) -> Unit,
-    onDelete: (ShoppingListEntity) -> Unit
+    onEdit: (ShoppingList) -> Unit,
+    onDelete: (ShoppingList) -> Unit
 ) {
 
     val isActive = list.id == activeListId
@@ -154,8 +149,7 @@ private fun ListRow(
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            tonalElevation = if (isActive) 6.dp else 1.dp,
-            shape = MaterialTheme.shapes.medium
+            tonalElevation = if (isActive) 6.dp else 1.dp
         ) {
 
             Card(
@@ -168,9 +162,9 @@ private fun ListRow(
                 colors = CardDefaults.cardColors(
                     containerColor =
                         if (isActive)
-                            MaterialTheme.colorScheme.primaryContainer
+                            BrandGreen
                         else
-                            MaterialTheme.colorScheme.surface
+                            BrandOlive
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -183,7 +177,6 @@ private fun ListRow(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
-                    // grüner Active Indicator
                     if (isActive) {
                         Box(
                             modifier = Modifier
@@ -197,10 +190,9 @@ private fun ListRow(
 
                     list.storeTypes.firstOrNull()?.let { store ->
 
-                        Image(
-                            painter = painterResource(id = store.logoRes),
-                            contentDescription = store.displayName,
-                            modifier = Modifier.size(40.dp)
+                        StoreIcon(
+                            store = store,
+                            modifier = Modifier.size(24.dp)
                         )
 
                         Spacer(Modifier.width(12.dp))
@@ -211,7 +203,21 @@ private fun ListRow(
                     ) {
 
                         Text(
-                            text = list.name,
+                            text = buildAnnotatedString {
+
+                                append(list.name)
+
+                                append("    ")
+
+                                withStyle(
+                                    style = SpanStyle(
+                                        fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                                        color = Color.Black
+                                    )
+                                ) {
+                                    append("(${list.itemCount} Artikel)")
+                                }
+                            },
                             style = MaterialTheme.typography.titleMedium
                         )
 
@@ -222,7 +228,7 @@ private fun ListRow(
                                 else
                                     "Tippen zum Öffnen",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color.Black
                         )
                     }
                 }

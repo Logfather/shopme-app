@@ -12,7 +12,9 @@ sealed class ShoppingAction {
     ) : ShoppingAction()
 
     data class ConfirmStores(
+
         val customLists: List<String>
+
     ) : ShoppingAction()
 
     object CancelMultiCreation : ShoppingAction()

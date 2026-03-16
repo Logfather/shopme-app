@@ -3,28 +3,64 @@ package de.shopme.presentation.event
 import android.content.Context
 import de.shopme.domain.model.ShoppingItem
 
-sealed class ShopEvent {
+sealed interface ShopEvent {
 
-    data class AddItem(
-        val name: String
-    ) : ShopEvent()
+    // -----------------------------
+    // ITEM EVENTS
+    // -----------------------------
 
-    data class ToggleItem(
-        val item: ShoppingItem
-    ) : ShopEvent()
+    sealed interface Item : ShopEvent {
 
-    data class DeleteItem(
-        val item: ShoppingItem
-    ) : ShopEvent()
+        data class Add(
+            val name: String
+        ) : Item
 
-    data class UpdateItem(
-        val item: ShoppingItem,
-        val newName: String
-    ) : ShopEvent()
+        data class Toggle(
+            val item: ShoppingItem
+        ) : Item
 
-    data class CreateInvite(
-        val context: Context
-    ) : ShopEvent()
+        data class Delete(
+            val item: ShoppingItem
+        ) : Item
 
-    object ClearAll : ShopEvent()
+        data class Update(
+            val item: ShoppingItem,
+            val newName: String
+        ) : Item
+
+        data class SetChecked(
+            val item: ShoppingItem,
+            val checked: Boolean
+        ) : Item
+    }
+
+    // -----------------------------
+    // LIST EVENTS
+    // -----------------------------
+
+    sealed interface List : ShopEvent {
+
+        object ClearAll : List
+
+        object DeleteAllLists : List
+    }
+
+    // -----------------------------
+    // SPEECH EVENTS
+    // -----------------------------
+
+    sealed interface Speech : ShopEvent {
+
+        data class AddItemFromSpeech(
+            val text: String
+        ) : Speech
+    }
+
+    // -----------------------------
+    // SYSTEM EVENTS
+    // -----------------------------
+
+    sealed interface System : ShopEvent {
+        object CreateInvite : System
+    }
 }

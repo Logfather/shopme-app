@@ -16,10 +16,10 @@ fun ItemsScreen(
     listId: String?
 ) {
 
-    val groupedItems by vm.groupedItems.collectAsStateWithLifecycle()
+    val viewState by vm.viewState.collectAsStateWithLifecycle()
 
     val items: List<ShoppingItem> =
-        groupedItems.values.flatten()
+        viewState.groupedItems.values.flatten()
 
     LazyColumn {
 

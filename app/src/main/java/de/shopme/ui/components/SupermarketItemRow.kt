@@ -1,9 +1,16 @@
 package de.shopme.ui.components
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -11,28 +18,28 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import de.shopme.domain.model.ShoppingItem
+import de.shopme.ui.theme.BrandOlive
 
 @Composable
 fun SupermarketItemRow(
     item: ShoppingItem,
     categoryColor: Color,
     onToggle: () -> Unit,
-    onDelete: () -> Unit,
-    onEdit: (String) -> Unit
-) {
+    onDelete: () -> Unit
+){
 
-    val brandOlive = MaterialTheme.colorScheme.secondary
-    val anthracite = Color(0xFF2B2B2B)
+    var isEditing by remember(item.id) {
+        mutableStateOf(!item.isChecked)
+    }
 
-    val isEditing = !item.isChecked
+    var textFieldValue by rememberSaveable(item.id, stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(item.name))
+    }
 
-    var textFieldValue by remember(item.id) {
-        mutableStateOf(
-            TextFieldValue(
-                text = item.name,
-                selection = TextRange(item.name.length)
-            )
-        )
+    LaunchedEffect(item.id, item.name) {
+        if (!isEditing && textFieldValue.text != item.name) {
+            textFieldValue = TextFieldValue(item.name)
+        }
     }
 
     val focusRequester = remember { FocusRequester() }
@@ -46,16 +53,18 @@ fun SupermarketItemRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .background(brandOlive)
-            .heightIn(min = 64.dp),
+            .padding(vertical = 6.dp)
+            .background(BrandOlive),
+
+
+        horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
 
         Box(
             modifier = Modifier
                 .width(6.dp)
-                .fillMaxHeight()
+                .height(40.dp)
                 .background(categoryColor)
         )
 
@@ -64,11 +73,15 @@ fun SupermarketItemRow(
         Checkbox(
             checked = item.isChecked,
             onCheckedChange = {
-                onToggle()
+                isEditing = !it
             }
         )
 
         Spacer(Modifier.width(12.dp))
+
+        //var textFieldValue by remember(item.id) {
+        //    mutableStateOf(TextFieldValue(item.name))
+        //}
 
         if (isEditing) {
 
@@ -78,37 +91,39 @@ fun SupermarketItemRow(
                 modifier = Modifier
                     .weight(1f)
                     .focusRequester(focusRequester),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = anthracite,
-                    unfocusedContainerColor = anthracite,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    cursorColor = Color.White,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.outline
-                )
+                singleLine = true
             )
 
             Spacer(Modifier.width(8.dp))
 
             TextButton(
                 onClick = {
-                    onEdit(textFieldValue.text)
-                    onToggle()
+
+                    val newText = textFieldValue.text.trim()
+
+                    if (newText.isNotBlank()) {
+                        textFieldValue = TextFieldValue(
+                            text = newText,
+                            selection = TextRange(newText.length)
+                        )
+                    }
+
+                    onToggle()   // <-- Firestore Update hier
+                    isEditing = false
                 }
             ) {
-                Text("Fertig", color = Color.Black)
+                Text(
+                    text = "Fertig",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.Black
+                )
             }
-
         } else {
 
             Text(
-                text = item.name,
-                modifier = Modifier.weight(1f),
+                text = textFieldValue.text,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSecondary
+                modifier = Modifier.weight(1f)
             )
 
             Spacer(Modifier.width(8.dp))
@@ -117,8 +132,9 @@ fun SupermarketItemRow(
                 onClick = { onDelete() }
             ) {
                 Text(
-                    "Löschen",
-                    color = MaterialTheme.colorScheme.onSecondary
+                    text = "Löschen",
+                    color = Color.Black,
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }

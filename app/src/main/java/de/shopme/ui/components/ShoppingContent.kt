@@ -1,16 +1,19 @@
 package de.shopme.ui.components
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
@@ -23,11 +26,22 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import de.shopme.presentation.viewmodel.ShoppingViewModel
-import de.shopme.speech.SpeechController
+
+
 import de.shopme.presentation.event.ShopEvent
+import de.shopme.presentation.viewmodel.ShoppingViewModel
+import de.shopme.data.input.speech.SpeechController
+import de.shopme.domain.model.ShoppingItem
+import de.shopme.domain.service.CatalogService
+import de.shopme.presentation.action.ShoppingAction
 import de.shopme.ui.theme.AppButtonDefaults
 import de.shopme.ui.theme.CategoryColors
+
+
+sealed interface ListRow {
+    data class Header(val category: String) : ListRow
+    data class Item(val item: ShoppingItem) : ListRow
+}
 
 @Composable
 fun ListHeader(
@@ -54,12 +68,15 @@ fun ListHeader(
                 contentDescription = null,
                 modifier = Modifier.size(42.dp)
             )
+
             Spacer(Modifier.width(12.dp))
+
             Column {
                 Text(
                     text = listName,
                     style = MaterialTheme.typography.titleMedium
                 )
+
                 Text(
                     text = "$itemCount Artikel",
                     style = MaterialTheme.typography.labelMedium,
@@ -70,24 +87,55 @@ fun ListHeader(
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShoppingContent(
     vm: ShoppingViewModel,
-    speechController: SpeechController
+    speechController: SpeechController,
+    catalogService: CatalogService
 ) {
 
-    val groupedItems by vm.groupedItems.collectAsStateWithLifecycle()
+    val viewState by vm.viewState.collectAsStateWithLifecycle()
+    val groupedItems = viewState.groupedItems
 
     val categoryEntries = remember(groupedItems) {
         groupedItems.entries.toList()
     }
 
-    val categories = remember(groupedItems) { groupedItems.keys.toList() }
-
     val listening by speechController.isListening.collectAsStateWithLifecycle()
 
     var text by rememberSaveable { mutableStateOf("") }
+
+    // ------------------------------------------------------------
+    // DEBOUNCE
+    // ------------------------------------------------------------
+
+    val debouncedText by produceState(initialValue = "", text) {
+        kotlinx.coroutines.delay(120)
+        value = text
+    }
+
+    // ------------------------------------------------------------
+    // AUTOCOMPLETE
+    // ------------------------------------------------------------
+
+    val suggestions =
+        remember(debouncedText) {
+
+            if (debouncedText.length < 2) emptyList()
+            else {
+
+                val result =
+                    catalogService
+                        .autocomplete(debouncedText.lowercase())
+                        .take(5)
+
+                result
+            }
+        }
+
+    val expanded = suggestions.isNotEmpty()
 
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -107,33 +155,70 @@ fun ShoppingContent(
 
         Spacer(Modifier.height(16.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
 
-            TextField(
-                value = text,
-                onValueChange = { text = it },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        if (text.isNotBlank()) {
-                            vm.onEvent(ShopEvent.AddItem(text))
-                            text = ""
-                            keyboardController?.hide()
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = {},
+                modifier = Modifier.weight(1f)   // Gewicht hierhin verschieben
+            ) {
+
+                TextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier
+                        .menuAnchor(
+                            type = ExposedDropdownMenuAnchorType.PrimaryEditable,
+                            enabled = true
+                        )
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (text.isNotBlank()) {
+                                vm.onEvent(ShopEvent.Item.Add(text))
+                                text = ""
+                                keyboardController?.hide()
+                            }
                         }
-                    }
+                    )
                 )
-            )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = {}
+                ) {
+
+
+
+                    suggestions.forEach { item ->
+                        DropdownMenuItem(
+                            text = { Text(item.itemname) },
+                            onClick = {
+
+                                text = item.itemname
+
+                                vm.onEvent(
+                                    ShopEvent.Item.Add(item.itemname)
+                                )
+
+                                text = ""
+                            }
+                        )
+                    }
+                }
+            }
 
             Spacer(Modifier.width(8.dp))
 
             Button(
                 onClick = {
                     if (text.isNotBlank()) {
-                        vm.onEvent(ShopEvent.AddItem(text))
+                        vm.onEvent(ShopEvent.Item.Add(text))
                         text = ""
                     }
                 },
@@ -144,7 +229,45 @@ fun ShoppingContent(
             }
         }
 
+
+        Spacer(Modifier.height(16.dp))
+
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+
+            RecordingButton(
+                isRecording = listening,
+                onClick = {
+                    speechController.setResultListener { spokenText ->
+                        vm.addItemsFromSpeech(spokenText)
+                    }
+
+                    if (listening) {
+                        speechController.stop()
+                    } else {
+                        permissionLauncher.launch(
+                            android.Manifest.permission.RECORD_AUDIO
+                        )
+                    }
+                }
+            )
+        }
+
         Spacer(Modifier.height(24.dp))
+
+        val rows = buildList {
+
+            categoryEntries.forEach { entry ->
+
+                add(ListRow.Header(entry.key))
+
+                entry.value.forEach { item ->
+                    add(ListRow.Item(item))
+                }
+            }
+        }
 
         LazyColumn(
             modifier = Modifier.weight(1f),
@@ -152,81 +275,70 @@ fun ShoppingContent(
         ) {
 
             items(
-                items = categoryEntries,
-                key = { it.key }
-            ) { entry ->
+                items = rows,
+                key = {
+                    when (it) {
+                        is ListRow.Header -> "header_${it.category}"
+                        is ListRow.Item -> it.item.id
+                    }
+                }
+            ) { row ->
 
-                val category = entry.key
-                val itemsInCategory = entry.value
+                when (row) {
 
-                val categoryColor =
-                    CategoryColors[category]
-                        ?: MaterialTheme.colorScheme.onSurfaceVariant
+                    is ListRow.Header -> {
 
-                Text(
-                    text = category,
-                    color = categoryColor,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp)
-                )
+                        val categoryColor =
+                            CategoryColors[row.category]
+                                ?: MaterialTheme.colorScheme.onSurfaceVariant
 
-                itemsInCategory.forEach { item ->
+                        Text(
+                            text = row.category,
+                            color = categoryColor,
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp)
+                        )
+                    }
 
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = { value ->
-                            if (value == SwipeToDismissBoxValue.EndToStart) {
-                                vm.onEvent(ShopEvent.DeleteItem(item))
-                                true
-                            } else false
-                        }
-                    )
+                    is ListRow.Item -> {
 
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        backgroundContent = {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(MaterialTheme.colorScheme.secondary)
-                                    .padding(horizontal = 20.dp),
-                                contentAlignment = Alignment.CenterEnd
-                            ) {
-                                Text(
-                                    text = "Löschen",
-                                    color = MaterialTheme.colorScheme.onSecondary
-                                )
-                            }
-                        },
-                        enableDismissFromStartToEnd = false,
-                        enableDismissFromEndToStart = true
-                    ) {
+                        val item = row.item
 
-                        SupermarketItemRow(
-                            item = item,
-                            categoryColor = categoryColor,
-                            onToggle = {
-                                vm.onEvent(ShopEvent.ToggleItem(item))
-                            },
-                            onDelete = {
-                                vm.onEvent(ShopEvent.DeleteItem(item))
-                            },
-                            onEdit = { newName ->
-                                vm.onEvent(
-                                    ShopEvent.UpdateItem(item, newName)
-                                )
+                        val categoryColor =
+                            CategoryColors[item.category]
+                                ?: MaterialTheme.colorScheme.onSurfaceVariant
+
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { value ->
+                                if (value == SwipeToDismissBoxValue.EndToStart) {
+                                    vm.onEvent(ShopEvent.Item.Delete(item))
+                                    true
+                                } else false
                             }
                         )
 
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = {},
+                            enableDismissFromStartToEnd = false,
+                            enableDismissFromEndToStart = true
+                        ) {
+
+                            SupermarketItemRow(
+                                item = item,
+                                categoryColor = categoryColor,
+                                onToggle = {
+                                    vm.onEvent(ShopEvent.Item.Toggle(item))
+                                },
+                                onDelete = {
+                                    vm.onEvent(ShopEvent.Item.Delete(item))
+                                }
+                            )
+                        }
                     }
                 }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 16.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
-                )
             }
         }
 
@@ -234,25 +346,16 @@ fun ShoppingContent(
 
         Button(
             onClick = {
-                vm.onEvent(ShopEvent.CreateInvite(context))
+                vm.dispatch(
+                    ShoppingAction.CancelMultiCreation
+                )
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             colors = AppButtonDefaults.primary()
         ) {
-            Text("Liste teilen")
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        Button(
-            onClick = { vm.onEvent(ShopEvent.ClearAll) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-        ) {
-            Text("Liste löschen")
+            Text("Liste erstellen fertig")
         }
 
         Spacer(Modifier.height(24.dp))

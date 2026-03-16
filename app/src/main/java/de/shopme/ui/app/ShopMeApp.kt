@@ -1,5 +1,6 @@
 package de.shopme.ui.app
 
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
@@ -17,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -25,33 +25,51 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.shopme.R
 import de.shopme.presentation.action.ShoppingAction
-import de.shopme.presentation.effect.UIEffect
-import de.shopme.presentation.shopping.ShoppingUiState
+import de.shopme.presentation.event.ShopEvent
+import de.shopme.presentation.state.ShoppingScreenMode
 import de.shopme.presentation.shopping.components.MultiOverviewScreen
 import de.shopme.presentation.shopping.components.StoreSelectionDialog
 import de.shopme.presentation.viewmodel.ShoppingViewModel
-import de.shopme.speech.SpeechController
+import de.shopme.data.input.speech.SpeechController
+import de.shopme.domain.model.StoreType
+import de.shopme.domain.service.CatalogService
 import de.shopme.ui.components.ShoppingContent
 import de.shopme.ui.components.WelcomeDialog
 import de.shopme.ui.theme.BrandGreen
-import de.shopme.presentation.shopping.toScreen
 import de.shopme.presentation.navigation.Screen
-import de.shopme.presentation.shopping.toScreen
+import de.shopme.ui.navigation.toScreen
+import de.shopme.ui.illustration.buttons.AddActionButton
+import de.shopme.ui.illustration.buttons.CloseActionButton
+import de.shopme.ui.illustration.icons.shopicons.StoreIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShopMeApp(
     vm: ShoppingViewModel,
-    speechController: SpeechController
+    speechController: SpeechController,
+    catalogService: CatalogService
 ) {
 
     val viewState by vm.viewState.collectAsStateWithLifecycle()
+
+    if (viewState.uiState == ShoppingScreenMode.Loading) {
+
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+
+        return
+    }
 
     val uiState = viewState.uiState
     val userLists = viewState.lists
     val activeList = viewState.activeList
     val groupedItems = viewState.groupedItems
     val snackbarMessage = viewState.snackbarMessage
+    //val viewState by vm.viewState.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -146,8 +164,8 @@ fun ShopMeApp(
                 topBar = {
 
                     val showListHeader =
-                        (uiState == ShoppingUiState.Normal) ||
-                                (uiState == ShoppingUiState.MultiOverview && userLists.isNotEmpty())
+                        (uiState == ShoppingScreenMode.Normal) ||
+                                (uiState == ShoppingScreenMode.MultiOverview && userLists.isNotEmpty())
 
                     val titleText =
                         when (uiState.toScreen()) {
@@ -163,45 +181,39 @@ fun ShopMeApp(
                                 targetState = uiState,
                                 transitionSpec = { fadeIn() togetherWith fadeOut() },
                                 label = "TopBarAnimation"
-                            ) {
+                            ) { state ->
+
+                                val showListHeader =
+                                    (state == ShoppingScreenMode.Normal) ||
+                                            (state == ShoppingScreenMode.MultiOverview && userLists.isNotEmpty())
 
                                 if (showListHeader && activeList != null) {
-
                                     Surface(
                                         shape = MaterialTheme.shapes.medium,
                                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
                                         modifier = Modifier.clickable { showListSelector = true }
                                     ) {
-
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                         ) {
-
                                             activeList.storeTypes.firstOrNull()?.let { store ->
-
-                                                Image(
-                                                    painter = painterResource(id = store.logoRes),
-                                                    contentDescription = store.displayName,
+                                                StoreIcon(
+                                                    store = store,
                                                     modifier = Modifier.size(26.dp)
                                                 )
-
                                                 Spacer(Modifier.width(8.dp))
                                             }
 
                                             Column {
-
                                                 Text(
                                                     text = activeList.name,
                                                     style = MaterialTheme.typography.titleMedium
                                                 )
-
                                                 Text(
                                                     text = "$itemCount Artikel",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                                    style = MaterialTheme.typography.labelSmall
                                                 )
-
                                             }
 
                                             Spacer(Modifier.width(8.dp))
@@ -210,20 +222,14 @@ fun ShopMeApp(
                                                 imageVector = Icons.Default.ArrowDropDown,
                                                 contentDescription = "Liste wechseln"
                                             )
-
                                         }
-
                                     }
-
                                 } else {
-
                                     Text(
                                         text = titleText,
                                         style = MaterialTheme.typography.titleLarge
                                     )
-
                                 }
-
                             }
 
                         },
@@ -239,47 +245,80 @@ fun ShopMeApp(
 
                 floatingActionButton = {
 
-                    if (uiState == ShoppingUiState.Normal ||
-                        (uiState == ShoppingUiState.MultiOverview && userLists.isNotEmpty())
+                    if (viewState.uiState == ShoppingScreenMode.MultiOverview &&
+                        userLists.isNotEmpty()
                     ) {
 
-                        ExtendedFloatingActionButton(
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalAlignment = Alignment.End
+                        ) {
 
-                            onClick = { vm.dispatch(
-                                ShoppingAction.StartMultiStoreCreation
-                            ) },
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
 
-                            icon = {
+                                ExtendedFloatingActionButton(
 
-                                Image(
-                                    painter = painterResource(id = R.drawable.plus_icon_48),
-                                    contentDescription = "Neue Liste",
-                                    modifier = Modifier.size(24.dp)
+                                    onClick = {
+                                        vm.onEvent(ShopEvent.List.DeleteAllLists)
+                                    },
+
+                                    icon = {
+                                        CloseActionButton(
+                                            modifier = Modifier.size(36.dp),
+                                            onClick = {}
+                                        )
+                                    },
+
+                                    text = { Text("Alle Listen löschen") },
+
+                                    shape = RoundedCornerShape(24.dp),
+
+                                    containerColor = BrandGreen,
+
+                                    contentColor = Color.Black,
+
+                                    elevation = FloatingActionButtonDefaults.elevation(
+                                        defaultElevation = 8.dp,
+                                        pressedElevation = 14.dp
+                                    )
                                 )
 
-                            },
+                                ExtendedFloatingActionButton(
 
-                            text = { Text("Weitere Liste") },
+                                    onClick = {
+                                        vm.dispatch(
+                                            ShoppingAction.StartMultiStoreCreation
+                                        )
+                                    },
 
-                            shape = RoundedCornerShape(24.dp),
+                                    icon = {
+                                        AddActionButton(
+                                            modifier = Modifier.size(36.dp),
+                                            onClick = {}
+                                        )
+                                    },
 
-                            containerColor = BrandGreen,
+                                    text = { Text("Weitere Liste") },
 
-                            contentColor = Color.Black,
+                                    shape = RoundedCornerShape(24.dp),
 
-                            modifier = Modifier
-                                .padding(bottom = 12.dp)
-                                .shadow(12.dp, RoundedCornerShape(24.dp)),
+                                    containerColor = BrandGreen,
 
-                            elevation = FloatingActionButtonDefaults.elevation(
-                                defaultElevation = 8.dp,
-                                pressedElevation = 14.dp
-                            )
+                                    contentColor = Color.Black,
 
-                        )
-
+                                    elevation = FloatingActionButtonDefaults.elevation(
+                                        defaultElevation = 8.dp,
+                                        pressedElevation = 14.dp
+                                    )
+                                )
+                            }
+                        }
                     }
-
                 }
 
             ) { padding ->
@@ -325,7 +364,8 @@ fun ShopMeApp(
                                     vm.dispatch(
                                         ShoppingAction.StartMultiStoreCreation
                                     )
-                                }
+                                },
+                                viewState = viewState
                             )
 
                         }
@@ -334,7 +374,8 @@ fun ShopMeApp(
 
                             ShoppingContent(
                                 vm = vm,
-                                speechController = speechController
+                                speechController = speechController,
+                                catalogService = catalogService
                             )
 
                         }
@@ -342,7 +383,7 @@ fun ShopMeApp(
                         Screen.StoreSelection -> {
 
                             val selectedStores =
-                                (uiState as ShoppingUiState.MultiSelect).selectedStores
+                                (uiState as ShoppingScreenMode.MultiSelect).selectedStores
 
                             val existingStores = remember(userLists) {
                                 userLists.flatMap { it.storeTypes }
@@ -351,16 +392,19 @@ fun ShopMeApp(
                             StoreSelectionDialog(
                                 selectedStores = selectedStores,
                                 existingStores = existingStores,
+
                                 onToggle = { store ->
                                     vm.dispatch(
                                         ShoppingAction.ToggleStore(store)
                                     )
                                 },
+
                                 onConfirm = { customLists ->
                                     vm.dispatch(
                                         ShoppingAction.ConfirmStores(customLists)
                                     )
                                 },
+
                                 onDismiss = {
                                     vm.dispatch(
                                         ShoppingAction.CancelMultiCreation
@@ -391,14 +435,15 @@ fun ShopMeApp(
                 ) + fadeOut()
         ) {
 
-            WelcomeDialog(
-                onCreateFirstList = {
-                    vm.dismissWelcomeDialog()
-                    vm.dispatch(
-                        ShoppingAction.StartMultiStoreCreation
-                    )
-                }
-            )
+            if (showWelcomeDialog) {
+
+                WelcomeDialog(
+                    onCreateFirstList = {
+                        vm.dismissWelcomeDialog()
+                        vm.startMultiStoreCreation()
+                    }
+                )
+            }
 
         }
 

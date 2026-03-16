@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
+import de.shopme.ui.illustration.buttons.CartoonMicrophone
 
 @Composable
 fun RecordingButton(
@@ -78,11 +79,8 @@ fun RecordingButton(
                 }
         ) {
 
-            Icon(
-                imageVector = Icons.Default.Mic,
-                contentDescription = "Aufnahme",
-                tint = if (isRecording) activeContentColor else inactiveContentColor,
-                modifier = Modifier.size(32.dp)
+            CartoonMicrophone(
+                modifier = Modifier.size(48.dp)
             )
         }
     }
