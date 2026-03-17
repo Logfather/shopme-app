@@ -19,4 +19,8 @@ class FirebaseAuthProvider : AuthProvider {
         return auth.currentUser?.uid
             ?: throw IllegalStateException("User not authenticated")
     }
+
+    override fun getCurrentUserId(): String? {
+        return FirebaseAuth.getInstance().currentUser?.uid
+    }
 }

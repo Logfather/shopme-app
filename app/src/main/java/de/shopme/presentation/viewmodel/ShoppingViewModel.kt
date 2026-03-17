@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import de.shopme.core.network.NetworkMonitor
 import de.shopme.data.mapper.EntityMapper.toDomain
 import de.shopme.data.mapper.EntityMapper.toEntity
-import de.shopme.data.repository.FirestoreShoppingRepository
+import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.domain.auth.AuthProvider
 import de.shopme.domain.model.*
 import de.shopme.domain.service.CategoryMapper
@@ -14,11 +14,9 @@ import de.shopme.domain.service.QuantityMapper
 import de.shopme.domain.service.SpeechItemParser
 import de.shopme.domain.usecase.CreateListUseCase
 import de.shopme.domain.usecase.DeleteListUseCase
-import de.shopme.domain.usecase.SetActiveListUseCase
 import de.shopme.presentation.action.ShoppingAction
 import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.event.ShopEvent
-import de.shopme.presentation.reducer.reduce
 import de.shopme.presentation.state.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -27,8 +25,7 @@ import java.util.UUID
 class ShoppingViewModel(
     private val createListUseCase: CreateListUseCase,
     private val deleteListUseCase: DeleteListUseCase,
-    private val setActiveListUseCase: SetActiveListUseCase,
-    private val repository: FirestoreShoppingRepository,
+    private val roomRepository: RoomShoppingRepository,
     private val quantityMapper: QuantityMapper,
     private val categoryMapper: CategoryMapper,
     private val networkMonitor: NetworkMonitor,
@@ -48,6 +45,22 @@ class ShoppingViewModel(
 
     private val _effects = MutableSharedFlow<UIEffect>()
     val effects: SharedFlow<UIEffect> = _effects
+
+    private val _currentListId = MutableStateFlow<String?>(null)
+    val currentListId: StateFlow<String?> = _currentListId
+
+
+
+    fun setCurrentList(listId: String) {
+
+        Log.d("LIST_DEBUG", "SET currentListId=$listId")
+
+        _currentListId.value = listId
+
+        _state.update {
+            it.copy(activeListId = listId)
+        }
+    }
 
     // ------------------------------------------------------------
     // VIEW STATE
@@ -94,16 +107,13 @@ class ShoppingViewModel(
             val uid = authProvider.currentUserId()
                 ?: return@launch
 
-            repository.ensureUserDocument()
-
-            launch { observeLists(uid) }
-            launch { observeItems() }
+            launch { observeLists() }
         }
     }
 
-    private suspend fun observeLists(uid: String) {
+    private suspend fun observeLists() {
 
-        repository.observeListsForUser(uid)
+        roomRepository.observeLists()
             .collect { lists ->
 
                 val domainLists =
@@ -138,23 +148,37 @@ class ShoppingViewModel(
             }
     }
 
-    private suspend fun observeItems() {
+    init {
+        observeItems()
+    }
 
-        state
-            .map { it.activeListId }
-            .distinctUntilChanged()
-            .flatMapLatest { id ->
-                if (id != null)
-                    repository.observeItems()
-                else
-                    flowOf(emptyList())
-            }
-            .collect { items ->
+    private fun observeItems() {
 
-                _state.update {
-                    it.copy(items = items)
+        viewModelScope.launch {
+
+            currentListId
+                .onEach { Log.d("EVENT_DEBUG", "Flow emits listId=$it") }
+                .filterNotNull()
+                .collectLatest { listId ->
+
+                    Log.d("EVENT_DEBUG", "OBSERVE → listId=$listId")
+
+                    roomRepository
+                        .observeItemsWithSyncStatus(listId)
+                        .collect { itemsWithStatus ->
+
+                            Log.d("EVENT_DEBUG", "Items size=${itemsWithStatus.size}") // ✅ HIER
+
+                            val domainItems = itemsWithStatus.map { (entity, status) ->
+                                entity.toDomain().copy(syncStatus = status)
+                            }
+
+                            _state.update {
+                                it.copy(items = domainItems)
+                            }
+                        }
                 }
-            }
+        }
     }
 
     // ------------------------------------------------------------
@@ -181,27 +205,43 @@ class ShoppingViewModel(
 
         when (effect) {
 
-            is UIEffect.CreateLists -> {
+            is UIEffect.AddItem -> {
+                Log.d("EVENT_DEBUG", "Effect → AddItem: ${effect.name}")
+                addItem(effect.name)
+            }
 
+            is UIEffect.ToggleItem -> {
+                toggleItem(effect.item)
+            }
+
+            is UIEffect.DeleteItem -> {
+                deleteItem(effect.item)
+            }
+
+            is UIEffect.CreateLists -> {
                 confirmStoreSelection(
                     stores = effect.stores,
                     customLists = effect.customLists
                 )
             }
 
-            is UIEffect.DeleteList ->
+            is UIEffect.DeleteList -> {
                 deleteList(effect.list.toDomain())
+            }
 
-            is UIEffect.ShowSnackbar ->
+            is UIEffect.ShowSnackbar -> {
                 viewModelScope.launch {
                     _effects.emit(effect)
                 }
+            }
 
-            UIEffect.ShowWelcomeDialog ->
+            UIEffect.ShowWelcomeDialog -> {
                 _showWelcomeDialog.value = true
+            }
 
-            UIEffect.HideWelcomeDialog ->
+            UIEffect.HideWelcomeDialog -> {
                 _showWelcomeDialog.value = false
+            }
         }
     }
 
@@ -210,16 +250,7 @@ class ShoppingViewModel(
     // ------------------------------------------------------------
 
     private fun setActiveList(listId: String) {
-
-        viewModelScope.launch {
-
-            setActiveListUseCase(listId)
-            repository.setActiveList(listId)
-
-            _state.update {
-                it.copy(activeListId = listId)
-            }
-        }
+        setCurrentList(listId)
     }
 
     fun editList(list: ShoppingList) {
@@ -241,8 +272,8 @@ class ShoppingViewModel(
     private fun confirmStoreSelection(
         stores: List<StoreType>,
         customLists: List<String>
+
     ) {
-        Log.d("STORE_DEBUG", "Stores=$stores  Custom=$customLists")
         viewModelScope.launch {
 
             var lastCreatedId: String? = null
@@ -269,16 +300,15 @@ class ShoppingViewModel(
 
             lastCreatedId?.let { id ->
 
-                setActiveListUseCase(id)
-                repository.setActiveList(id)
+                setCurrentList(id)   // 🔥 DAS IST DER FIX
 
                 _state.update {
                     it.copy(
-                        activeListId = id,
                         screenMode = ShoppingScreenMode.MultiOverview
                     )
                 }
             }
+            Log.d("EVENT_DEBUG", "Created listId=$lastCreatedId")
         }
     }
 
@@ -287,6 +317,8 @@ class ShoppingViewModel(
     // ------------------------------------------------------------
 
     fun onEvent(event: ShopEvent) {
+
+        Log.d("EVENT_DEBUG", "Event received: $event")
 
         val result =
             de.shopme.presentation.reducer.reduce(
@@ -297,21 +329,9 @@ class ShoppingViewModel(
 
         _state.value = result.state
 
-        when (event) {
-
-            is ShopEvent.Item.Add ->
-                addItem(event.name)
-
-            is ShopEvent.Speech.AddItemFromSpeech ->
-                addItem(event.text)
-
-            is ShopEvent.Item.Toggle ->
-                toggleItem(event.item)
-
-            is ShopEvent.Item.Delete ->
-                deleteItem(event.item)
-
-            else -> Unit
+        // 🔥 DAS ist der richtige Weg
+        result.effects.forEach { effect ->
+            handleEffect(effect)
         }
     }
 
@@ -327,24 +347,28 @@ class ShoppingViewModel(
             val category =
                 categoryMapper.resolve(normalized)
 
-            val item =
-                ShoppingItemEntity(
-                    id = UUID.randomUUID().toString(),
-                    name = normalized,
-                    quantity = 1,
-                    category = category,
-                    isChecked = true,
-                    version = 0,
-                    deletedAt = null,
-                    createdAt = System.currentTimeMillis(),
-                    updatedAt = System.currentTimeMillis()
-                )
-
             val listId =
-                state.value.activeListId ?: return@launch
+                currentListId.value ?: return@launch
 
-            repository.addItem(item)
-            repository.incrementItemCount(listId)
+            val item = ShoppingItemEntity(
+                id = UUID.randomUUID().toString(),
+                listId = listId,
+                name = normalized,
+                quantity = 1,
+                category = category,
+                isChecked = true,
+                version = 0,
+                deletedAt = null,
+                createdAt = System.currentTimeMillis(),
+                updatedAt = System.currentTimeMillis()
+            )
+
+            Log.d("EVENT_DEBUG", "addItem: Insert item into listId=$listId")
+
+            Log.d("EVENT_DEBUG", "ADD → currentListId=$listId")
+            Log.d("EVENT_DEBUG", "ADD → activeListId=${state.value.activeListId}")
+
+            roomRepository.addItem(item)
         }
     }
 
@@ -352,7 +376,7 @@ class ShoppingViewModel(
 
         viewModelScope.launch {
 
-            repository.updateItem(
+            roomRepository.updateItem(
                 item.toEntity().copy(
                     isChecked = !item.isChecked
                 )
@@ -364,11 +388,7 @@ class ShoppingViewModel(
 
         viewModelScope.launch {
 
-            val listId =
-                state.value.activeListId ?: return@launch
-
-            repository.softDelete(item.id)
-            repository.decrementItemCount(listId)
+            roomRepository.deleteItem(item.toEntity())
         }
     }
 

@@ -26,4 +26,16 @@ sealed class UIEffect {
         val list: ShoppingListEntity
     ) : UIEffect()
 
+    data class AddItem(
+        val name: String
+    ) : UIEffect()
+
+    data class ToggleItem(
+        val item: de.shopme.domain.model.ShoppingItem
+    ) : UIEffect()
+
+    data class DeleteItem(
+        val item: de.shopme.domain.model.ShoppingItem
+    ) : UIEffect()
+
 }

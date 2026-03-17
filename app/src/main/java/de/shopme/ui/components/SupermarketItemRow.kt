@@ -2,7 +2,12 @@ package de.shopme.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -18,6 +23,11 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import de.shopme.domain.model.ShoppingItem
+import de.shopme.domain.model.SyncStatus
+import de.shopme.ui.illustration.icons.syncicons.FailedIllustration
+import de.shopme.ui.illustration.icons.syncicons.PendingIllustration
+import de.shopme.ui.illustration.icons.syncicons.SyncedIllustration
+import de.shopme.ui.illustration.icons.syncicons.SyncingIllustration
 import de.shopme.ui.theme.BrandOlive
 
 @Composable
@@ -79,10 +89,6 @@ fun SupermarketItemRow(
 
         Spacer(Modifier.width(12.dp))
 
-        //var textFieldValue by remember(item.id) {
-        //    mutableStateOf(TextFieldValue(item.name))
-        //}
-
         if (isEditing) {
 
             TextField(
@@ -135,6 +141,35 @@ fun SupermarketItemRow(
                     text = "Löschen",
                     color = Color.Black,
                     style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        when (item.syncStatus) {
+
+            SyncStatus.PENDING -> {
+                PendingIllustration(
+                    modifier = Modifier.size(8.dp)
+                )
+            }
+
+            SyncStatus.SYNCING -> {
+                SyncingIllustration(
+                    modifier = Modifier.size(8.dp)
+                )
+            }
+
+            SyncStatus.FAILED -> {
+                FailedIllustration(
+                    modifier = Modifier.size(8.dp)
+                )
+            }
+
+            SyncStatus.SYNCED -> {
+                SyncedIllustration(
+                    modifier = Modifier.size(8.dp)
                 )
             }
         }

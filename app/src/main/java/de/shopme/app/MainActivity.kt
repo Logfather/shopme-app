@@ -9,25 +9,31 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.room.Room
 import de.shopme.core.json.loadJsonMap
 import de.shopme.core.network.NetworkMonitor
 import de.shopme.data.auth.FirebaseAuthProvider
 import de.shopme.data.input.speech.SpeechController
-import de.shopme.data.repository.FirestoreShoppingRepository
 import de.shopme.domain.auth.AuthProvider
 import de.shopme.domain.service.CategoryMapper
 import de.shopme.domain.service.QuantityMapper
 import de.shopme.domain.usecase.CreateListUseCase
 import de.shopme.domain.usecase.DeleteListUseCase
-import de.shopme.domain.usecase.SetActiveListUseCase
+import de.shopme.data.datasource.room.ShopMeDatabase
 import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.ui.app.ShopMeApp
 import de.shopme.ui.theme.ShopMeTheme
 
 import de.shopme.data.datasource.catalog.CatalogLoader
+import de.shopme.data.datasource.firestore.FirestoreDataSource
+import de.shopme.data.repository.RoomShoppingRepository
+import de.shopme.data.sync.ConflictResolver
+import de.shopme.data.sync.FirestoreListener
+import de.shopme.data.sync.SyncCoordinator
 import de.shopme.domain.catalog.CatalogIndex
 import de.shopme.domain.service.CatalogService
 import de.shopme.domain.service.SpeechItemParser
+
 
 class MainActivity : ComponentActivity() {
 
@@ -42,6 +48,33 @@ class MainActivity : ComponentActivity() {
             ShopMeTheme {
 
                 val context = this@MainActivity
+
+                // ------------------------------------------------------------
+                // Local Database (Room)
+                // ------------------------------------------------------------
+
+                val database = remember {
+
+                    Room.databaseBuilder(
+                        context,
+                        ShopMeDatabase::class.java,
+                        "shopme_database"
+                    )
+                        .fallbackToDestructiveMigration()   // ✅ HIER
+                        .build()
+                }
+
+                val listDao = remember { database.listDao() }
+                val itemDao = remember { database.itemDao() }
+                val changeQueueDao = remember { database.changeQueueDao() }
+
+                val roomRepository = remember {
+                    RoomShoppingRepository(
+                        itemDao = itemDao,
+                        listDao = listDao,
+                        changeQueueDao = changeQueueDao
+                    )
+                }
 
                 // ------------------------------------------------------------
                 // Catalog (einmalig erzeugen)
@@ -65,8 +98,29 @@ class MainActivity : ComponentActivity() {
                 // Repository + Mapper
                 // ------------------------------------------------------------
 
-                val repository = remember {
-                    FirestoreShoppingRepository()
+                val firestoreDataSource = remember {
+                    FirestoreDataSource()
+                }
+
+                val conflictResolver = remember {
+                    ConflictResolver()
+                }
+
+                val firestoreListener = remember {
+                    FirestoreListener(
+                        dataSource = firestoreDataSource,
+                        itemDao = itemDao,
+                        listDao = listDao,
+                        conflictResolver = conflictResolver
+                    )
+                }
+
+                val syncCoordinator = remember {
+                    SyncCoordinator(
+                        changeQueueDao = changeQueueDao,
+                        itemDao = itemDao,
+                        firestore = firestoreDataSource
+                    )
                 }
 
                 val quantityMapper = remember {
@@ -89,9 +143,8 @@ class MainActivity : ComponentActivity() {
 
                 val factory = remember {
 
-                    val createListUseCase = CreateListUseCase(repository)
-                    val deleteListUseCase = DeleteListUseCase(repository)
-                    val setActiveListUseCase = SetActiveListUseCase(repository)
+                    val createListUseCase = CreateListUseCase(roomRepository)
+                    val deleteListUseCase = DeleteListUseCase(roomRepository)
 
                     viewModelFactory {
 
@@ -100,8 +153,7 @@ class MainActivity : ComponentActivity() {
                             ShoppingViewModel(
                                 createListUseCase = createListUseCase,
                                 deleteListUseCase = deleteListUseCase,
-                                setActiveListUseCase = setActiveListUseCase,
-                                repository = repository,
+                                roomRepository = roomRepository,
                                 quantityMapper = quantityMapper,
                                 categoryMapper = categoryMapper,
                                 networkMonitor = networkMonitor,
@@ -123,10 +175,22 @@ class MainActivity : ComponentActivity() {
                     val listId = deepLinkData?.getQueryParameter("listId")
                     val inviteId = deepLinkData?.getQueryParameter("inviteId")
 
+                    syncCoordinator.start {
+                        vm.currentListId.value
+                    }
+
                     vm.bootstrap(
                         deepLinkListId = listId,
                         deepLinkInviteId = inviteId
                     )
+
+                    val uid = authProvider.getCurrentUserId() ?: return@LaunchedEffect
+
+                    firestoreListener.startListSync(uid)
+
+                    listId?.let {
+                        firestoreListener.startItemSync(it)
+                    }
                 }
 
                 // ------------------------------------------------------------

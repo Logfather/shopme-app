@@ -62,4 +62,7 @@
     <string name="veggie_label">VEGGIE</string>
     <string name="veggie_illustration_description">A colorful group of happy animated veggie characters including a broccoli, burger, carrot, tofu, milk and a tomato, with a large wooden VEGGIE ribbon and a checkmark.</string>
     <string name="vegetables_group_illustration_description">A colorful group of happy animated vegetable characters including a tomato, carrot, corn, and others</string>
+    <string name="out_of_time_illustration_description">A worried animated alarm clock with an hourglass, indicating running out of time</string>
+    <string name="sync_success_illustration_description">Illustration showing two happy smartphones with arrows and a checkmark, indicating a successful synchronization.</string>
+    <string name="sync_error_illustration_description">Illustration showing a laptop and a smartphone with worried faces, circular arrows, and a warning triangle, indicating a synchronization error.</string>
 </resources>

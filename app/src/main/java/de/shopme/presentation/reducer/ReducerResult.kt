@@ -1,5 +1,6 @@
 package de.shopme.presentation.reducer
 
+import android.util.Log
 import de.shopme.presentation.action.ShoppingAction
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.state.ShoppingScreenMode
@@ -30,45 +31,32 @@ fun reduce(
         newState = when (it) {
 
             is ShopEvent.Item.Add -> {
-                state
+
+                Log.d("EVENT_DEBUG", "Reducer → AddItem: ${it.name}")
+
+                effects = listOf(
+                    UIEffect.AddItem(it.name)   // ✅ Effect setzen
+                )
+
+                state   // ✅ State bleibt gleich
             }
 
             is ShopEvent.Item.Toggle -> {
 
-                val updatedItems = state.items.map { item ->
-                    if (item.id == it.item.id)
-                        item.copy(isChecked = !item.isChecked)
-                    else
-                        item
-                }
+                effects = listOf(
+                    UIEffect.ToggleItem(it.item)
+                )
 
-                state.copy(items = updatedItems)
+                state
             }
 
             is ShopEvent.Item.Delete -> {
 
-                state.copy(
-                    items = state.items.filter { item ->
-                        item.id != it.item.id
-                    }
+                effects = listOf(
+                    UIEffect.DeleteItem(it.item)
                 )
-            }
 
-            is ShopEvent.Item.SetChecked -> {
-
-                val updatedItems = state.items.map { item ->
-                    if (item.id == it.item.id)
-                        item.copy(isChecked = it.checked)
-                    else
-                        item
-                }
-
-                state.copy(items = updatedItems)
-            }
-
-            ShopEvent.List.ClearAll -> {
-
-                state.copy(items = emptyList())
+                state
             }
 
             else -> state

@@ -1,15 +1,13 @@
 package de.shopme.domain.usecase
 
-import de.shopme.data.repository.FirestoreShoppingRepository
+import de.shopme.data.repository.RoomShoppingRepository
 
 class DeleteListUseCase(
-    private val repository: FirestoreShoppingRepository
+    private val roomRepository: RoomShoppingRepository
 ) {
 
     suspend operator fun invoke(listId: String) {
 
-        repository.deleteList(listId)
-
+        roomRepository.deleteList(listId)
     }
-
 }

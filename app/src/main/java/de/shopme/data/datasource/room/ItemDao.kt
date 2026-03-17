@@ -16,4 +16,23 @@ interface ItemDao {
     @Delete
     suspend fun deleteItem(item: ShoppingItemEntity)
 
+    @Query("SELECT * FROM items WHERE deletedAt IS NULL")
+    fun observeActiveItems(): Flow<List<ShoppingItemEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(item: ShoppingItemEntity)
+
+    @Query("DELETE FROM items")
+    suspend fun clearAll()
+
+    @Query("SELECT * FROM items WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): ShoppingItemEntity?
+
+    @Query("""
+    SELECT * FROM items
+    WHERE listId = :listId
+    AND deletedAt IS NULL
+""")
+    fun observeItemsForList(listId: String): Flow<List<ShoppingItemEntity>>
+
 }

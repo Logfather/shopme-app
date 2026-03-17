@@ -9,6 +9,8 @@ data class ShoppingItemEntity(
     @PrimaryKey
     val id: String,
 
+    val listId: String,
+
     val name: String,
 
     val quantity: Int,

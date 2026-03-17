@@ -5,4 +5,6 @@ interface AuthProvider {
     suspend fun ensureAuthenticated()
 
     fun currentUserId(): String
+
+    fun getCurrentUserId(): String?
 }

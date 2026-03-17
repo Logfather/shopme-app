@@ -34,9 +34,10 @@ object EntityMapper {
     // ITEM
     // ---------------------------
 
-    fun ShoppingItemEntity.toDomain(): ShoppingItem =
-        ShoppingItem(
+    fun ShoppingItemEntity.toDomain(): ShoppingItem {
+        return ShoppingItem(
             id = id,
+            listId = listId,   // ✅ FIX
             name = name,
             quantity = quantity,
             category = category,
@@ -46,10 +47,12 @@ object EntityMapper {
             createdAt = createdAt,
             updatedAt = updatedAt
         )
+    }
 
-    fun ShoppingItem.toEntity(): ShoppingItemEntity =
-        ShoppingItemEntity(
+    fun ShoppingItem.toEntity(): ShoppingItemEntity {
+        return ShoppingItemEntity(
             id = id,
+            listId = listId,   // ✅ FIX
             name = name,
             quantity = quantity,
             category = category,
@@ -59,4 +62,5 @@ object EntityMapper {
             createdAt = createdAt,
             updatedAt = updatedAt
         )
+    }
 }
