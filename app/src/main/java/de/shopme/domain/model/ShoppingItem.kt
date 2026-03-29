@@ -11,5 +11,5 @@ data class ShoppingItem(
     val deletedAt: Long?,
     val createdAt: Long,
     val updatedAt: Long,
-    val syncStatus: SyncStatus = SyncStatus.SYNCED
+    val syncStatus: SyncStatus = SyncStatus.Synced
 )

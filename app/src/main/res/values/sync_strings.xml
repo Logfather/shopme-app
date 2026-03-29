@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="data_transfer_illustration_description">Two happy smartphones exchanging data with circular arrows and sparkles</string>
+    <string name="data_transfer_complete_illustration_description">Two happy smartphones successfully finished data transfer with a big checkmark in the middle</string>
 </resources>

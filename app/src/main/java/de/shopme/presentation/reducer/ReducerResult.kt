@@ -1,11 +1,12 @@
 package de.shopme.presentation.reducer
 
-import android.util.Log
+import de.shopme.domain.model.SyncStatus
 import de.shopme.presentation.action.ShoppingAction
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.state.ShoppingScreenMode
 import de.shopme.presentation.state.ShoppingState
 import de.shopme.presentation.effect.UIEffect
+import de.shopme.presentation.undo.UndoAction
 
 data class ReducerResult(
     val state: ShoppingState,
@@ -32,8 +33,6 @@ fun reduce(
 
             is ShopEvent.Item.Add -> {
 
-                Log.d("EVENT_DEBUG", "Reducer → AddItem: ${it.name}")
-
                 effects = listOf(
                     UIEffect.AddItem(it.name)   // ✅ Effect setzen
                 )
@@ -44,7 +43,21 @@ fun reduce(
             is ShopEvent.Item.Toggle -> {
 
                 effects = listOf(
-                    UIEffect.ToggleItem(it.item)
+                    UIEffect.ToggleItem(it.item),
+
+                    UIEffect.ShowUndo(
+                        action = de.shopme.presentation.undo.UndoAction.ToggleItem(it.item),
+                        message = "Status geändert"
+                    )
+                )
+
+                state
+            }
+
+            is ShopEvent.Item.RetrySync -> {
+
+                effects = listOf(
+                    UIEffect.RetrySync(it.itemId)
                 )
 
                 state
@@ -53,7 +66,55 @@ fun reduce(
             is ShopEvent.Item.Delete -> {
 
                 effects = listOf(
-                    UIEffect.DeleteItem(it.item)
+                    UIEffect.DeleteItem(it.item),
+
+                    UIEffect.ShowUndo(
+                        action = UndoAction.DeleteItem(it.item),
+                        message = "Item gelöscht"
+                    )
+                )
+
+                state
+            }
+
+            is ShopEvent.Item.Update -> {
+
+                effects = listOf(
+                    UIEffect.UpdateItem(it.item, it.newName),
+
+                    UIEffect.ShowUndo(
+                        action = UndoAction.UpdateItem(it.item),
+                        message = "Item geändert"
+                    )
+                )
+
+                state.copy(
+                    items = state.items.map { item ->
+                        if (item.id == it.item.id) {
+                            item.copy(
+                                name = it.newName,
+                                isChecked = true,
+                                updatedAt = System.currentTimeMillis(),
+                                syncStatus = SyncStatus.Pending
+                            )
+                        } else item
+                    }
+                )
+            }
+
+            is ShopEvent.List.DeleteAllLists -> {
+
+                effects = listOf(
+                    UIEffect.DeleteAllLists
+                )
+
+                state
+            }
+
+            is ShopEvent.List.Delete -> {
+
+                effects = listOf(
+                    UIEffect.DeleteList(it.listId)
                 )
 
                 state

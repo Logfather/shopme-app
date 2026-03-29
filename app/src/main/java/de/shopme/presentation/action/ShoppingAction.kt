@@ -19,12 +19,4 @@ sealed class ShoppingAction {
 
     object CancelMultiCreation : ShoppingAction()
 
-    data class EditList(
-        val list: ShoppingListEntity
-    ) : ShoppingAction()
-
-    data class DeleteList(
-        val list: ShoppingListEntity
-    ) : ShoppingAction()
-
 }

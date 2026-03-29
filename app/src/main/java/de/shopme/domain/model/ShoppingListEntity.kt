@@ -15,6 +15,8 @@ data class ShoppingListEntity(
     val ownerId: String,
     val storeTypes: List<StoreType>,
 
+    val sharedWith: List<String> = emptyList(),
+
     val itemCount: Int = 0,
 
     val createdAt: Long,

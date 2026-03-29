@@ -10,7 +10,11 @@ import de.shopme.domain.model.StoreType
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.tasks.await
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.Timestamp
+import java.util.UUID
 
 class FirestoreDataSource {
 
@@ -24,8 +28,9 @@ class FirestoreDataSource {
     // LISTS
     // ============================================================
 
-    fun observeListsForUser(uid: String): Flow<List<ShoppingListEntity>> =
-        callbackFlow {
+    fun observeListsForUser(uid: String): Flow<List<ShoppingListEntity>> {
+
+        val ownedFlow = callbackFlow {
 
             val listener = firestore
                 .collection("lists")
@@ -33,46 +38,44 @@ class FirestoreDataSource {
                 .addSnapshotListener { snapshot, error ->
 
                     if (error != null) {
-                        Log.e("Firestore", "Listener error", error)
+                        Log.e("Firestore", "Owned listener error", error)
                         return@addSnapshotListener
                     }
 
-                    val lists = snapshot?.documents?.mapNotNull { document ->
-
-                        val storeTypes =
-                            (document.get("storeTypes") as? List<String>)
-                                ?.mapNotNull {
-                                    runCatching { StoreType.valueOf(it) }
-                                        .getOrNull()
-                                } ?: emptyList()
-
-                        val createdAt =
-                            (document.get("createdAt") as? com.google.firebase.Timestamp)
-                                ?.toDate()?.time ?: System.currentTimeMillis()
-
-                        val updatedAt =
-                            (document.get("updatedAt") as? com.google.firebase.Timestamp)
-                                ?.toDate()?.time ?: System.currentTimeMillis()
-
-                        val itemCount = (document.getLong("itemCount") ?: 0).toInt()
-
-                        ShoppingListEntity(
-                            id = document.id,
-                            name = document.getString("name") ?: "",
-                            ownerId = document.getString("ownerId") ?: "",
-                            storeTypes = storeTypes,
-                            itemCount = itemCount,
-                            createdAt = createdAt,
-                            updatedAt = updatedAt
-                        )
-
-                    } ?: emptyList()
+                    val lists = snapshot?.documents?.mapNotNull { it.toShoppingListEntity() }
+                        ?: emptyList()
 
                     trySend(lists)
                 }
 
             awaitClose { listener.remove() }
         }
+
+        val sharedFlow = callbackFlow {
+
+            val listener = firestore
+                .collection("lists")
+                .whereArrayContains("sharedWith", uid)
+                .addSnapshotListener { snapshot, error ->
+
+                    if (error != null) {
+                        Log.e("Firestore", "Shared listener error", error)
+                        return@addSnapshotListener
+                    }
+
+                    val lists = snapshot?.documents?.mapNotNull { it.toShoppingListEntity() }
+                        ?: emptyList()
+
+                    trySend(lists)
+                }
+
+            awaitClose { listener.remove() }
+        }
+
+        return combine(ownedFlow, sharedFlow) { owned, shared ->
+            (owned + shared).distinctBy { it.id }
+        }
+    }
 
     // ============================================================
     // ITEMS
@@ -81,20 +84,94 @@ class FirestoreDataSource {
     private fun itemsRef(listId: String) =
         firestore.collection("lists")
             .document(listId)
-            .collection("items")
+            .collection("items")   // 👈 GENAU HIER
+
+    suspend fun getItemsOnce(listId: String): List<ShoppingItemEntity> {
+
+        return try {
+
+            val snapshot = itemsRef(listId)
+                .get()
+                .await()
+
+            snapshot.documents.mapNotNull { doc ->
+
+                val createdAt =
+                    (doc.get("createdAt") as? com.google.firebase.Timestamp)
+                        ?.toDate()?.time ?: System.currentTimeMillis()
+
+                val updatedAt =
+                    (doc.get("updatedAt") as? com.google.firebase.Timestamp)
+                        ?.toDate()?.time ?: System.currentTimeMillis()
+
+                val deletedAt =
+                    (doc.get("deletedAt") as? com.google.firebase.Timestamp)
+                        ?.toDate()?.time
+
+                ShoppingItemEntity(
+                    id = doc.id,
+                    listId = listId,
+                    name = doc.getString("name") ?: return@mapNotNull null,
+                    quantity = (doc.getLong("quantity") ?: 1).toInt(),
+                    category = doc.getString("category") ?: "Sonstiges",
+                    isChecked = doc.getBoolean("isChecked") ?: false,
+                    version = (doc.getLong("version") ?: 0).toInt(),
+                    deletedAt = deletedAt,
+                    createdAt = createdAt,
+                    updatedAt = updatedAt
+                )
+            }
+
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getListOnce(listId: String): ShoppingListEntity? {
+        return try {
+
+            val doc = firestore
+                .collection("lists")
+                .document(listId)
+                .get()
+                .await()
+
+            if (!doc.exists()) {
+                return null
+            }
+
+            return doc.toShoppingListEntity()
+
+
+        } catch (e: Exception) {
+            null
+        }
+    }
+    suspend fun getItemVersion(
+        listId: String,
+        itemId: String
+    ): Int? {
+        return try {
+            val snapshot = itemsRef(listId)
+                .document(itemId)
+                .get()
+                .await()
+
+            (snapshot.getLong("version") ?: 0L).toInt()
+
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     fun observeItems(listId: String): Flow<List<ShoppingItemEntity>> =
         callbackFlow {
 
-            val uid = requireUid()
-
             val listener = itemsRef(listId)
-                .whereEqualTo("ownerId", uid)
                 .whereEqualTo("deletedAt", null)
                 .addSnapshotListener { snapshot, error ->
 
                     if (error != null) {
-                        Log.e("Firestore", "Items listener failed", error)
                         return@addSnapshotListener
                     }
 
@@ -139,23 +216,32 @@ class FirestoreDataSource {
 
     suspend fun addItem(listId: String, item: ShoppingItemEntity) {
 
-        val uid = requireUid()
+        try {
 
-        itemsRef(listId)
-            .document(item.id)
-            .set(
-                mapOf(
-                    "name" to item.name,
-                    "quantity" to item.quantity,
-                    "category" to item.category,
-                    "isChecked" to item.isChecked,
-                    "version" to item.version,
-                    "deletedAt" to item.deletedAt,
-                    "createdAt" to item.createdAt,
-                    "updatedAt" to item.updatedAt,
-                    "ownerId" to uid
+            
+
+            itemsRef(listId)
+                .document(item.id)
+                .set(
+                    mapOf(
+                        "name" to item.name,
+                        "quantity" to item.quantity,
+                        "category" to item.category,
+                        "isChecked" to item.isChecked,
+                        "version" to item.version,
+                        "deletedAt" to item.deletedAt,
+                        "createdAt" to item.createdAt,
+                        "updatedAt" to item.updatedAt
+                        // 🔥 ownerId erstmal RAUS!
+                    )
                 )
-            ).await()
+                .await()
+
+            
+
+        } catch (e: Exception) {
+            throw e
+        }
     }
 
     suspend fun updateItem(listId: String, item: ShoppingItemEntity) {
@@ -168,7 +254,6 @@ class FirestoreDataSource {
             val serverVersion = (snapshot.getLong("version") ?: 0).toInt()
 
             if (serverVersion != item.version) {
-                Log.w("FIRESTORE_CONFLICT", "Version conflict for ${item.id}")
                 return@runTransaction null
             }
 
@@ -196,4 +281,146 @@ class FirestoreDataSource {
                 )
             ).await()
     }
+
+    suspend fun createList(list: ShoppingListEntity) {
+
+        firestore
+            .collection("lists")
+            .document(list.id)
+            .set(
+                mapOf(
+                    "name" to list.name,
+                    "ownerId" to list.ownerId,
+                    "storeTypes" to list.storeTypes.map { it.name },
+                    "itemCount" to list.itemCount,
+                    "createdAt" to list.createdAt,
+                    "updatedAt" to list.updatedAt,
+                    "sharedWith" to emptyList<String>() // 🔥 wichtig für später
+                )
+            )
+            .await()
+    }
+
+    suspend fun addUserToList(
+        listId: String,
+        userId: String
+    ) {
+        firestore
+            .collection("lists")
+            .document(listId)
+            .update(
+                "sharedWith",
+                com.google.firebase.firestore.FieldValue.arrayUnion(userId)
+            )
+            .await()
+    }
+
+    fun DocumentSnapshot.toShoppingListEntity(): ShoppingListEntity? {
+
+        val name = getString("name") ?: return null
+
+        val ownerId = getString("ownerId") ?: ""
+
+        val storeTypes =
+            (get("storeTypes") as? List<String>)
+                ?.mapNotNull {
+                    runCatching { StoreType.valueOf(it) }.getOrNull()
+                } ?: emptyList()
+
+        val sharedWith =
+            (get("sharedWith") as? List<*>)
+                ?.filterIsInstance<String>()
+                ?: emptyList()
+
+        val createdAt =
+            (get("createdAt") as? Timestamp)
+                ?.toDate()?.time ?: System.currentTimeMillis()
+
+        val updatedAt =
+            (get("updatedAt") as? Timestamp)
+                ?.toDate()?.time ?: System.currentTimeMillis()
+
+        //val itemCount = (getLong("itemCount") ?: 0).toInt()
+        val itemCount = (getLong("itemCount") ?: 0).toInt()
+
+        return ShoppingListEntity(
+            id = id,
+            name = name,
+            ownerId = ownerId,
+            sharedWith = sharedWith,
+            storeTypes = storeTypes,
+            itemCount = itemCount,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+        )
+    }
+
+    suspend fun debugDumpAllLists() {
+        try {
+            val snapshot = firestore
+                .collection("lists")
+                .get()
+                .await()
+
+            snapshot.documents.forEach { doc ->
+                
+            }
+
+        } catch (e: Exception) {
+        }
+    }
+
+    suspend fun deleteList(listId: String) {
+        firestore
+            .collection("lists")
+            .document(listId)
+            .delete()
+            .await()
+    }
+
+    // ============================================================
+    // LISTS INVITE
+    // ============================================================
+
+    suspend fun createInvite(): String {
+
+        val inviteId = UUID.randomUUID().toString()
+
+        firestore
+            .collection("invites")
+            .document(inviteId)
+            .set(
+                mapOf(
+                    "createdBy" to requireUid(),
+                    "createdAt" to System.currentTimeMillis(),
+                    "status" to "active"
+                )
+            )
+            .await()
+
+        return inviteId
+    }
+
+    suspend fun getInvite(inviteId: String): String? {
+
+        val doc = firestore
+            .collection("invites")
+            .document(inviteId)
+            .get()
+            .await()
+
+        return doc.getString("createdBy")
+    }
+
+    suspend fun getListsForUser(userId: String): List<ShoppingListEntity> {
+
+        val snapshot = firestore
+            .collection("lists")
+            .whereEqualTo("ownerId", userId)
+            .get()
+            .await()
+
+        return snapshot.documents.mapNotNull { it.toShoppingListEntity() }
+    }
+
 }

@@ -3,6 +3,7 @@ package de.shopme.domain.usecase
 import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.domain.model.ShoppingListEntity
 import de.shopme.domain.model.StoreType
+import android.util.Log
 
 class CreateListUseCase(
     private val roomRepository: RoomShoppingRepository
@@ -10,8 +11,7 @@ class CreateListUseCase(
 
     suspend operator fun invoke(
         name: String,
-        storeTypes: List<StoreType>,
-        isCustom: Boolean
+        storeTypes: List<StoreType>
     ): String {
 
             val listId = java.util.UUID.randomUUID().toString()

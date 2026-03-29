@@ -2,12 +2,7 @@ package de.shopme.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -19,15 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.model.SyncStatus
-import de.shopme.ui.illustration.icons.syncicons.FailedIllustration
-import de.shopme.ui.illustration.icons.syncicons.PendingIllustration
-import de.shopme.ui.illustration.icons.syncicons.SyncedIllustration
-import de.shopme.ui.illustration.icons.syncicons.SyncingIllustration
+import de.shopme.presentation.mapper.toUiState
+import de.shopme.presentation.model.SyncUiState
 import de.shopme.ui.theme.BrandOlive
 
 @Composable
@@ -35,7 +29,9 @@ fun SupermarketItemRow(
     item: ShoppingItem,
     categoryColor: Color,
     onToggle: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onRetry: (String) -> Unit,
+    onUpdate: (String) -> Unit
 ){
 
     var isEditing by remember(item.id) {
@@ -60,6 +56,8 @@ fun SupermarketItemRow(
         }
     }
 
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -83,6 +81,7 @@ fun SupermarketItemRow(
         Checkbox(
             checked = item.isChecked,
             onCheckedChange = {
+                onToggle()
                 isEditing = !it
             }
         )
@@ -114,8 +113,9 @@ fun SupermarketItemRow(
                         )
                     }
 
-                    onToggle()   // <-- Firestore Update hier
+                    onUpdate(newText)
                     isEditing = false
+                    keyboardController?.hide()
                 }
             ) {
                 Text(
@@ -145,33 +145,19 @@ fun SupermarketItemRow(
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.width(8.dp))
 
-        when (item.syncStatus) {
 
-            SyncStatus.PENDING -> {
-                PendingIllustration(
-                    modifier = Modifier.size(8.dp)
-                )
-            }
+        Box(modifier = Modifier.size(24.dp)) {
 
-            SyncStatus.SYNCING -> {
-                SyncingIllustration(
-                    modifier = Modifier.size(8.dp)
-                )
-            }
+            val uiState = item.syncStatus.toUiState()
 
-            SyncStatus.FAILED -> {
-                FailedIllustration(
-                    modifier = Modifier.size(8.dp)
-                )
-            }
-
-            SyncStatus.SYNCED -> {
-                SyncedIllustration(
-                    modifier = Modifier.size(8.dp)
-                )
-            }
+            SyncStatusIcon(
+                state = uiState,
+                onRetry = {
+                    onRetry(item.id)
+                }
+            )
         }
     }
 }

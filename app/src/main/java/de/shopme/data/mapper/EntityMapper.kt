@@ -14,6 +14,7 @@ object EntityMapper {
             name = name,
             ownerId = ownerId,
             storeTypes = storeTypes,
+            sharedWith = sharedWith,
             itemCount = itemCount,
             createdAt = createdAt,
             updatedAt = updatedAt

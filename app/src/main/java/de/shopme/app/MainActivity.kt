@@ -2,6 +2,7 @@ package de.shopme.app
 
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
@@ -10,30 +11,29 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.google.firebase.auth.FirebaseAuth
+import de.shopme.core.AppScope
 import de.shopme.core.json.loadJsonMap
 import de.shopme.core.network.NetworkMonitor
 import de.shopme.data.auth.FirebaseAuthProvider
-import de.shopme.data.input.speech.SpeechController
-import de.shopme.domain.auth.AuthProvider
-import de.shopme.domain.service.CategoryMapper
-import de.shopme.domain.service.QuantityMapper
-import de.shopme.domain.usecase.CreateListUseCase
-import de.shopme.domain.usecase.DeleteListUseCase
-import de.shopme.data.datasource.room.ShopMeDatabase
-import de.shopme.presentation.viewmodel.ShoppingViewModel
-import de.shopme.ui.app.ShopMeApp
-import de.shopme.ui.theme.ShopMeTheme
-
 import de.shopme.data.datasource.catalog.CatalogLoader
 import de.shopme.data.datasource.firestore.FirestoreDataSource
+import de.shopme.data.datasource.room.ShopMeDatabase
+import de.shopme.data.input.speech.SpeechController
 import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.data.sync.ConflictResolver
 import de.shopme.data.sync.FirestoreListener
 import de.shopme.data.sync.SyncCoordinator
+import de.shopme.domain.auth.AuthProvider
 import de.shopme.domain.catalog.CatalogIndex
-import de.shopme.domain.service.CatalogService
-import de.shopme.domain.service.SpeechItemParser
-
+import de.shopme.domain.service.*
+import de.shopme.domain.usecase.CreateListUseCase
+import de.shopme.domain.usecase.DeleteListUseCase
+import de.shopme.presentation.viewmodel.ShoppingViewModel
+import de.shopme.ui.app.ShopMeApp
+import de.shopme.ui.theme.ShopMeTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -42,25 +42,37 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val deepLinkData: Uri? = intent?.data
+        Log.e("BOOTSTRAP", "ACTIVITY STARTED")
+
+        // Pending Invite speichern
+        intent?.data?.let { uri ->
+            if (uri.host == "shopme-app.de" && uri.path?.contains("invite") == true) {
+                val listId = uri.getQueryParameter("listId")
+                if (listId != null) {
+                    getSharedPreferences("shopme", MODE_PRIVATE)
+                        .edit()
+                        .putString("pending_invite_list_id", listId)
+                        .apply()
+                }
+            }
+        }
 
         setContent {
+            Log.e("BOOTSTRAP", "SETCONTENT STARTED")
             ShopMeTheme {
 
-                val context = this@MainActivity
-
-                // ------------------------------------------------------------
-                // Local Database (Room)
-                // ------------------------------------------------------------
+                val activityContext = this@MainActivity
 
                 val database = remember {
-
                     Room.databaseBuilder(
-                        context,
+                        activityContext,
                         ShopMeDatabase::class.java,
                         "shopme_database"
                     )
-                        .fallbackToDestructiveMigration()   // ✅ HIER
+                        .addMigrations(ShopMeDatabase.MIGRATION_3_4)
+                        .addCallback(object : RoomDatabase.Callback() {
+                            override fun onCreate(db: SupportSQLiteDatabase) {}
+                        })
                         .build()
                 }
 
@@ -76,17 +88,12 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                // ------------------------------------------------------------
-                // Catalog (einmalig erzeugen)
-                // ------------------------------------------------------------
+                val appScope = remember { AppScope() }
 
                 val catalogService = remember {
-
-                    val loader = CatalogLoader(context)
+                    val loader = CatalogLoader(activityContext)
                     val items = loader.load()
-
                     val index = CatalogIndex(items)
-
                     CatalogService(index)
                 }
 
@@ -94,24 +101,16 @@ class MainActivity : ComponentActivity() {
                     SpeechItemParser(catalogService)
                 }
 
-                // ------------------------------------------------------------
-                // Repository + Mapper
-                // ------------------------------------------------------------
-
-                val firestoreDataSource = remember {
-                    FirestoreDataSource()
-                }
-
-                val conflictResolver = remember {
-                    ConflictResolver()
-                }
+                val firestoreDataSource = remember { FirestoreDataSource() }
+                val conflictResolver = remember { ConflictResolver() }
 
                 val firestoreListener = remember {
                     FirestoreListener(
                         dataSource = firestoreDataSource,
                         itemDao = itemDao,
                         listDao = listDao,
-                        conflictResolver = conflictResolver
+                        conflictResolver = conflictResolver,
+                        appScope = appScope
                     )
                 }
 
@@ -119,13 +118,15 @@ class MainActivity : ComponentActivity() {
                     SyncCoordinator(
                         changeQueueDao = changeQueueDao,
                         itemDao = itemDao,
-                        firestore = firestoreDataSource
+                        listDao = listDao,
+                        firestore = firestoreDataSource,
+                        appScope = appScope
                     )
                 }
 
                 val quantityMapper = remember {
                     QuantityMapper(
-                        loadJsonMap(context, "quantity_mapping.json")
+                        loadJsonMap(activityContext, "quantity_mapping.json")
                     )
                 }
 
@@ -134,22 +135,17 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val networkMonitor = remember {
-                    NetworkMonitor(context)
+                    NetworkMonitor(activityContext)
                 }
-
-                // ------------------------------------------------------------
-                // ViewModel Factory
-                // ------------------------------------------------------------
 
                 val factory = remember {
 
                     val createListUseCase = CreateListUseCase(roomRepository)
-                    val deleteListUseCase = DeleteListUseCase(roomRepository)
+                    val deleteListUseCase =
+                        DeleteListUseCase(roomRepository, firestoreDataSource)
 
                     viewModelFactory {
-
                         initializer {
-
                             ShoppingViewModel(
                                 createListUseCase = createListUseCase,
                                 deleteListUseCase = deleteListUseCase,
@@ -158,55 +154,78 @@ class MainActivity : ComponentActivity() {
                                 categoryMapper = categoryMapper,
                                 networkMonitor = networkMonitor,
                                 authProvider = authProvider,
-                                speechItemParser = speechParser
+                                speechItemParser = speechParser,
+                                firestoreDataSource = firestoreDataSource,
+                                itemDao = itemDao,
+                                listDao = listDao,
+                                firestoreListener = firestoreListener
                             )
                         }
                     }
                 }
 
-                val vm: ShoppingViewModel = viewModel(factory = factory)
+                // ------------------------------------------------------------
+                // 🔥 FINALER BOOTSTRAP (sofort + fallback)
+                // ------------------------------------------------------------
 
-                // ------------------------------------------------------------
-                // Bootstrap (DeepLink Handling)
-                // ------------------------------------------------------------
+                val vm: ShoppingViewModel = viewModel(factory = factory)
 
                 LaunchedEffect(Unit) {
 
-                    val listId = deepLinkData?.getQueryParameter("listId")
-                    val inviteId = deepLinkData?.getQueryParameter("inviteId")
 
-                    syncCoordinator.start {
-                        vm.currentListId.value
+                    val auth = FirebaseAuth.getInstance()
+
+                    fun runBootstrap() {
+
+                        val user = auth.currentUser ?: return
+
+                        Log.d("BOOTSTRAP", "Auth READY → ${user.uid}")
+
+                        val uri: Uri? = intent?.data
+                        val listId = uri?.getQueryParameter("listId")
+                        val inviteId = uri?.getQueryParameter("inviteId")
+
+                        vm.bootstrap(
+                            deepLinkListId = listId,
+                            deepLinkInviteId = inviteId
+                        )
+
+                        if (inviteId != null) {
+                            vm.joinViaInvite(inviteId)
+                        }
+
+                        Log.d("BOOTSTRAP", "Bootstrap COMPLETE")
                     }
 
-                    vm.bootstrap(
-                        deepLinkListId = listId,
-                        deepLinkInviteId = inviteId
-                    )
+                    // 🔥 Fall 1: User existiert
+                    if (auth.currentUser != null) {
+                        runBootstrap()
+                        return@LaunchedEffect
+                    }
 
-                    val uid = authProvider.getCurrentUserId() ?: return@LaunchedEffect
+                    // 🔥 Fall 2: Kein User → Login + danach Bootstrap
+                    Log.d("BOOTSTRAP", "No user → signing in anonymously")
 
-                    firestoreListener.startListSync(uid)
-
-                    listId?.let {
-                        firestoreListener.startItemSync(it)
+                    try {
+                        auth.signInAnonymously()
+                            .addOnSuccessListener {
+                                Log.d("BOOTSTRAP", "Anonymous login SUCCESS")
+                                runBootstrap() // 🔥 HIER IST DER FIX
+                            }
+                            .addOnFailureListener {
+                                Log.e("BOOTSTRAP", "Anonymous login FAILED", it)
+                            }
+                    } catch (e: Exception) {
+                        Log.e("BOOTSTRAP", "Auth crash", e)
                     }
                 }
-
-                // ------------------------------------------------------------
-                // Speech Controller
-                // ------------------------------------------------------------
 
                 val speechController = remember {
                     SpeechController(
-                        context = context,
+                        context = activityContext,
                         catalogService = catalogService
                     )
                 }
-
-                // ------------------------------------------------------------
-                // UI
-                // ------------------------------------------------------------
 
                 ShopMeApp(
                     vm = vm,

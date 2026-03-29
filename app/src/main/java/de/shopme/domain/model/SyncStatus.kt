@@ -1,8 +1,16 @@
 package de.shopme.domain.model
 
-enum class SyncStatus {
-    SYNCED,
-    PENDING,
-    SYNCING,
-    FAILED
+sealed class SyncStatus {
+
+    data object Pending : SyncStatus()
+
+    data class Syncing(
+        val progress: Float? = null // optional!
+    ) : SyncStatus()
+
+    data object Synced : SyncStatus()
+
+    data class Failed(
+        val canRetry: Boolean = true
+    ) : SyncStatus()
 }

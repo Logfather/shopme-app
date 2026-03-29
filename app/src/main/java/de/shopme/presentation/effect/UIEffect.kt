@@ -1,7 +1,9 @@
 package de.shopme.presentation.effect
 
+import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.model.ShoppingListEntity
 import de.shopme.domain.model.StoreType
+import de.shopme.presentation.undo.UndoAction
 
 sealed class UIEffect {
 
@@ -22,9 +24,7 @@ sealed class UIEffect {
         val customLists: List<String>
     ) : UIEffect()
 
-    data class DeleteList(
-        val list: ShoppingListEntity
-    ) : UIEffect()
+    data class DeleteList(val listId: String) : UIEffect()
 
     data class AddItem(
         val name: String
@@ -37,5 +37,19 @@ sealed class UIEffect {
     data class DeleteItem(
         val item: de.shopme.domain.model.ShoppingItem
     ) : UIEffect()
+
+    data class RetrySync(val itemId: String) : UIEffect()
+
+    data class ShowUndo(
+        val action: UndoAction,
+        val message: String
+    ) : UIEffect()
+
+    data class UpdateItem(
+        val item: ShoppingItem,
+        val newName: String
+    ) : UIEffect()
+
+    object DeleteAllLists : UIEffect()
 
 }

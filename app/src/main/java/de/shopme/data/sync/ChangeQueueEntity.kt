@@ -13,6 +13,8 @@ data class ChangeQueueEntity(
 
     val entityId: String,
 
+    val listId: String,
+
     val operation: String,
 
     val payload: String?,
@@ -23,5 +25,18 @@ data class ChangeQueueEntity(
 
     val retryCount: Int = 0,
 
-    val lastAttemptAt: Long? = null
+    val lastAttemptAt: Long? = null,
+
+    val progress: Float? = null,
+
+    val errorMessage: String? = null,
+
+    val baseVersion: Int = 0
 )
+
+enum class SyncStatus {
+    PENDING,
+    SYNCING,
+    FAILED,
+    SYNCED
+}

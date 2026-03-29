@@ -1,12 +1,18 @@
 package de.shopme.presentation.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.shopme.core.network.NetworkMonitor
+import de.shopme.data.datasource.firestore.FirestoreDataSource
+import de.shopme.data.datasource.room.ItemDao
+import de.shopme.data.datasource.room.ListDao
 import de.shopme.data.mapper.EntityMapper.toDomain
 import de.shopme.data.mapper.EntityMapper.toEntity
 import de.shopme.data.repository.RoomShoppingRepository
+import de.shopme.data.sync.FirestoreListener
 import de.shopme.domain.auth.AuthProvider
 import de.shopme.domain.model.*
 import de.shopme.domain.service.CategoryMapper
@@ -18,6 +24,8 @@ import de.shopme.presentation.action.ShoppingAction
 import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.state.*
+import de.shopme.presentation.undo.UndoAction
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -30,7 +38,11 @@ class ShoppingViewModel(
     private val categoryMapper: CategoryMapper,
     private val networkMonitor: NetworkMonitor,
     private val authProvider: AuthProvider,
-    private val speechItemParser: SpeechItemParser
+    private val speechItemParser: SpeechItemParser,
+    private val firestoreDataSource: FirestoreDataSource,
+    private val itemDao: ItemDao,
+    private val listDao: ListDao,
+    private val firestoreListener: FirestoreListener
 ) : ViewModel() {
 
     // ------------------------------------------------------------
@@ -49,11 +61,43 @@ class ShoppingViewModel(
     private val _currentListId = MutableStateFlow<String?>(null)
     val currentListId: StateFlow<String?> = _currentListId
 
+    private var lastUndoAction: UndoAction? = null
 
+    private var pendingInviteListId: String? = null
+
+    init {
+        observeItems()
+    }
+
+    fun itemsForList(listId: String) =
+        roomRepository.observeItems(listId)
+
+    fun consumePendingInvite(context: Context) {
+
+        val prefs = context.getSharedPreferences("shopme", Context.MODE_PRIVATE)
+        val listId = prefs.getString("pending_invite_list_id", null)
+
+        if (listId != null) {
+
+            val exists = state.value.lists.any { it.id == listId }
+
+            prefs.edit().remove("pending_invite_list_id").apply()
+
+            pendingInviteListId = listId
+
+            if (exists) {
+                setCurrentList(listId)
+            } else {
+                
+
+                joinList(listId, null)
+            }
+        }
+    }
 
     fun setCurrentList(listId: String) {
 
-        Log.d("LIST_DEBUG", "SET currentListId=$listId")
+        
 
         _currentListId.value = listId
 
@@ -61,10 +105,6 @@ class ShoppingViewModel(
             it.copy(activeListId = listId)
         }
     }
-
-    // ------------------------------------------------------------
-    // VIEW STATE
-    // ------------------------------------------------------------
 
     val viewState: StateFlow<ShoppingViewState> =
         combine(state, showWelcomeDialog) { s, welcome ->
@@ -84,7 +124,8 @@ class ShoppingViewModel(
                 groupedItems = grouped,
                 showWelcomeDialog = welcome,
                 showStoreSelectionDialog =
-                    s.screenMode is ShoppingScreenMode.MultiSelect
+                    s.screenMode is ShoppingScreenMode.MultiSelect,
+                snackbarMessage = null
             )
         }.stateIn(
             viewModelScope,
@@ -92,64 +133,57 @@ class ShoppingViewModel(
             ShoppingViewState()
         )
 
-    // ------------------------------------------------------------
-    // BOOTSTRAP
-    // ------------------------------------------------------------
+    fun editList(list: ShoppingList) {
+        setCurrentList(list.id)
 
-    fun bootstrap(
-        deepLinkListId: String?,
-        deepLinkInviteId: String?
-    ) {
-        viewModelScope.launch {
-
-            authProvider.ensureAuthenticated()
-
-            val uid = authProvider.currentUserId()
-                ?: return@launch
-
-            launch { observeLists() }
+        _state.update {
+            it.copy(screenMode = ShoppingScreenMode.Normal)
         }
     }
 
-    private suspend fun observeLists() {
+    // ------------------------------------------------------------
+    // REDUCER
+    // ------------------------------------------------------------
 
-        roomRepository.observeLists()
-            .collect { lists ->
+    fun dispatch(action: ShoppingAction) {
+        val result =
+            de.shopme.presentation.reducer.reduce(
+                state = _state.value,
+                screenMode = _state.value.screenMode,
+                action = action
+            )
 
-                val domainLists =
-                    lists.map { it.toDomain() }
-
-                _state.update { current ->
-                    current.copy(
-                        lists = domainLists,
-                        activeListId =
-                            if (domainLists.any { it.id == current.activeListId })
-                                current.activeListId
-                            else
-                                null
-                    )
-                }
-
-                if (domainLists.isEmpty()) {
-
-                    _showWelcomeDialog.value = true
-
-                    _state.update {
-                        it.copy(
-                            screenMode =
-                                ShoppingScreenMode.MultiOverview
-                        )
-                    }
-
-                } else {
-
-                    _showWelcomeDialog.value = false
-                }
-            }
+        _state.value = result.state
+        result.effects.forEach { effect -> handleEffect(effect) }
     }
 
-    init {
-        observeItems()
+    fun deleteList(list: ShoppingList) {
+        viewModelScope.launch {
+            deleteListUseCase(list.id)
+        }
+    }
+
+    fun bootstrap(
+        deepLinkListId: String? = null,
+        deepLinkInviteId: String? = null
+    ) {
+
+        viewModelScope.launch {
+
+            Log.e("LIST_DEBUG", "BOOTSTRAP ENTERED")
+
+            val uid = authProvider.getCurrentUserId()
+
+            if (uid == null) {
+                Log.e("LIST_DEBUG", "No user → abort")
+                return@launch
+            }
+
+            Log.e("LIST_DEBUG", "START FIRESTORE SYNC for user=$uid")
+            firestoreListener.startListSync(uid)
+
+            observeLists()
+        }
     }
 
     private fun observeItems() {
@@ -157,17 +191,20 @@ class ShoppingViewModel(
         viewModelScope.launch {
 
             currentListId
-                .onEach { Log.d("EVENT_DEBUG", "Flow emits listId=$it") }
                 .filterNotNull()
                 .collectLatest { listId ->
 
-                    Log.d("EVENT_DEBUG", "OBSERVE → listId=$listId")
+                    
+
+                    if (_currentListId.value != listId) {
+                        firestoreListener.startItemSync(listId)
+                    }
 
                     roomRepository
                         .observeItemsWithSyncStatus(listId)
                         .collect { itemsWithStatus ->
 
-                            Log.d("EVENT_DEBUG", "Items size=${itemsWithStatus.size}") // ✅ HIER
+                            
 
                             val domainItems = itemsWithStatus.map { (entity, status) ->
                                 entity.toDomain().copy(syncStatus = status)
@@ -181,23 +218,118 @@ class ShoppingViewModel(
         }
     }
 
-    // ------------------------------------------------------------
-    // REDUCER
-    // ------------------------------------------------------------
+//    private suspend fun observeLists() {
+//
+//        roomRepository.observeLists()
+//            .collect { lists ->
+//
+//                val domainLists =
+//                    lists
+//                        .map { it.toDomain() }
+//                        .filter { it.name.isNotBlank() }
+//
+//                val firstListId = domainLists.firstOrNull()?.id
+//
+//                _state.update { current ->
+//
+//                    val resolvedActiveListId =
+//                        when {
+//                            pendingInviteListId != null &&
+//                                    domainLists.any { it.id == pendingInviteListId } ->
+//                                pendingInviteListId
+//
+//                            current.activeListId != null &&
+//                                    domainLists.any { it.id == current.activeListId } ->
+//                                current.activeListId
+//
+//                            else -> firstListId
+//                        }
+//
+//                    current.copy(
+//                        lists = domainLists,
+//                        activeListId = resolvedActiveListId
+//                    )
+//                }
+//
+//                // 🔥 FIX: KEINE voreilige UI-Entscheidung mehr
+//                if (domainLists.isEmpty()) {
+//
+//                    // 👉 Nur anzeigen, aber NICHT Zustand erzwingen
+//                    if (pendingInviteListId == null) {
+//                        _showWelcomeDialog.value = true
+//                    }
+//
+//                    return@collect
+//                }
+//
+//                // 🔥 Erst wenn wirklich Listen da sind → UI setzen
+//                _showWelcomeDialog.value = false
+//
+//                var resolvedActiveId: String? = null
+//
+//                _state.update { current ->
+//
+//                    resolvedActiveId =
+//                        when {
+//                            current.activeListId != null &&
+//                                    domainLists.any { it.id == current.activeListId } ->
+//                                current.activeListId
+//
+//                            else -> firstListId
+//                        }
+//
+//                    current.copy(
+//                        screenMode = ShoppingScreenMode.MultiOverview,
+//                        activeListId = resolvedActiveId
+//                    )
+//                }
+//
+//                // 🔥 Side Effects getrennt
+//                resolvedActiveId?.let { listId ->
+//
+//                    if (_currentListId.value != listId) {
+//                        _currentListId.value = listId
+//                    }
+//
+//                    firestoreListener.startItemSync(listId)
+//                }
+//            }
+//    }
 
-    fun dispatch(action: ShoppingAction) {
+    private fun observeLists() {
 
-        val result =
-            de.shopme.presentation.reducer.reduce(
-                state = _state.value,
-                screenMode = _state.value.screenMode,
-                action = action
-            )
+        viewModelScope.launch {
 
-        _state.value = result.state
+            Log.e("LIST_DEBUG", "observeLists STARTED")
 
-        result.effects.forEach { effect ->
-            handleEffect(effect)
+            roomRepository.observeLists()
+                .collect { lists ->
+
+                    Log.e("LIST_DEBUG", "ROOM EMIT size=${lists.size}")
+
+                    val domainLists =
+                        lists
+                            .map { it.toDomain() }
+                            .filter { it.name.isNotBlank() }
+
+                    _state.update { current ->
+
+                        current.copy(
+                            lists = domainLists,
+
+                            // 🔥 DAS IST DER FIX
+                            screenMode = ShoppingScreenMode.MultiOverview,
+
+                            // optional sauber:
+                            activeListId =
+                                current.activeListId
+                                    ?: domainLists.firstOrNull()?.id
+                        )
+                    }
+
+                    // 🔥 WelcomeDialog Steuerung
+                    _showWelcomeDialog.value = domainLists.isEmpty()
+                }
         }
     }
 
@@ -205,18 +337,11 @@ class ShoppingViewModel(
 
         when (effect) {
 
-            is UIEffect.AddItem -> {
-                Log.d("EVENT_DEBUG", "Effect → AddItem: ${effect.name}")
-                addItem(effect.name)
-            }
+            is UIEffect.AddItem -> addItem(effect.name)
 
-            is UIEffect.ToggleItem -> {
-                toggleItem(effect.item)
-            }
+            is UIEffect.ToggleItem -> toggleItem(effect.item)
 
-            is UIEffect.DeleteItem -> {
-                deleteItem(effect.item)
-            }
+            is UIEffect.DeleteItem -> deleteItem(effect.item)
 
             is UIEffect.CreateLists -> {
                 confirmStoreSelection(
@@ -226,13 +351,29 @@ class ShoppingViewModel(
             }
 
             is UIEffect.DeleteList -> {
-                deleteList(effect.list.toDomain())
+                viewModelScope.launch {
+                    roomRepository.deleteList(effect.listId)
+                }
             }
 
-            is UIEffect.ShowSnackbar -> {
+            is UIEffect.RetrySync -> {
                 viewModelScope.launch {
-                    _effects.emit(effect)
+                    roomRepository.retryChangeByItemId(effect.itemId)
                 }
+            }
+
+            is UIEffect.ShowUndo -> {
+                
+                lastUndoAction = effect.action
+            }
+
+            // ✅ NEU (wichtig für exhaustiveness)
+            is UIEffect.ShowSnackbar -> {
+                // aktuell ungenutzt
+            }
+
+            is UIEffect.UpdateItem -> {
+                updateItem(effect.item, effect.newName)
             }
 
             UIEffect.ShowWelcomeDialog -> {
@@ -242,83 +383,121 @@ class ShoppingViewModel(
             UIEffect.HideWelcomeDialog -> {
                 _showWelcomeDialog.value = false
             }
+
+            is UIEffect.DeleteAllLists -> {
+                viewModelScope.launch {
+                    roomRepository.deleteAllLists()
+                }
+            }
+
+            is UIEffect.DeleteList -> {
+                viewModelScope.launch {
+                    roomRepository.deleteList(effect.listId)
+                }
+            }
         }
     }
 
-    // ------------------------------------------------------------
-    // LIST MANAGEMENT
-    // ------------------------------------------------------------
-
-    private fun setActiveList(listId: String) {
-        setCurrentList(listId)
-    }
-
-    fun editList(list: ShoppingList) {
-
-        setActiveList(list.id)
-
-        _state.update {
-            it.copy(screenMode = ShoppingScreenMode.Normal)
-        }
-    }
-
-    fun deleteList(list: ShoppingList) {
+    private fun updateItem(item: ShoppingItem, newName: String) {
 
         viewModelScope.launch {
-            deleteListUseCase(list.id)
+
+            val updated = item.copy(
+                name = newName,
+                isChecked = true,
+                updatedAt = System.currentTimeMillis()
+            )
+
+            roomRepository.updateItem(updated.toEntity())
         }
     }
 
     private fun confirmStoreSelection(
         stores: List<StoreType>,
         customLists: List<String>
-
     ) {
         viewModelScope.launch {
 
             var lastCreatedId: String? = null
 
+            if (stores.isEmpty() && customLists.isEmpty()) {
+                return@launch
+            }
+
+            // 🔹 Stores
             stores.forEach { store ->
 
-                lastCreatedId =
+                val id =
                     createListUseCase(
                         name = store.displayName,
-                        storeTypes = listOf(store),
-                        isCustom = false
+                        storeTypes = listOf(store)
                     )
+
+                lastCreatedId = id
+
+                val list = listDao.getListOnce(id) ?: return@forEach
+                val uid = authProvider.currentUserId() ?: return@forEach
+
+                val listWithOwner = list.copy(
+                    ownerId = uid
+                )
+
+                firestoreDataSource.createList(listWithOwner)
             }
 
+            // 🔹 Custom Lists
             customLists.forEach { name ->
 
-                lastCreatedId =
+                val id =
                     createListUseCase(
                         name = name,
-                        storeTypes = emptyList(),
-                        isCustom = true
+                        storeTypes = emptyList()
                     )
+
+                lastCreatedId = id
+
+                val list = listDao.getListOnce(id) ?: return@forEach
+                val uid = authProvider.currentUserId() ?: return@forEach
+
+                val listWithOwner = list.copy(
+                    ownerId = uid
+                )
+
+                firestoreDataSource.createList(listWithOwner)
             }
 
-            lastCreatedId?.let { id ->
+            if (stores.isNotEmpty() || customLists.isNotEmpty()) {
 
-                setCurrentList(id)   // 🔥 DAS IST DER FIX
+                lastCreatedId?.let { id ->
 
-                _state.update {
-                    it.copy(
-                        screenMode = ShoppingScreenMode.MultiOverview
-                    )
+                    setCurrentList(id)
+
+                    _currentListId.value = id
+
+                    _showWelcomeDialog.value = false
+
+                    _state.update {
+                        it.copy(
+                            screenMode = ShoppingScreenMode.MultiOverview,
+                            activeListId = id
+                        )
+                    }
                 }
             }
-            Log.d("EVENT_DEBUG", "Created listId=$lastCreatedId")
         }
     }
 
     // ------------------------------------------------------------
-    // ITEM LOGIC
+    // ITEM EVENTS
     // ------------------------------------------------------------
 
     fun onEvent(event: ShopEvent) {
 
-        Log.d("EVENT_DEBUG", "Event received: $event")
+        // 🔥 Undo direkt behandeln (WICHTIG: richtiger Pfad!)
+        if (event is ShopEvent.List.UndoLastAction) {
+            handleUndo()
+            return
+        }
 
         val result =
             de.shopme.presentation.reducer.reduce(
@@ -328,12 +507,51 @@ class ShoppingViewModel(
             )
 
         _state.value = result.state
+        result.effects.forEach { effect -> handleEffect(effect) }
+    }
 
-        // 🔥 DAS ist der richtige Weg
-        result.effects.forEach { effect ->
-            handleEffect(effect)
+    private fun handleUndo() {
+
+        val action = lastUndoAction ?: return
+
+        viewModelScope.launch {
+
+            when (action) {
+
+                is UndoAction.DeleteItem -> {
+
+                    val restored = action.item.copy(
+                        deletedAt = null,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                    
+                    roomRepository.updateItem(
+                        restored.toEntity()
+                    )
+                }
+
+                is UndoAction.ToggleItem -> {
+                    roomRepository.updateItem(action.item.toEntity())
+                }
+
+                is UndoAction.UpdateItem -> {
+
+                    val restored = action.oldItem.copy(
+                        isChecked = true,
+                        updatedAt = System.currentTimeMillis()
+                    )
+
+                    roomRepository.updateItem(restored.toEntity())
+                }
+            }
+
+            lastUndoAction = null
         }
     }
+
+    // ------------------------------------------------------------
+    // ITEM LOGIC
+    // ------------------------------------------------------------
 
     private fun addItem(name: String) {
 
@@ -341,14 +559,9 @@ class ShoppingViewModel(
 
         viewModelScope.launch {
 
-            val normalized =
-                quantityMapper.normalize(name)
-
-            val category =
-                categoryMapper.resolve(normalized)
-
-            val listId =
-                currentListId.value ?: return@launch
+            val normalized = quantityMapper.normalize(name)
+            val category = categoryMapper.resolve(normalized)
+            val listId = currentListId.value ?: return@launch
 
             val item = ShoppingItemEntity(
                 id = UUID.randomUUID().toString(),
@@ -363,19 +576,12 @@ class ShoppingViewModel(
                 updatedAt = System.currentTimeMillis()
             )
 
-            Log.d("EVENT_DEBUG", "addItem: Insert item into listId=$listId")
-
-            Log.d("EVENT_DEBUG", "ADD → currentListId=$listId")
-            Log.d("EVENT_DEBUG", "ADD → activeListId=${state.value.activeListId}")
-
             roomRepository.addItem(item)
         }
     }
 
     private fun toggleItem(item: ShoppingItem) {
-
         viewModelScope.launch {
-
             roomRepository.updateItem(
                 item.toEntity().copy(
                     isChecked = !item.isChecked
@@ -385,10 +591,13 @@ class ShoppingViewModel(
     }
 
     private fun deleteItem(item: ShoppingItem) {
-
         viewModelScope.launch {
 
-            roomRepository.deleteItem(item.toEntity())
+            val deletedItem = item.toEntity().copy(
+                deletedAt = System.currentTimeMillis()
+            )
+
+            roomRepository.updateItem(deletedItem)
         }
     }
 
@@ -450,6 +659,112 @@ class ShoppingViewModel(
                 screenMode =
                     ShoppingScreenMode.MultiSelect(existingStores)
             )
+        }
+    }
+
+    fun onRetrySync(itemId: String) {
+        viewModelScope.launch {
+            roomRepository.retrySyncForItem(itemId)
+        }
+    }
+
+    fun shareList(listId: String): String {
+
+        val inviteId = java.util.UUID.randomUUID().toString()
+        return "https://shopme-app.de/invite?listId=$listId&inviteId=$inviteId"
+
+    }
+
+    fun handleInviteLink(uri: Uri) {
+
+        val listId =
+            uri.getQueryParameter("listId")
+                ?: uri.lastPathSegment?.substringAfter("listId=")?.substringBefore("&")
+
+        val inviteId =
+            uri.getQueryParameter("inviteId")
+                ?: uri.toString().substringAfter("inviteId=", "").substringBefore("&")
+
+        if (listId == null) {
+            return
+        }
+
+        
+
+        joinList(listId, inviteId)
+    }
+
+    fun joinList(listId: String, inviteId: String?) {
+
+        viewModelScope.launch {
+
+            try {
+
+                val remoteList = firestoreDataSource.getListOnce(listId)
+
+                remoteList?.let { list ->
+
+                    val uid = authProvider.currentUserId() ?: return@let
+
+                    // 1️⃣ Firestore Berechtigung
+                    firestoreDataSource.addUserToList(
+                        listId = list.id,
+                        userId = uid
+                    )
+
+                    delay(300)
+
+                    // 2️⃣ Lokal speichern
+                    listDao.upsert(list)
+
+                    // 🔥 3️⃣ WICHTIG: Item Sync starten
+                    firestoreListener.startItemSync(list.id)
+
+                    // 🔥 4️⃣ Danach UI triggern
+                    setCurrentList(list.id)
+                }
+
+            } catch (e: Exception) {
+                
+            }
+        }
+    }
+
+    // ============================================================
+    // LISTS INVITE
+    // ============================================================
+
+    fun createInviteAndShare() {
+
+        viewModelScope.launch {
+
+            val inviteId = firestoreDataSource.createInvite()
+
+            val link = "https://shopme.app/invite?inviteId=$inviteId"
+        }
+    }
+
+    fun joinViaInvite(inviteId: String) {
+
+        viewModelScope.launch {
+
+            try {
+                val ownerId = firestoreDataSource.getInvite(inviteId) ?: return@launch
+
+                val uid = authProvider.currentUserId() ?: return@launch
+
+                val lists = firestoreDataSource.getListsForUser(ownerId)
+
+                lists.forEach { list ->
+                    firestoreDataSource.addUserToList(
+                        listId = list.id,
+                        userId = uid
+                    )
+                }
+
+            } catch (e: Exception) {
+
+            }
         }
     }
 }

@@ -41,9 +41,6 @@ fun RecordingButton(
     val activeColor = MaterialTheme.colorScheme.error
     val inactiveColor = MaterialTheme.colorScheme.primary
 
-    val activeContentColor = MaterialTheme.colorScheme.onError
-    val inactiveContentColor = MaterialTheme.colorScheme.onPrimary
-
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.size(100.dp)

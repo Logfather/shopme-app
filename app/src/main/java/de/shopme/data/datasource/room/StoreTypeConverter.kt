@@ -15,5 +15,4 @@ class StoreTypeConverter {
         if (value.isEmpty()) return emptyList()
         return value.split(",").map { StoreType.valueOf(it) }
     }
-
 }

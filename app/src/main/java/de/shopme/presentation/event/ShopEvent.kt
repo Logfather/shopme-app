@@ -32,6 +32,10 @@ sealed interface ShopEvent {
             val item: ShoppingItem,
             val checked: Boolean
         ) : Item
+
+        data class RetrySync(
+            val itemId: String
+        ) : Item
     }
 
     // -----------------------------
@@ -43,6 +47,10 @@ sealed interface ShopEvent {
         object ClearAll : List
 
         object DeleteAllLists : List
+
+        data class Delete(val listId: String) : List
+
+        object UndoLastAction : List
     }
 
     // -----------------------------

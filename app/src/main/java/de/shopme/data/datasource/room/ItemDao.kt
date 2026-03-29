@@ -31,7 +31,6 @@ interface ItemDao {
     @Query("""
     SELECT * FROM items
     WHERE listId = :listId
-    AND deletedAt IS NULL
 """)
     fun observeItemsForList(listId: String): Flow<List<ShoppingItemEntity>>
 

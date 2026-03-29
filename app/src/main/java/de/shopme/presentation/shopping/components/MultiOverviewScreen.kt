@@ -1,5 +1,6 @@
 package de.shopme.presentation.shopping.components
 
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,9 +24,11 @@ import de.shopme.ui.illustration.icons.shopicons.StoreIcon
 import de.shopme.ui.theme.BrandGreen
 import de.shopme.ui.theme.BrandOlive
 import de.shopme.presentation.state.ShoppingViewState
+import de.shopme.presentation.viewmodel.ShoppingViewModel
 
 @Composable
 fun MultiOverviewScreen(
+    viewModel: ShoppingViewModel,
     viewState: ShoppingViewState,
     lists: List<ShoppingList>,
     activeListId: String?,
@@ -62,14 +66,18 @@ fun MultiOverviewScreen(
 
             items(customLists) { list ->
 
+                val items by viewModel
+                    .itemsForList(list.id)
+                    .collectAsState(initial = emptyList())
+
                 ListRow(
                     viewState = viewState,
                     list = list,
                     activeListId = activeListId,
+                    itemCount = items.size, // 👈 FIX
                     onEdit = onEdit,
                     onDelete = onDelete
                 )
-
             }
 
             item {
@@ -97,10 +105,15 @@ fun MultiOverviewScreen(
 
             items(storeLists) { list ->
 
+                val items by viewModel
+                    .itemsForList(list.id)
+                    .collectAsState(initial = emptyList())
+
                 ListRow(
                     viewState = viewState,
                     list = list,
                     activeListId = activeListId,
+                    itemCount = items.size, // 👈 FIX
                     onEdit = onEdit,
                     onDelete = onDelete
                 )
@@ -114,6 +127,7 @@ private fun ListRow(
     viewState: ShoppingViewState,
     list: ShoppingList,
     activeListId: String?,
+    itemCount: Int,
     onEdit: (ShoppingList) -> Unit,
     onDelete: (ShoppingList) -> Unit
 ) {
@@ -215,7 +229,7 @@ private fun ListRow(
                                         color = Color.Black
                                     )
                                 ) {
-                                    append("(${list.itemCount} Artikel)")
+                                    append("(${itemCount} Artikel)")
                                 }
                             },
                             style = MaterialTheme.typography.titleMedium

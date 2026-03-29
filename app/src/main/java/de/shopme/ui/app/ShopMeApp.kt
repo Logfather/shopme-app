@@ -1,5 +1,6 @@
 package de.shopme.ui.app
 
+import android.content.Intent
 import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +22,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,13 +71,8 @@ fun ShopMeApp(
     val userLists = viewState.lists
     val activeList = viewState.activeList
     val groupedItems = viewState.groupedItems
-    val snackbarMessage = viewState.snackbarMessage
-    //val viewState by vm.viewState.collectAsStateWithLifecycle()
-
     val snackbarHostState = remember { SnackbarHostState() }
-
     val showWelcomeDialog = viewState.showWelcomeDialog
-    val showStoreSelectionDialog = viewState.showStoreSelectionDialog
 
 
 
@@ -84,18 +82,33 @@ fun ShopMeApp(
 
     var showListSelector by remember { mutableStateOf(false) }
 
-    val blurRadius by animateDpAsState(
+    val blurWelcome by animateDpAsState(
         targetValue = if (showWelcomeDialog) 10.dp else 0.dp,
         animationSpec = tween(durationMillis = 300),
-        label = "backgroundBlur"
+        label = "welcomeBlur"
     )
+
+    val context = LocalContext.current
+
+    fun shareList(listId: String) {
+        val text = vm.shareList(listId)
+
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+
+        context.startActivity(
+            Intent.createChooser(intent, "Liste teilen")
+        )
+    }
 
     Box {
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .blur(blurRadius)
+                .blur(blurWelcome)
         ) {
 
             Image(
@@ -163,10 +176,6 @@ fun ShopMeApp(
 
                 topBar = {
 
-                    val showListHeader =
-                        (uiState == ShoppingScreenMode.Normal) ||
-                                (uiState == ShoppingScreenMode.MultiOverview && userLists.isNotEmpty())
-
                     val titleText =
                         when (uiState.toScreen()) {
                             Screen.StoreSelection -> "Supermarkt wählen"
@@ -232,6 +241,30 @@ fun ShopMeApp(
                                 }
                             }
 
+                        },
+
+                        actions = {
+                            if (activeList != null) {
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+
+                                    Text(
+                                        text = "Liste(n) teilen",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    )
+
+                                    IconButton(onClick = { shareList(activeList.id) }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Share,
+                                            contentDescription = "Liste teilen"
+                                        )
+                                    }
+                                }
+                            }
                         },
 
                         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -356,10 +389,11 @@ fun ShopMeApp(
                         Screen.ListsOverview -> {
 
                             MultiOverviewScreen(
+                                viewModel = vm,
                                 lists = userLists,
                                 activeListId = activeList?.id,
-                                onEdit = { vm.editList(it) },
-                                onDelete = { vm.deleteList(it) },
+                                onEdit = { list -> vm.editList(list) },
+                                onDelete = { list -> vm.deleteList(list) },
                                 onCreateNewList = {
                                     vm.dispatch(
                                         ShoppingAction.StartMultiStoreCreation
@@ -435,7 +469,7 @@ fun ShopMeApp(
                 ) + fadeOut()
         ) {
 
-            if (showWelcomeDialog) {
+            if (showWelcomeDialog && userLists.isEmpty()) {
 
                 WelcomeDialog(
                     onCreateFirstList = {

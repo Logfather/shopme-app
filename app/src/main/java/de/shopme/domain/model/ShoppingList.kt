@@ -8,6 +8,8 @@ data class ShoppingList(
 
     val ownerId: String,
 
+    val sharedWith: List<String>,
+
     val storeTypes: List<StoreType>,
 
     val itemCount: Int = 0,
