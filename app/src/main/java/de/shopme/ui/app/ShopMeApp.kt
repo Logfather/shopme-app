@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -24,9 +25,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.shopme.R
+import de.shopme.app.MainActivity
 import de.shopme.presentation.action.ShoppingAction
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.state.ShoppingScreenMode
@@ -36,6 +39,7 @@ import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.data.input.speech.SpeechController
 import de.shopme.domain.model.StoreType
 import de.shopme.domain.service.CatalogService
+import de.shopme.presentation.effect.UIEffect
 import de.shopme.ui.components.ShoppingContent
 import de.shopme.ui.components.WelcomeDialog
 import de.shopme.ui.theme.BrandGreen
@@ -44,6 +48,7 @@ import de.shopme.ui.navigation.toScreen
 import de.shopme.ui.illustration.buttons.AddActionButton
 import de.shopme.ui.illustration.buttons.CloseActionButton
 import de.shopme.ui.illustration.icons.shopicons.StoreIcon
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,11 +72,37 @@ fun ShopMeApp(
         return
     }
 
+    val showAccountHint by vm.shouldShowAccountHint.collectAsState()
     val uiState = viewState.uiState
     val userLists = viewState.lists
     val activeList = viewState.activeList
     val groupedItems = viewState.groupedItems
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        vm.effects.collect { effect ->
+
+            when (effect) {
+
+                is UIEffect.ShowUndo -> {
+
+                    val result = snackbarHostState.showSnackbar(
+                        message = effect.message,
+                        actionLabel = "Rückgängig",
+                        duration = SnackbarDuration.Short
+                    )
+
+                    if (result == SnackbarResult.ActionPerformed) {
+                        vm.onEvent(ShopEvent.List.UndoLastAction)
+                    }
+                }
+
+                else -> Unit
+            }
+        }
+    }
+
+
     val showWelcomeDialog = viewState.showWelcomeDialog
 
 
@@ -127,6 +158,7 @@ fun ShopMeApp(
             )
 
             Scaffold(
+
                 snackbarHost = {
 
                     Box(
@@ -140,31 +172,13 @@ fun ShopMeApp(
                             hostState = snackbarHostState,
                             snackbar = { data ->
 
-                                AnimatedVisibility(
-                                    visible = true,
-                                    enter =
-                                        slideInVertically(
-                                            initialOffsetY = { it },
-                                            animationSpec = tween(
-                                                durationMillis = 350,
-                                                easing = FastOutSlowInEasing
-                                            )
-                                        ) + fadeIn(),
-                                    exit = fadeOut()
-                                ) {
-
-                                    Snackbar(
-                                        snackbarData = data,
-                                        containerColor = BrandGreen.copy(alpha = 0.95f),
-                                        contentColor = Color.White,
-                                        shape = RoundedCornerShape(16.dp),
-                                        modifier = Modifier
-                                            .widthIn(max = 420.dp)
-                                            .padding(horizontal = 16.dp)
-                                    )
-
-                                }
-
+                                Snackbar(
+                                    snackbarData = data,
+                                    shape = RoundedCornerShape(16.dp),
+                                    containerColor = BrandGreen.copy(alpha = 0.95f),
+                                    contentColor = Color.Black,
+                                    actionColor = Color.Black
+                                )
                             }
                         )
 
@@ -182,7 +196,44 @@ fun ShopMeApp(
                             else -> "ShopMe"
                         }
 
+                    val showAccountAction by vm.showAccountAction.collectAsState()
+                    val isAnonymous by vm.isAnonymous.collectAsState()
+                    val context = LocalContext.current
+
                     CenterAlignedTopAppBar(
+
+                        navigationIcon = {
+
+                            val context = LocalContext.current
+
+                            if (showAccountAction) {
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .clickable(enabled = isAnonymous) {
+                                            (context as? MainActivity)?.startGoogleLogin()
+                                        }
+                                        .padding(start = 8.dp)
+                                ) {
+
+                                    Icon(
+                                        imageVector = Icons.Default.AccountCircle,
+                                        contentDescription = "Account Status",
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+
+                                    Spacer(Modifier.width(6.dp))
+
+                                    Text(
+                                        text = if (isAnonymous) "Anonym" else "Verbunden",
+                                        color = Color.Black,
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                            }
+                        },
 
                         title = {
 
@@ -253,7 +304,7 @@ fun ShopMeApp(
                                     Text(
                                         text = "Liste(n) teilen",
                                         style = MaterialTheme.typography.labelLarge,
-                                        color = Color.White,
+                                        color = Color.Black,
                                         modifier = Modifier.padding(end = 8.dp)
                                     )
 
@@ -269,7 +320,7 @@ fun ShopMeApp(
 
                         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                             containerColor = BrandGreen,
-                            titleContentColor = Color.White
+                            titleContentColor = Color.Black
                         )
 
                     )
@@ -451,6 +502,34 @@ fun ShopMeApp(
 
                 }
 
+            }
+
+            val showAccountHint by vm.shouldShowAccountHint.collectAsState()
+            val context = LocalContext.current
+
+            LaunchedEffect(showAccountHint) {
+
+                if (showAccountHint) {
+
+                    Log.d("ACCOUNT_HINT", "UI observed: $showAccountHint")
+
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Verbinde Listen mit einem Account",
+                        actionLabel = "Sichern",
+                        duration = SnackbarDuration.Long
+                    )
+
+                    Log.d("ACCOUNT_HINT", "SNACKBAR RESULT: $result")
+
+                    if (result == SnackbarResult.ActionPerformed) {
+                        Log.d("ACCOUNT_HINT", "ACTION CLICKED")
+                        (context as? MainActivity)?.startGoogleLogin()
+                    }
+
+                    // 🔥 ERST DANACH zurücksetzen
+                    vm.shouldShowAccountHint.value = false
+                    vm.showAccountAction.value = true
+                }
             }
 
         }

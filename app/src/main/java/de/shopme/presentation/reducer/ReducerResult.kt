@@ -114,7 +114,7 @@ fun reduce(
             is ShopEvent.List.Delete -> {
 
                 effects = listOf(
-                    UIEffect.DeleteList(it.listId)
+                    UIEffect.RequestDeleteList(it.listId)
                 )
 
                 state

@@ -1,5 +1,6 @@
 package de.shopme.presentation.undo
 
+import de.shopme.domain.model.ListDeleteSnapshot
 import de.shopme.domain.model.ShoppingItem
 
 sealed class UndoAction {
@@ -14,5 +15,10 @@ sealed class UndoAction {
 
     data class UpdateItem(
         val oldItem: ShoppingItem
+    ) : UndoAction()
+
+    // 🔥 NEU
+    data class DeleteList(
+        val snapshot: ListDeleteSnapshot
     ) : UndoAction()
 }

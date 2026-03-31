@@ -1,0 +1,24 @@
+{
+  "name": "shopme",
+  "version": "1.0.0",
+  "description": "ShopMe ist eine moderne Android Einkaufslisten-App mit Multi-Store Unterstützung, Realtime Synchronisation und Offline-First Architektur.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Logfather/shopme-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Logfather/shopme-app/issues"
+  },
+  "homepage": "https://github.com/Logfather/shopme-app#readme",
+  "dependencies": {
+    "firebase-admin": "^13.7.0"
+  }
+}

@@ -75,6 +75,14 @@ interface ChangeQueueDao {
         LIMIT 1
         """)
     suspend fun getLatestChangeForItem(query: String): ChangeQueueEntity?
+
+    @Query("""
+    UPDATE change_queue
+    SET state = 'SYNCING',
+    lastAttemptAt = :timestamp
+    WHERE id = :id
+    """)
+    suspend fun markSyncing(id: String, timestamp: Long)
 }
 
 

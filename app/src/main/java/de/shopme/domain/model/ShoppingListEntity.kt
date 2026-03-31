@@ -20,5 +20,6 @@ data class ShoppingListEntity(
     val itemCount: Int = 0,
 
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val deletedAt: Long? = null
 )

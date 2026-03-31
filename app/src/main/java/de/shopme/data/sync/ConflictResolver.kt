@@ -13,12 +13,15 @@ class ConflictResolver {
 
         return when {
 
-            // Version gewinnt
-            remote.version > local.version -> true
+            // 🔥 DELETE hat höchste Priorität
+            remote.deletedAt != null -> true
 
-            // gleiche Version → updatedAt entscheidet
-            remote.version == local.version ->
-                remote.updatedAt > local.updatedAt
+            local.deletedAt != null -> false
+
+            // Version = updatedAt
+            remote.updatedAt > local.updatedAt -> true
+
+            remote.updatedAt == local.updatedAt -> false
 
             else -> false
         }

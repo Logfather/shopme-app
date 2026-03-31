@@ -34,4 +34,11 @@ interface ItemDao {
 """)
     fun observeItemsForList(listId: String): Flow<List<ShoppingItemEntity>>
 
+    @Query("SELECT * FROM items WHERE listId = :listId")
+    suspend fun getItemsForList(listId: String): List<ShoppingItemEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<ShoppingItemEntity>)
+
+
 }

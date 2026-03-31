@@ -65,4 +65,5 @@
     <string name="out_of_time_illustration_description">A worried animated alarm clock with an hourglass, indicating running out of time</string>
     <string name="sync_success_illustration_description">Illustration showing two happy smartphones with arrows and a checkmark, indicating a successful synchronization.</string>
     <string name="sync_error_illustration_description">Illustration showing a laptop and a smartphone with worried faces, circular arrows, and a warning triangle, indicating a synchronization error.</string>
+    <string name="default_web_client_id">152465501725-fs9lu2fbf1ejrlj9j813j16s5k6u4qh9.apps.googleusercontent.com</string>
 </resources>

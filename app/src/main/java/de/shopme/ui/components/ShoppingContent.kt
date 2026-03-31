@@ -23,6 +23,7 @@ import de.shopme.data.input.speech.SpeechController
 import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.service.CatalogService
 import de.shopme.presentation.action.ShoppingAction
+import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.ui.theme.AppButtonDefaults
@@ -53,17 +54,41 @@ fun ShoppingContent(
         groupedItems.entries.toList()
     }
 
+    var lastDeletedItem by remember { mutableStateOf<ShoppingItem?>(null) }
     var lastUndoMessage by remember { mutableStateOf<String?>(null) }
 
-    var lastDeletedItem by remember { mutableStateOf<ShoppingItem?>(null) }
     var text by rememberSaveable { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val listState = rememberLazyListState()
 
-    // Undo Snackbar
+    // ✅ ZENTRALE EFFECT HANDLING (NEU + WICHTIG)
+//    LaunchedEffect(Unit) {
+//        vm.effects.collect { effect ->
+//            when (effect) {
+//
+//                is UIEffect.ShowUndo -> {
+//                    val result = snackbarHostState.showSnackbar(
+//                        message = effect.message,
+//                        actionLabel = "Rückgängig",
+//                        duration = SnackbarDuration.Short
+//                    )
+//
+//                    if (result == SnackbarResult.ActionPerformed) {
+//                        vm.onEvent(ShopEvent.List.UndoLastAction)
+//                    }
+//                }
+//
+//                else -> Unit
+//            }
+//        }
+//    }
+
+    // ✅ ITEM DELETE (bestehendes Verhalten behalten)
     LaunchedEffect(lastDeletedItem) {
+
+        val item = lastDeletedItem ?: return@LaunchedEffect
 
         val result = snackbarHostState.showSnackbar(
             message = "Item gelöscht",
@@ -78,6 +103,7 @@ fun ShoppingContent(
         lastDeletedItem = null
     }
 
+    // ✅ ITEM UPDATE (bestehendes Verhalten behalten)
     LaunchedEffect(lastUndoMessage) {
 
         val message = lastUndoMessage ?: return@LaunchedEffect
@@ -95,7 +121,6 @@ fun ShoppingContent(
         lastUndoMessage = null
     }
 
-    // 👉 rows MUSS außerhalb LazyColumn sein
     val rows = remember(categoryEntries) {
         buildList<ListRow> {
             categoryEntries.forEach { entry ->
@@ -113,7 +138,6 @@ fun ShoppingContent(
             SnackbarHost(
                 hostState = snackbarHostState,
                 snackbar = { data ->
-
                     Snackbar(
                         snackbarData = data,
                         shape = RoundedCornerShape(16.dp),

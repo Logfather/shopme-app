@@ -7,7 +7,6 @@ data class ShoppingItem(
     val quantity: Int,
     val category: String,
     val isChecked: Boolean,
-    val version: Int,
     val deletedAt: Long?,
     val createdAt: Long,
     val updatedAt: Long,

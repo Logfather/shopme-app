@@ -19,8 +19,6 @@ data class ShoppingItemEntity(
 
     val isChecked: Boolean,
 
-    val version: Int,
-
     val deletedAt: Long?,
 
     val createdAt: Long,

@@ -17,7 +17,8 @@ object EntityMapper {
             sharedWith = sharedWith,
             itemCount = itemCount,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            deletedAt = deletedAt
         )
 
     fun ShoppingList.toEntity(): ShoppingListEntity =
@@ -26,9 +27,11 @@ object EntityMapper {
             name = name,
             ownerId = ownerId,
             storeTypes = storeTypes,
+            sharedWith = sharedWith,
             itemCount = itemCount,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            deletedAt = deletedAt
         )
 
     // ---------------------------
@@ -38,12 +41,11 @@ object EntityMapper {
     fun ShoppingItemEntity.toDomain(): ShoppingItem {
         return ShoppingItem(
             id = id,
-            listId = listId,   // ✅ FIX
+            listId = listId,
             name = name,
             quantity = quantity,
             category = category,
             isChecked = isChecked,
-            version = version,
             deletedAt = deletedAt,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -53,12 +55,11 @@ object EntityMapper {
     fun ShoppingItem.toEntity(): ShoppingItemEntity {
         return ShoppingItemEntity(
             id = id,
-            listId = listId,   // ✅ FIX
+            listId = listId,
             name = name,
             quantity = quantity,
             category = category,
             isChecked = isChecked,
-            version = version,
             deletedAt = deletedAt,
             createdAt = createdAt,
             updatedAt = updatedAt

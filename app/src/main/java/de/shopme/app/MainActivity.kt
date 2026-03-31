@@ -7,12 +7,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import de.shopme.core.AppScope
 import de.shopme.core.json.loadJsonMap
@@ -32,17 +35,56 @@ import de.shopme.domain.service.*
 import de.shopme.domain.usecase.CreateListUseCase
 import de.shopme.domain.usecase.DeleteListUseCase
 import de.shopme.presentation.viewmodel.ShoppingViewModel
+import de.shopme.R
 import de.shopme.ui.app.ShopMeApp
 import de.shopme.ui.theme.ShopMeTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     private val authProvider: AuthProvider = FirebaseAuthProvider()
 
+    private val googleSignInLauncher =
+        registerForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+
+            if (result.resultCode == RESULT_OK) {
+
+                val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+
+                try {
+                    val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
+
+                    val idToken = account.idToken
+
+                    if (idToken != null) {
+                        onGoogleIdTokenReceived(idToken)
+                    } else {
+                        Log.e("AUTH", "ID TOKEN NULL")
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("AUTH", "Google sign-in failed", e)
+                }
+            }
+        }
+
+    private lateinit var shoppingViewModel: ShoppingViewModel
+
+    private lateinit var googleSignInClient: com.google.android.gms.auth.api.signin.GoogleSignInClient
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        Log.e("BOOTSTRAP", "ACTIVITY STARTED")
+        val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
+            com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
+        )
+            .requestIdToken(getString(de.shopme.R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+
+        googleSignInClient = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(this, gso)
 
         // Pending Invite speichern
         intent?.data?.let { uri ->
@@ -58,7 +100,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            Log.e("BOOTSTRAP", "SETCONTENT STARTED")
+
             ShopMeTheme {
 
                 val activityContext = this@MainActivity
@@ -69,7 +111,9 @@ class MainActivity : ComponentActivity() {
                         ShopMeDatabase::class.java,
                         "shopme_database"
                     )
-                        .addMigrations(ShopMeDatabase.MIGRATION_3_4)
+                        .addMigrations(
+                            ShopMeDatabase.MIGRATION_4_5
+                        )
                         .addCallback(object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {}
                         })
@@ -165,21 +209,37 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // ------------------------------------------------------------
-                // 🔥 FINALER BOOTSTRAP (sofort + fallback)
+                // BOOTSTRAP
                 // ------------------------------------------------------------
 
                 val vm: ShoppingViewModel = viewModel(factory = factory)
 
+                shoppingViewModel = vm
+
                 LaunchedEffect(Unit) {
 
+                    Log.e("BOOT", "LaunchedEffect STARTED")
 
                     val auth = FirebaseAuth.getInstance()
 
                     fun runBootstrap() {
 
-                        val user = auth.currentUser ?: return
+                        Log.e("BOOT", "runBootstrap CALLED")
 
-                        Log.d("BOOTSTRAP", "Auth READY → ${user.uid}")
+                        val user = auth.currentUser
+
+                        Log.e("BOOT", "USER = $user")
+
+                        if (user == null) {
+                            Log.e("BOOT", "USER IS NULL → ABORT")
+                            return
+                        }
+
+                        Log.e("BOOT", "STARTING SYNC")
+
+                        syncCoordinator.start()
+
+                        Log.e("BOOT", "SYNC START CALLED")
 
                         val uri: Uri? = intent?.data
                         val listId = uri?.getQueryParameter("listId")
@@ -190,35 +250,72 @@ class MainActivity : ComponentActivity() {
                             deepLinkInviteId = inviteId
                         )
 
+                        Log.e("BOOT", "BOOTSTRAP CALLED")
+
                         if (inviteId != null) {
                             vm.joinViaInvite(inviteId)
                         }
-
-                        Log.d("BOOTSTRAP", "Bootstrap COMPLETE")
                     }
 
-                    // 🔥 Fall 1: User existiert
                     if (auth.currentUser != null) {
+                        Log.e("BOOT", "USER EXISTS → DIRECT BOOTSTRAP")
                         runBootstrap()
                         return@LaunchedEffect
                     }
 
-                    // 🔥 Fall 2: Kein User → Login + danach Bootstrap
-                    Log.d("BOOTSTRAP", "No user → signing in anonymously")
+                    Log.e("BOOT", "NO USER → SIGN IN")
 
-                    try {
-                        auth.signInAnonymously()
-                            .addOnSuccessListener {
-                                Log.d("BOOTSTRAP", "Anonymous login SUCCESS")
-                                runBootstrap() // 🔥 HIER IST DER FIX
-                            }
-                            .addOnFailureListener {
-                                Log.e("BOOTSTRAP", "Anonymous login FAILED", it)
-                            }
-                    } catch (e: Exception) {
-                        Log.e("BOOTSTRAP", "Auth crash", e)
-                    }
+                    auth.signInAnonymously()
+                        .addOnSuccessListener {
+                            Log.e("BOOT", "ANON LOGIN SUCCESS")
+                            runBootstrap()
+                        }
+                        .addOnFailureListener {
+                            Log.e("BOOT", "ANON LOGIN FAILED", it)
+                        }
                 }
+
+//                LaunchedEffect(Unit) {
+//
+//
+//                    val auth = FirebaseAuth.getInstance()
+//
+//                    fun runBootstrap() {
+//
+//                        val user = auth.currentUser ?: return
+//
+//                        val uri: Uri? = intent?.data
+//                        val listId = uri?.getQueryParameter("listId")
+//                        val inviteId = uri?.getQueryParameter("inviteId")
+//
+//                        vm.bootstrap(
+//                            deepLinkListId = listId,
+//                            deepLinkInviteId = inviteId
+//                        )
+//
+//                        if (inviteId != null) {
+//                            vm.joinViaInvite(inviteId)
+//                        }
+//                    }
+//
+//                    // 🔥 Fall 1: User existiert
+//                    if (auth.currentUser != null) {
+//                        runBootstrap()
+//                        return@LaunchedEffect
+//                    }
+//
+//                    // 🔥 Fall 2: Kein User → Login + danach Bootstrap
+//
+//                    try {
+//                        auth.signInAnonymously()
+//                            .addOnSuccessListener {
+//                                runBootstrap() // 🔥 HIER IST DER FIX
+//                            }
+//                            .addOnFailureListener {
+//                            }
+//                    } catch (e: Exception) {
+//                    }
+//                }
 
                 val speechController = remember {
                     SpeechController(
@@ -234,5 +331,32 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    private fun onGoogleIdTokenReceived(idToken: String) {
+
+        Log.d("AUTH", "ID TOKEN RECEIVED: ${idToken.take(10)}...")
+
+        val beforeUid = com.google.firebase.auth.FirebaseAuth.getInstance().uid
+        Log.d("AUTH", "UID BEFORE LINK: $beforeUid")
+
+        lifecycleScope.launch {
+
+            val result = shoppingViewModel.linkWithGoogle(idToken)
+
+            val afterUid = com.google.firebase.auth.FirebaseAuth.getInstance().uid
+            Log.d("AUTH", "UID AFTER LINK: $afterUid")
+
+            if (result.isSuccess) {
+                Log.d("AUTH", "Google account linked SUCCESS")
+            } else {
+                Log.e("AUTH", "Link FAILED", result.exceptionOrNull())
+            }
+        }
+    }
+
+    fun startGoogleLogin() {
+        val signInIntent = googleSignInClient.signInIntent
+        googleSignInLauncher.launch(signInIntent)
     }
 }

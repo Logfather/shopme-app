@@ -31,7 +31,7 @@ data class ChangeQueueEntity(
 
     val errorMessage: String? = null,
 
-    val baseVersion: Int = 0
+    val baseVersion: Long
 )
 
 enum class SyncStatus {

@@ -1,9 +1,11 @@
 package de.shopme.data.repository
 
+import android.util.Log
 import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
 import de.shopme.data.sync.ChangeQueueDao
 import de.shopme.data.sync.ChangeQueueEntity
+import de.shopme.domain.model.ListDeleteSnapshot
 import de.shopme.domain.model.ShoppingItemEntity
 import de.shopme.domain.model.ShoppingListEntity
 import de.shopme.domain.sync.toSyncStatus
@@ -34,6 +36,8 @@ class RoomShoppingRepository(
 
     suspend fun deleteList(listId: String) {
 
+        val current = listDao.getListById(listId)
+
         changeQueueDao.insert(
             ChangeQueueEntity(
                 id = UUID.randomUUID().toString(),
@@ -45,18 +49,17 @@ class RoomShoppingRepository(
                 createdAt = System.currentTimeMillis(),
                 state = "PENDING",
                 progress = 0f,
-                baseVersion = 0
+                baseVersion = (current?.updatedAt ?: 0)
             )
         )
 
-        listDao.deleteListById(listId)
+        listDao.markDeleted(listId, System.currentTimeMillis())
     }
 
     suspend fun deleteAllLists() {
 
         val lists = listDao.observeLists().first()
 
-        // 1. Queue DELETE für jede Liste
         lists.forEach { list ->
             changeQueueDao.insert(
                 ChangeQueueEntity(
@@ -69,21 +72,20 @@ class RoomShoppingRepository(
                     createdAt = System.currentTimeMillis(),
                     state = "PENDING",
                     progress = 0f,
-                    baseVersion = 0
+                    baseVersion = (list.updatedAt / 1000)
                 )
             )
         }
 
-        // 2. Local löschen
-        listDao.clearAll()
+        lists.forEach { list ->
+            listDao.markDeleted(list.id, System.currentTimeMillis())
+        }
     }
 
     suspend fun createList(list: ShoppingListEntity) {
 
-        // 1. Local speichern
         listDao.upsert(list)
 
-        // 2. Queue Change
         changeQueueDao.insert(
             ChangeQueueEntity(
                 id = UUID.randomUUID().toString(),
@@ -95,7 +97,7 @@ class RoomShoppingRepository(
                 createdAt = System.currentTimeMillis(),
                 state = "PENDING",
                 progress = 0f,
-                baseVersion = 0
+                baseVersion = 0L
             )
         )
     }
@@ -110,32 +112,37 @@ class RoomShoppingRepository(
 
     suspend fun addItem(item: ShoppingItemEntity) {
 
-        // 1. LOCAL WRITE (optimistic)
         itemDao.upsert(item)
 
-        // 2. QUEUE CHANGE
         enqueueChange(
             entityId = item.id,
             listId = item.listId,
-            operation = "CREATE"
+            operation = "CREATE",
+            baseVersion = 0L
         )
     }
 
     suspend fun updateItem(item: ShoppingItemEntity) {
 
+        val current = itemDao.getById(item.id)
+
         itemDao.upsert(item)
 
         enqueueChange(
             entityId = item.id,
             listId = item.listId,
-            operation = "UPDATE"
+            operation = "UPDATE",
+            baseVersion = current?.updatedAt ?: 0L
         )
     }
 
     suspend fun deleteItem(item: ShoppingItemEntity) {
 
+        val current = itemDao.getById(item.id)
+
         val deleted = item.copy(
-            deletedAt = System.currentTimeMillis()
+            deletedAt = System.currentTimeMillis(),
+            updatedAt = System.currentTimeMillis()
         )
 
         itemDao.upsert(deleted)
@@ -143,7 +150,8 @@ class RoomShoppingRepository(
         enqueueChange(
             entityId = item.id,
             listId = item.listId,
-            operation = "DELETE"
+            operation = "DELETE",
+            baseVersion = current?.updatedAt ?: 0L
         )
     }
 
@@ -155,7 +163,7 @@ class RoomShoppingRepository(
         entityId: String,
         listId: String,
         operation: String,
-        baseVersion: Int = 0
+        baseVersion: Long = 0L
     ) {
         changeQueueDao.insert(
             ChangeQueueEntity(
@@ -168,7 +176,7 @@ class RoomShoppingRepository(
                 createdAt = System.currentTimeMillis(),
                 state = "PENDING",
                 progress = 0f,
-                baseVersion = baseVersion
+                baseVersion = baseVersion // ⚠️ wegen aktuellem Schema
             )
         )
     }
@@ -227,6 +235,7 @@ class RoomShoppingRepository(
     }
 
     suspend fun retryChange(change: ChangeQueueEntity) {
+
         changeQueueDao.updateRetry(
             id = change.id,
             state = "PENDING",
@@ -244,6 +253,72 @@ class RoomShoppingRepository(
             state = "PENDING",
             retryCount = change.retryCount + 1,
             timestamp = System.currentTimeMillis()
+        )
+    }
+
+
+    suspend fun markListDeleted(listId: String) {
+        listDao.markDeleted(listId, System.currentTimeMillis())
+    }
+
+
+    suspend fun createListDeleteSnapshot(listId: String): ListDeleteSnapshot {
+
+        val list = listDao.getListById(listId)
+            ?: throw IllegalStateException("List not found for snapshot: $listId")
+
+        val items = itemDao.getItemsForList(listId)
+
+        return ListDeleteSnapshot(
+            list = list,
+            items = items,
+            timestamp = System.currentTimeMillis()
+        )
+    }
+
+    suspend fun restoreList(snapshot: ListDeleteSnapshot) {
+
+        val now = System.currentTimeMillis()
+
+        val updatedAt = maxOf(
+            snapshot.list.updatedAt,
+            now
+        )
+
+
+
+        // 1. Queue
+        changeQueueDao.insert(
+            ChangeQueueEntity(
+                id = UUID.randomUUID().toString(),
+                entityType = "list",
+                entityId = snapshot.list.id,
+                listId = snapshot.list.id,
+                operation = "CREATE",
+                payload = null,
+                createdAt = now,
+                state = "PENDING",
+                progress = 0f,
+                baseVersion = (snapshot.list.updatedAt / 1000)
+            )
+        )
+
+        // 2. List
+        listDao.upsert(
+            snapshot.list.copy(
+                deletedAt = null,
+                updatedAt = updatedAt
+            )
+        )
+
+        // 3. Items
+        itemDao.insertAll(
+            snapshot.items.map {
+                it.copy(
+                    deletedAt = null,
+                    updatedAt = maxOf(it.updatedAt, now)
+                )
+            }
         )
     }
 }

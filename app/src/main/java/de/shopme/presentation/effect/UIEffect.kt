@@ -24,8 +24,6 @@ sealed class UIEffect {
         val customLists: List<String>
     ) : UIEffect()
 
-    data class DeleteList(val listId: String) : UIEffect()
-
     data class AddItem(
         val name: String
     ) : UIEffect()
@@ -48,6 +46,10 @@ sealed class UIEffect {
     data class UpdateItem(
         val item: ShoppingItem,
         val newName: String
+    ) : UIEffect()
+
+    data class RequestDeleteList(
+        val listId: String
     ) : UIEffect()
 
     object DeleteAllLists : UIEffect()

@@ -5,7 +5,6 @@ import de.shopme.core.AppScope
 import de.shopme.data.datasource.firestore.FirestoreDataSource
 import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
-import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.model.ShoppingItemEntity
 import kotlinx.coroutines.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -20,61 +19,60 @@ class SyncCoordinator(
 
     private val isRunning = AtomicBoolean(false)
 
-    fun start(listIdProvider: () -> String?) {
+    fun start() {
+
+        Log.d("SYNC", "START CALLED")
 
         if (isRunning.getAndSet(true)) return
 
         appScope.scope.launch {
 
+            Log.d("SYNC", "LOOP STARTED")
+
             while (true) {
+                try {
 
-                val hasWork = processQueueWithResult(listIdProvider)
+                    Log.d("SYNC", "Checking queue...")
 
-                if (!hasWork) {
-                    delay(2000) // idle
-                } else {
-                    delay(300) // fast follow-up
+                    val hasWork = processQueueWithResult()
+
+                    if (!hasWork) {
+                        delay(2000)
+                    } else {
+                        delay(300)
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("SYNC", "LOOP CRASH", e)
+                    delay(2000)
                 }
             }
         }
     }
 
-
-    private suspend fun processQueue(listIdProvider: () -> String?) {
-
-        val now = System.currentTimeMillis()
+    private suspend fun processQueue() {
 
         val changes = changeQueueDao.getPending(limit = 20)
 
         for (change in changes) {
 
-            if (change.entityType == "item") {
-
-                val remoteVersion = firestore.getItemVersion(change.listId, change.entityId)
-
-                if (remoteVersion != null && change.baseVersion != remoteVersion) {
-                    handleConflict(change)
-                    continue
-                }
-            }
-
-            // ----------------------------
-            // Backoff prüfen
-            // ----------------------------
-            val lastAttempt = change.lastAttemptAt ?: 0
-            val backoff = calculateBackoff(change.retryCount)
-
-            if (now - lastAttempt < backoff) {
+            // 🔁 Retry Backoff
+            if (!RetryPolicy.shouldRetry(change.retryCount, change.lastAttemptAt)) {
                 continue
             }
 
-            
-
             try {
 
-                changeQueueDao.updateState(change.id, "SYNCING")
+                changeQueueDao.markSyncing(
+                    change.id,
+                    System.currentTimeMillis()
+                )
 
                 when (change.entityType) {
+
+                    // ============================================================
+                    // LISTS
+                    // ============================================================
 
                     "list" -> {
                         when (change.operation) {
@@ -82,15 +80,41 @@ class SyncCoordinator(
                             "CREATE" -> {
                                 val list = listDao.getListOnce(change.entityId) ?: continue
                                 firestore.createList(list)
+                                changeQueueDao.updateState(change.id, "DONE")
                             }
 
                             "DELETE" -> {
-                                firestore.deleteList(change.listId)
+
+                                Log.d("SYNC", "Processing DELETE for list=${change.listId}")
+
+                                // 👉 falls deine Methode anders heißt, HIER anpassen
+                                firestore.softDeleteList(change.listId)
+
+                                changeQueueDao.updateState(change.id, "DONE")
+
+                                Log.d("SYNC", "DELETE SUCCESS → DONE")
                             }
                         }
                     }
 
+                    // ============================================================
+                    // ITEMS
+                    // ============================================================
+
                     "item" -> {
+
+                        // 🔍 Conflict Check (nur bei CREATE / UPDATE)
+                        if (change.operation != "DELETE") {
+
+                            val remoteVersion =
+                                firestore.getItemVersion(change.listId, change.entityId)
+
+                            if (remoteVersion != null && remoteVersion.toLong() != change.baseVersion) {
+                                handleConflict(change, remoteVersion.toLong())
+                                continue
+                            }
+                        }
+
                         when (change.operation) {
 
                             "CREATE" -> {
@@ -105,53 +129,54 @@ class SyncCoordinator(
 
                             "DELETE" -> {
                                 val item = itemDao.getById(change.entityId)
-                                val itemListId = item?.listId
-
-                                if (itemListId != null) {
+                                if (item != null) {
                                     firestore.deleteItem(change.listId, change.entityId)
                                 }
                             }
                         }
+
+                        changeQueueDao.updateState(change.id, "DONE")
                     }
                 }
 
-                changeQueueDao.updateState(change.id, "DONE")
-
             } catch (e: Exception) {
 
+                val now = System.currentTimeMillis()
                 val newRetry = change.retryCount + 1
+
+                Log.e("SYNC", "Sync failed id=${change.id} retry=$newRetry", e)
+
+                if (newRetry >= 5) {
+
+                    // 👉 da markFailed fehlt → fallback auf FAILED state
+                    changeQueueDao.updateState(change.id, "FAILED")
+
+                    continue
+                }
 
                 changeQueueDao.updateRetry(
                     id = change.id,
-                    state = if (newRetry >= 5) "FAILED" else "PENDING",
+                    state = "PENDING",
                     retryCount = newRetry,
                     timestamp = now
                 )
             }
         }
 
-        // Cleanup
         changeQueueDao.deleteCompleted()
     }
 
     private suspend fun handleConflict(
-        change: ChangeQueueEntity
+        change: ChangeQueueEntity,
+        remoteVersion: Long
     ) {
         try {
-            
 
             val localItem = itemDao.getById(change.entityId) ?: return
 
-            val remoteVersion = firestore.getItemVersion(localItem.listId, localItem.id)
-                ?: return
-
             val resolvedItem = resolveConflict(localItem, remoteVersion)
 
-            
-
             itemDao.upsert(resolvedItem)
-
-            
 
             changeQueueDao.updateState(
                 change.id,
@@ -159,8 +184,8 @@ class SyncCoordinator(
             )
 
         } catch (e: Exception) {
-            
 
+            Log.e("SYNC", "Conflict handling failed", e)
             changeQueueDao.updateState(
                 change.id,
                 "FAILED"
@@ -170,32 +195,26 @@ class SyncCoordinator(
 
     private fun resolveConflict(
         local: ShoppingItemEntity,
-        remoteVersion: Int
+        remoteUpdatedAt: Long
     ): ShoppingItemEntity {
 
-        return local.copy(
-            version = remoteVersion + 1,
-            updatedAt = System.currentTimeMillis()
-        )
+        return if (remoteUpdatedAt > local.updatedAt) {
+            local
+        } else {
+            local.copy(
+                updatedAt = System.currentTimeMillis()
+            )
+        }
     }
 
-    private fun calculateBackoff(retryCount: Int): Long {
-        val baseDelay = 1000L // 1s
-        val maxDelay = 60_000L // 60s
-
-        val delay = baseDelay * (1 shl retryCount)
-        return delay.coerceAtMost(maxDelay)
-    }
-
-    private suspend fun processQueueWithResult(
-        listIdProvider: () -> String?
-    ): Boolean {
+    private suspend fun processQueueWithResult(): Boolean {
 
         val changes = changeQueueDao.getPending(limit = 20)
+        Log.d("SYNC", "Queue size=${changes.size}")
 
         if (changes.isEmpty()) return false
 
-        processQueue(listIdProvider)
+        processQueue()
 
         return true
     }

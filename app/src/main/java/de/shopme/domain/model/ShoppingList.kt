@@ -16,5 +16,7 @@ data class ShoppingList(
 
     val createdAt: Long,
 
-    val updatedAt: Long
+    val updatedAt: Long,
+
+    val deletedAt: Long?
 )
