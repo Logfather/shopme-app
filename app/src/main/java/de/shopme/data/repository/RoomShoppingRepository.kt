@@ -84,6 +84,8 @@ class RoomShoppingRepository(
 
     suspend fun createList(list: ShoppingListEntity) {
 
+        Log.d("CREATE_DEBUG", "Repository.createList CALLED for ${list.id}")
+
         listDao.upsert(list)
 
         changeQueueDao.insert(

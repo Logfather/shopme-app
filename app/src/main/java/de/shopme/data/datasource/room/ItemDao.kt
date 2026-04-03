@@ -40,5 +40,6 @@ interface ItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<ShoppingItemEntity>)
 
-
+    @Query("DELETE FROM items WHERE listId = :listId")
+    suspend fun deleteByListId(listId: String)
 }

@@ -3,7 +3,6 @@ package de.shopme.ui.app
 import android.content.Intent
 import android.util.Log
 import androidx.compose.animation.*
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -25,8 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.content.Context
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.shopme.R
 import de.shopme.app.MainActivity
@@ -102,6 +101,27 @@ fun ShopMeApp(
         }
     }
 
+    val context = LocalContext.current
+
+    fun shareLink(link: String) {
+
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, link)
+        }
+
+        context.startActivity(
+            Intent.createChooser(intent, "Liste teilen")
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        vm.shareEvent.collect { link: String ->
+            Log.d("SHARE_DEBUG", "UI received link: $link")
+            shareLink(link)
+        }
+    }
+
 
     val showWelcomeDialog = viewState.showWelcomeDialog
 
@@ -118,21 +138,6 @@ fun ShopMeApp(
         animationSpec = tween(durationMillis = 300),
         label = "welcomeBlur"
     )
-
-    val context = LocalContext.current
-
-    fun shareList(listId: String) {
-        val text = vm.shareList(listId)
-
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, text)
-        }
-
-        context.startActivity(
-            Intent.createChooser(intent, "Liste teilen")
-        )
-    }
 
     Box {
 
@@ -198,13 +203,11 @@ fun ShopMeApp(
 
                     val showAccountAction by vm.showAccountAction.collectAsState()
                     val isAnonymous by vm.isAnonymous.collectAsState()
-                    val context = LocalContext.current
 
                     CenterAlignedTopAppBar(
 
                         navigationIcon = {
 
-                            val context = LocalContext.current
 
                             if (showAccountAction) {
 
@@ -307,8 +310,10 @@ fun ShopMeApp(
                                         color = Color.Black,
                                         modifier = Modifier.padding(end = 8.dp)
                                     )
-
-                                    IconButton(onClick = { shareList(activeList.id) }) {
+                                    IconButton(onClick = {
+                                        Log.d("SHARE_DEBUG", "Button clicked")
+                                        vm.createInviteAndShare(activeList.id)
+                                    }) {
                                         Icon(
                                             imageVector = Icons.Default.Share,
                                             contentDescription = "Liste teilen"
@@ -503,9 +508,6 @@ fun ShopMeApp(
                 }
 
             }
-
-            val showAccountHint by vm.shouldShowAccountHint.collectAsState()
-            val context = LocalContext.current
 
             LaunchedEffect(showAccountHint) {
 

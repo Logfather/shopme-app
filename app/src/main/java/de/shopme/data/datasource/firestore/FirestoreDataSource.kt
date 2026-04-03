@@ -28,27 +28,45 @@ class FirestoreDataSource {
     // LISTS
     // ============================================================
 
-    fun observeMemberships(userId: String): Flow<List<String>> = callbackFlow {
+    suspend fun addMembership(
+        userId: String,
+        listId: String
+    ) {
+        val docId = "${userId}_${listId}"
 
-        val listener = firestore
+        firestore
             .collection("list_members")
-            .whereEqualTo("userId", userId)
-            .addSnapshotListener { snapshot, error ->
+            .document(docId)
+            .set(
+                mapOf(
+                    "userId" to userId,
+                    "listId" to listId
+                )
+            )
+            .await()
+    }
 
-                if (error != null) {
-                    Log.e("Firestore", "Membership listener error", error)
-                    return@addSnapshotListener
-                }
 
-                val listIds = snapshot?.documents
-                    ?.mapNotNull { it.getString("listId") }
-                    ?.distinct()
-                    ?: emptyList()
+    suspend fun isUserMemberOfList(
+        userId: String,
+        listId: String
+    ): Boolean {
+        return try {
 
-                trySend(listIds)
-            }
+            val docId = "${userId}_${listId}"
 
-        awaitClose { listener.remove() }
+            val snapshot = firestore
+                .collection("list_members")
+                .document(docId)
+                .get()
+                .await()
+
+            snapshot.exists()
+
+        } catch (e: Exception) {
+            Log.e("MEMBERSHIP", "Check failed", e)
+            false
+        }
     }
 
     fun observeListById(listId: String): Flow<ShoppingListEntity?> = callbackFlow {
@@ -429,23 +447,33 @@ class FirestoreDataSource {
     // LISTS INVITE
     // ============================================================
 
-    suspend fun createInvite(): String {
+    suspend fun createInvite(listId: String): String {
 
-        val inviteId = UUID.randomUUID().toString()
+        val inviteId = java.util.UUID.randomUUID().toString()
+
+        val data = mapOf(
+            "listId" to listId,
+            "createdAt" to System.currentTimeMillis()
+        )
 
         firestore
             .collection("invites")
             .document(inviteId)
-            .set(
-                mapOf(
-                    "createdBy" to requireUid(),
-                    "createdAt" to System.currentTimeMillis(),
-                    "status" to "active"
-                )
-            )
+            .set(data)
             .await()
 
         return inviteId
+    }
+
+    suspend fun getInviteListId(inviteId: String): String? {
+
+        val snapshot = firestore
+            .collection("invites")
+            .document(inviteId)
+            .get()
+            .await()
+
+        return snapshot.getString("listId")
     }
 
     suspend fun getInvite(inviteId: String): String? {

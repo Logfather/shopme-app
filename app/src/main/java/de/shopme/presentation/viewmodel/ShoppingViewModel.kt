@@ -1,13 +1,9 @@
 package de.shopme.presentation.viewmodel
 
-import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import de.shopme.core.network.NetworkMonitor
 import de.shopme.data.datasource.firestore.FirestoreDataSource
-import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
 import de.shopme.data.mapper.EntityMapper.toDomain
 import de.shopme.data.mapper.EntityMapper.toEntity
@@ -25,6 +21,7 @@ import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.state.*
 import de.shopme.presentation.undo.UndoAction
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -36,11 +33,9 @@ class ShoppingViewModel(
     private val roomRepository: RoomShoppingRepository,
     private val quantityMapper: QuantityMapper,
     private val categoryMapper: CategoryMapper,
-    private val networkMonitor: NetworkMonitor,
     private val authProvider: AuthProvider,
     private val speechItemParser: SpeechItemParser,
     private val firestoreDataSource: FirestoreDataSource,
-    private val itemDao: ItemDao,
     private val listDao: ListDao,
     private val firestoreListener: FirestoreListener
 ) : ViewModel() {
@@ -52,11 +47,13 @@ class ShoppingViewModel(
     private val _state = MutableStateFlow(ShoppingState())
     val state: StateFlow<ShoppingState> = _state.asStateFlow()
 
-    private val _showWelcomeDialog = MutableStateFlow(true)
+    private val _showWelcomeDialog = MutableStateFlow(false)
     val showWelcomeDialog: StateFlow<Boolean> = _showWelcomeDialog.asStateFlow()
 
     val showAccountAction = MutableStateFlow(false)
     val isAnonymous = MutableStateFlow(true)
+
+    val isBootstrapping = MutableStateFlow(true)
 
     private val _effects = MutableSharedFlow<UIEffect>()
     val effects: SharedFlow<UIEffect> = _effects
@@ -65,8 +62,14 @@ class ShoppingViewModel(
     val currentListId: StateFlow<String?> = _currentListId
 
     private var lastUndoAction: UndoAction? = null
-    private var pendingInviteListId: String? = null
     private var _accountHintShown = false
+
+    private val _shareEvent = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 1
+    )
+
+    val shareEvent = _shareEvent.asSharedFlow()
 
     val shouldShowAccountHint = MutableStateFlow(false)
 
@@ -76,27 +79,6 @@ class ShoppingViewModel(
 
     fun itemsForList(listId: String) =
         roomRepository.observeItems(listId)
-
-    fun consumePendingInvite(context: Context) {
-
-        val prefs = context.getSharedPreferences("shopme", Context.MODE_PRIVATE)
-        val listId = prefs.getString("pending_invite_list_id", null)
-
-        if (listId != null) {
-
-            val exists = state.value.lists.any { it.id == listId }
-
-            prefs.edit().remove("pending_invite_list_id").apply()
-
-            pendingInviteListId = listId
-
-            if (exists) {
-                setCurrentList(listId)
-            } else {
-                joinList(listId, null)
-            }
-        }
-    }
 
     fun setCurrentList(listId: String) {
         _currentListId.value = listId
@@ -158,6 +140,12 @@ class ShoppingViewModel(
     }
 
     fun deleteList(list: ShoppingList) {
+
+        if (!isCurrentUserOwner()) {
+            Log.d("READ_ONLY", "deleteList blocked – not owner")
+            return
+        }
+
         viewModelScope.launch {
 
             val snapshot = deleteListUseCase(list.id)
@@ -182,23 +170,61 @@ class ShoppingViewModel(
 
         viewModelScope.launch {
 
-            val uid = authProvider.getCurrentUserId() ?: return@launch
+            val uid = authProvider.currentUserId()   // ✅ FAIL-FAST
 
             isAnonymous.value = authProvider.isAnonymous()
 
-            firestoreListener.startListSync(uid)
+            Log.d("BOOT", "VM bootstrap for user=$uid")
+
+            // ✅ Nur noch lokale Beobachtung (Room)
             observeLists()
+
+            // 🆕 Invite Handling
+            if (deepLinkListId != null) {
+
+                val uid = authProvider.currentUserId() ?: return@launch
+
+                joinListIfNeeded(
+                    userId = uid,
+                    listId = deepLinkListId
+                )
+            }
+
+            // ❗ NICHT sofort false setzen
+            delay(1500) // minimaler Buffer für Sync
+
+            isBootstrapping.value = false
+
+            // 🔥 Re-evaluate Welcome nach Boot
+            _showWelcomeDialog.value = _state.value.lists.isEmpty()
         }
     }
 
+    // ------------------------------------------------------------
+    // ITEM OBSERVER (SAFE)
+    // ------------------------------------------------------------
+
+    private var itemsObserverJob: Job? = null
+
     private fun observeItems() {
 
-        viewModelScope.launch {
+        if (itemsObserverJob != null) {
+            Log.d("ITEM_OBSERVER", "Already running → skip")
+            return
+        }
+
+        Log.d("ITEM_OBSERVER", "Starting observer")
+
+        itemsObserverJob = viewModelScope.launch {
 
             currentListId
                 .filterNotNull()
+                .distinctUntilChanged()   // 🔥 verhindert doppelte Trigger
                 .collectLatest { listId ->
 
+                    Log.d("ITEM_OBSERVER", "Switch to list=$listId")
+
+                    // 🔥 wichtig: Sync nur einmal pro Wechsel
                     firestoreListener.startItemSync(listId)
 
                     roomRepository
@@ -217,9 +243,24 @@ class ShoppingViewModel(
         }
     }
 
+    // ------------------------------------------------------------
+    // LIST OBSERVER (SAFE)
+    // ------------------------------------------------------------
+
+    private var listsObserverJob: Job? = null
+
     private fun observeLists() {
 
-        viewModelScope.launch {
+        if (listsObserverJob != null) {
+            Log.d("LIST_OBSERVER", "Already running → skip")
+            return
+        }
+
+        Log.d("LIST_OBSERVER", "Starting observer")
+
+        listsObserverJob = viewModelScope.launch {
+
+            var isFirstEmission = true
 
             roomRepository.observeLists()
                 .collect { lists ->
@@ -245,12 +286,30 @@ class ShoppingViewModel(
 
                         current.copy(
                             lists = domainLists,
-                            screenMode = ShoppingScreenMode.MultiOverview,
+                            screenMode = ShoppingScreenMode.MultiOverview, // bleibt erstmal
                             activeListId = newActiveId
                         )
                     }
 
-                    _showWelcomeDialog.value = domainLists.isEmpty()
+                    // 🔥 FIX: Welcome erst NACH erstem echten Emit
+                    if (!isFirstEmission && !isBootstrapping.value) {
+
+                        val shouldShowWelcome = domainLists.isEmpty()
+
+                        _showWelcomeDialog.value = shouldShowWelcome
+
+                        // 🔥 Safety Sync mit screenMode (minimal-invasiv)
+                        _state.update { current ->
+                            current.copy(
+                                screenMode = if (shouldShowWelcome)
+                                    ShoppingScreenMode.MultiOverview // bleibt bei dir aktuell so
+                                else
+                                    current.screenMode
+                            )
+                        }
+                    }
+
+                    isFirstEmission = false
                 }
         }
     }
@@ -336,6 +395,14 @@ class ShoppingViewModel(
 
         viewModelScope.launch {
 
+            val list = state.value.lists.firstOrNull { it.id == item.listId }
+            val uid = authProvider.currentUserId()
+
+            if (list?.ownerId != uid) {
+                Log.d("READ_ONLY", "updateItem blocked – not owner")
+                return@launch
+            }
+
             val updated = item.copy(
                 name = newName,
                 isChecked = true,
@@ -369,10 +436,11 @@ class ShoppingViewModel(
                 lastCreatedId = id
 
                 val list = listDao.getListOnce(id) ?: return@forEach
-                val uid = authProvider.currentUserId() ?: return@forEach
 
-                firestoreDataSource.createList(
-                    list.copy(ownerId = uid)
+                roomRepository.createList(
+                    list.copy(
+                        ownerId = authProvider.currentUserId() ?: return@forEach
+                    )
                 )
             }
 
@@ -387,10 +455,11 @@ class ShoppingViewModel(
                 lastCreatedId = id
 
                 val list = listDao.getListOnce(id) ?: return@forEach
-                val uid = authProvider.currentUserId() ?: return@forEach
 
-                firestoreDataSource.createList(
-                    list.copy(ownerId = uid)
+                roomRepository.createList(
+                    list.copy(
+                        ownerId = authProvider.currentUserId() ?: return@forEach
+                    )
                 )
             }
 
@@ -487,6 +556,11 @@ class ShoppingViewModel(
 
     private fun addItem(name: String) {
 
+        if (!isCurrentUserOwner()) {
+            Log.d("READ_ONLY", "addItem blocked – not owner")
+            return
+        }
+
         if (name.isBlank()) return
 
         viewModelScope.launch {
@@ -512,6 +586,12 @@ class ShoppingViewModel(
     }
 
     private fun toggleItem(item: ShoppingItem) {
+
+        if (!isCurrentUserOwner()) {
+            Log.d("READ_ONLY", "toggleItem blocked – not owner")
+            return
+        }
+
         viewModelScope.launch {
             roomRepository.updateItem(
                 item.toEntity().copy(
@@ -523,6 +603,12 @@ class ShoppingViewModel(
     }
 
     private fun deleteItem(item: ShoppingItem) {
+
+        if (!isCurrentUserOwner()) {
+            Log.d("READ_ONLY", "deleteItem blocked – not owner")
+            return
+        }
+
         viewModelScope.launch {
             roomRepository.updateItem(
                 item.toEntity().copy(
@@ -537,39 +623,40 @@ class ShoppingViewModel(
     // SPEECH
     // ------------------------------------------------------------
 
-    fun addItemsFromSpeech(text: String) {
-
-        speechItemParser.parseSpeech(text)
-            .forEach { parsed ->
-
-                repeat(parsed.quantity) {
-                    onEvent(ShopEvent.Item.Add(parsed.name))
-                }
-            }
-    }
+    // TODO v6: Re-enable when Speech UI is implemented
+//    fun addItemsFromSpeech(text: String) {
+//
+//        speechItemParser.parseSpeech(text)
+//            .forEach { parsed ->
+//
+//                repeat(parsed.quantity) {
+//                    onEvent(ShopEvent.Item.Add(parsed.name))
+//                }
+//            }
+//    }
 
     // ------------------------------------------------------------
     // MULTI STORE FLOW
     // ------------------------------------------------------------
-
-    fun toggleStore(store: StoreType) {
-
-        val mode = state.value.screenMode
-        if (mode !is ShoppingScreenMode.MultiSelect) return
-
-        val updated =
-            if (store in mode.selectedStores)
-                mode.selectedStores - store
-            else
-                mode.selectedStores + store
-
-        _state.update {
-            it.copy(
-                screenMode =
-                    ShoppingScreenMode.MultiSelect(updated)
-            )
-        }
-    }
+    // TODO v6: MultiStore Use
+//    fun toggleStore(store: StoreType) {
+//
+//        val mode = state.value.screenMode
+//        if (mode !is ShoppingScreenMode.MultiSelect) return
+//
+//        val updated =
+//            if (store in mode.selectedStores)
+//                mode.selectedStores - store
+//            else
+//                mode.selectedStores + store
+//
+//        _state.update {
+//            it.copy(
+//                screenMode =
+//                    ShoppingScreenMode.MultiSelect(updated)
+//            )
+//        }
+//    }
 
     fun dismissWelcomeDialog() {
         _showWelcomeDialog.value = false
@@ -589,96 +676,38 @@ class ShoppingViewModel(
             )
         }
     }
+//    // TODO v6: Fehlerbehandlung
+//    fun onRetrySync(itemId: String) {
+//        viewModelScope.launch {
+//            roomRepository.retrySyncForItem(itemId)
+//        }
+//    }
 
-    fun onRetrySync(itemId: String) {
-        viewModelScope.launch {
-            roomRepository.retrySyncForItem(itemId)
-        }
-    }
+//    fun shareList(listId: String): String {
+//        val inviteId = UUID.randomUUID().toString()
+//        return "https://shopme-app.de/invite?listId=$listId&inviteId=$inviteId"
+//    }
 
-    fun shareList(listId: String): String {
-        val inviteId = UUID.randomUUID().toString()
-        return "https://shopme-app.de/invite?listId=$listId&inviteId=$inviteId"
-    }
-
-    fun handleInviteLink(uri: Uri) {
-
-        val listId =
-            uri.getQueryParameter("listId")
-                ?: uri.lastPathSegment?.substringAfter("listId=")?.substringBefore("&")
-
-        val inviteId =
-            uri.getQueryParameter("inviteId")
-                ?: uri.toString().substringAfter("inviteId=", "").substringBefore("&")
-
-        if (listId == null) return
-
-        joinList(listId, inviteId)
-    }
-
-    fun joinList(listId: String, inviteId: String?) {
+    fun createInviteAndShare(listId: String) {
 
         viewModelScope.launch {
+
+            Log.d("SHARE_DEBUG", "VM called with listId=$listId")
 
             try {
 
-                val remoteList = firestoreDataSource.getListOnce(listId)
+                val inviteId = firestoreDataSource.createInvite(listId)
 
-                remoteList?.let { list ->
+                val link = "https://shopme-app.de/invite?listId=$listId&inviteId=$inviteId"
 
-                    val uid = authProvider.currentUserId() ?: return@let
+                Log.d("SHARE_DEBUG", "Link created: $link")
 
-                    firestoreDataSource.addUserToList(
-                        listId = list.id,
-                        userId = uid
-                    )
+                Log.d("INVITE", "Generated link: $link")
 
-                    delay(300)
+                _shareEvent.tryEmit(link)   // 🔥 DAS FEHLT BEI DIR
 
-                    listDao.upsert(list)
-
-                    firestoreListener.startItemSync(list.id)
-
-                    setCurrentList(list.id)
-                }
-
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    // ------------------------------------------------------------
-    // INVITES
-    // ------------------------------------------------------------
-
-    fun createInviteAndShare() {
-
-        viewModelScope.launch {
-
-            val inviteId = firestoreDataSource.createInvite()
-            val link = "https://shopme.app/invite?inviteId=$inviteId"
-        }
-    }
-
-    fun joinViaInvite(inviteId: String) {
-
-        viewModelScope.launch {
-
-            try {
-
-                val ownerId = firestoreDataSource.getInvite(inviteId) ?: return@launch
-                val uid = authProvider.currentUserId() ?: return@launch
-
-                val lists = firestoreDataSource.getListsForUser(ownerId)
-
-                lists.forEach { list ->
-                    firestoreDataSource.addUserToList(
-                        listId = list.id,
-                        userId = uid
-                    )
-                }
-
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e("INVITE", "Failed to create invite", e)
             }
         }
     }
@@ -697,6 +726,117 @@ class ShoppingViewModel(
 
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private fun isCurrentUserOwner(): Boolean {
+
+        val currentListId = _currentListId.value ?: return false
+        val uid = authProvider.currentUserId()
+
+        val list = _state.value.lists.firstOrNull { it.id == currentListId }
+
+        return list?.ownerId == uid
+    }
+
+    suspend fun joinListIfNeeded(
+        userId: String,
+        listId: String
+    ) {
+        Log.d("JOIN", "Check membership → user=$userId list=$listId")
+
+        val alreadyMember = firestoreDataSource.isUserMemberOfList(userId, listId)
+
+        if (alreadyMember) {
+            Log.d("JOIN", "Already member → skip")
+            return
+        }
+
+        Log.d("JOIN", "Calling addMembership...")
+
+        Log.d("JOIN", "Not member → join")
+
+        try {
+
+            firestoreDataSource.addMembership(
+                userId = userId,
+                listId = listId
+            )
+
+            Log.d("JOIN", "addMembership DONE")
+
+        } catch (e: Exception) {
+
+            Log.e("JOIN", "addMembership FAILED", e)
+            return
+        }
+
+        Log.d("JOIN", "addMembership DONE")
+
+
+
+        // 🔥 Verifikation
+        repeat(5) {
+
+            delay(300)
+
+            val confirmed = firestoreDataSource.isUserMemberOfList(userId, listId)
+
+            if (confirmed) {
+                Log.d("JOIN", "Membership confirmed")
+                return
+            }
+        }
+
+        Log.e("JOIN", "Membership NOT confirmed after retries")
+    }
+
+    fun createInviteLink(
+        listId: String,
+        onResult: (String) -> Unit
+    ) {
+
+        viewModelScope.launch {
+
+            try {
+
+                val inviteId = firestoreDataSource.createInvite(listId)
+
+                val link = "https://shopme.app/invite?inviteId=$inviteId"
+
+                Log.d("INVITE", "Created invite → $link")
+
+                onResult(link)
+
+            } catch (e: Exception) {
+                Log.e("INVITE", "Failed to create invite", e)
+            }
+        }
+    }
+
+    fun joinViaInvite(inviteId: String) {
+
+        viewModelScope.launch {
+
+            try {
+
+                val listId = firestoreDataSource.getInviteListId(inviteId)
+                    ?: run {
+                        Log.e("JOIN", "Invite not found")
+                        return@launch
+                    }
+
+                val uid = authProvider.currentUserId()
+                    ?: return@launch
+
+                joinListIfNeeded(
+                    userId = uid,
+                    listId = listId
+                )
+
+            } catch (e: Exception) {
+                Log.e("JOIN", "Join via invite failed", e)
+            }
         }
     }
 }

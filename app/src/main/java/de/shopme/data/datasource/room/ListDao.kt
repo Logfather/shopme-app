@@ -38,5 +38,6 @@ interface ListDao {
     @Query("SELECT * FROM lists WHERE id = :id LIMIT 1")
     suspend fun getListById(id: String): ShoppingListEntity?
 
-
+    @Query("DELETE FROM lists WHERE id = :listId")
+    suspend fun deleteById(listId: String)
 }

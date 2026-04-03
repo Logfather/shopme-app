@@ -5,7 +5,11 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -17,6 +21,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import de.shopme.core.AppScope
 import de.shopme.core.json.loadJsonMap
 import de.shopme.core.network.NetworkMonitor
@@ -36,9 +41,12 @@ import de.shopme.domain.usecase.CreateListUseCase
 import de.shopme.domain.usecase.DeleteListUseCase
 import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.R
+import de.shopme.data.remote.MembershipListener
 import de.shopme.ui.app.ShopMeApp
 import de.shopme.ui.theme.ShopMeTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class MainActivity : ComponentActivity() {
 
@@ -75,6 +83,19 @@ class MainActivity : ComponentActivity() {
     private lateinit var googleSignInClient: com.google.android.gms.auth.api.signin.GoogleSignInClient
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
+        val uri: Uri? = intent?.data
+
+        Log.d("DEEPLINK", "RAW URI → $uri")
+
+        val listId = uri?.getQueryParameter("listId")
+        val inviteId = uri?.getQueryParameter("inviteId")
+
+        Log.d("DEEPLINK", "listId=$listId inviteId=$inviteId")
+
+
+
+
         super.onCreate(savedInstanceState)
 
         val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
@@ -168,6 +189,13 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
+                val membershipListener = remember {
+                    MembershipListener(
+                        firestore = FirebaseFirestore.getInstance(),
+                        syncCoordinator = syncCoordinator
+                    )
+                }
+
                 val quantityMapper = remember {
                     QuantityMapper(
                         loadJsonMap(activityContext, "quantity_mapping.json")
@@ -196,17 +224,17 @@ class MainActivity : ComponentActivity() {
                                 roomRepository = roomRepository,
                                 quantityMapper = quantityMapper,
                                 categoryMapper = categoryMapper,
-                                networkMonitor = networkMonitor,
                                 authProvider = authProvider,
                                 speechItemParser = speechParser,
                                 firestoreDataSource = firestoreDataSource,
-                                itemDao = itemDao,
                                 listDao = listDao,
                                 firestoreListener = firestoreListener
                             )
                         }
                     }
                 }
+
+
 
                 // ------------------------------------------------------------
                 // BOOTSTRAP
@@ -216,106 +244,61 @@ class MainActivity : ComponentActivity() {
 
                 shoppingViewModel = vm
 
+                val auth = FirebaseAuth.getInstance()
+                var bootstrapped by remember { mutableStateOf(false) }
+
                 LaunchedEffect(Unit) {
 
-                    Log.e("BOOT", "LaunchedEffect STARTED")
+                    if (bootstrapped) return@LaunchedEffect
 
-                    val auth = FirebaseAuth.getInstance()
+                    bootstrapped = true
 
-                    fun runBootstrap() {
+                    try {
 
-                        Log.e("BOOT", "runBootstrap CALLED")
+                        Log.d("BOOT", "START BOOTSTRAP")
 
-                        val user = auth.currentUser
+                        val user = auth.currentUser?.let { current ->
 
-                        Log.e("BOOT", "USER = $user")
+                            Log.d("BOOT", "TRY EXISTING USER → ${current.uid}")
 
-                        if (user == null) {
-                            Log.e("BOOT", "USER IS NULL → ABORT")
-                            return
+                            current.getIdToken(true).await()
+
+                            current
+
+                        } ?: run {
+
+                            Log.w("BOOT", "USER INVALID → RECREATE")
+
+                            auth.signOut()
+
+                            val result = auth.signInAnonymously().await()
+
+                            Log.d("BOOT", "ANON LOGIN SUCCESS")
+
+                            result.user ?: throw IllegalStateException("User null after recreate")
                         }
 
-                        Log.e("BOOT", "STARTING SYNC")
+                        Log.d("BOOT", "USER READY → ${user.uid}")
 
                         syncCoordinator.start()
+                        membershipListener.start(user.uid)
 
-                        Log.e("BOOT", "SYNC START CALLED")
-
-                        val uri: Uri? = intent?.data
-                        val listId = uri?.getQueryParameter("listId")
-                        val inviteId = uri?.getQueryParameter("inviteId")
-
+                        // 🔥 EINZIGER Bootstrap-Aufruf (hier!)
                         vm.bootstrap(
                             deepLinkListId = listId,
                             deepLinkInviteId = inviteId
                         )
 
-                        Log.e("BOOT", "BOOTSTRAP CALLED")
+                        // 🔥 KEIN zweiter Token Call mehr!
 
-                        if (inviteId != null) {
-                            vm.joinViaInvite(inviteId)
-                        }
+                        val uri: Uri? = intent?.data
+                        val listId = uri?.getQueryParameter("listId")
+                        val inviteId = uri?.getQueryParameter("inviteId")
+
+                    } catch (e: Exception) {
+                        Log.e("BOOT", "BOOT FAILED", e)
                     }
-
-                    if (auth.currentUser != null) {
-                        Log.e("BOOT", "USER EXISTS → DIRECT BOOTSTRAP")
-                        runBootstrap()
-                        return@LaunchedEffect
-                    }
-
-                    Log.e("BOOT", "NO USER → SIGN IN")
-
-                    auth.signInAnonymously()
-                        .addOnSuccessListener {
-                            Log.e("BOOT", "ANON LOGIN SUCCESS")
-                            runBootstrap()
-                        }
-                        .addOnFailureListener {
-                            Log.e("BOOT", "ANON LOGIN FAILED", it)
-                        }
                 }
-
-//                LaunchedEffect(Unit) {
-//
-//
-//                    val auth = FirebaseAuth.getInstance()
-//
-//                    fun runBootstrap() {
-//
-//                        val user = auth.currentUser ?: return
-//
-//                        val uri: Uri? = intent?.data
-//                        val listId = uri?.getQueryParameter("listId")
-//                        val inviteId = uri?.getQueryParameter("inviteId")
-//
-//                        vm.bootstrap(
-//                            deepLinkListId = listId,
-//                            deepLinkInviteId = inviteId
-//                        )
-//
-//                        if (inviteId != null) {
-//                            vm.joinViaInvite(inviteId)
-//                        }
-//                    }
-//
-//                    // 🔥 Fall 1: User existiert
-//                    if (auth.currentUser != null) {
-//                        runBootstrap()
-//                        return@LaunchedEffect
-//                    }
-//
-//                    // 🔥 Fall 2: Kein User → Login + danach Bootstrap
-//
-//                    try {
-//                        auth.signInAnonymously()
-//                            .addOnSuccessListener {
-//                                runBootstrap() // 🔥 HIER IST DER FIX
-//                            }
-//                            .addOnFailureListener {
-//                            }
-//                    } catch (e: Exception) {
-//                    }
-//                }
 
                 val speechController = remember {
                     SpeechController(

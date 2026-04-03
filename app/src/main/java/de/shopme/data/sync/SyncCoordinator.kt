@@ -19,36 +19,108 @@ class SyncCoordinator(
 
     private val isRunning = AtomicBoolean(false)
 
+    private val activeListSyncs = mutableMapOf<String, Job>()
+
     fun start() {
 
-        Log.d("SYNC", "START CALLED")
+        Log.d("SYNC_LIST", "START CALLED")
 
-        if (isRunning.getAndSet(true)) return
+        if (isRunning.getAndSet(true)) {
+            Log.d("SYNC_LIST", "Already running → skip")
+            return
+        }
 
         appScope.scope.launch {
 
-            Log.d("SYNC", "LOOP STARTED")
+            Log.d("SYNC_LIST", "LOOP STARTED")
 
-            while (true) {
+            while (isActive) {   // 🔥 FIX: lifecycle-aware
+
                 try {
 
-                    Log.d("SYNC", "Checking queue...")
+                    //Log.d("SYNC_LIST", "Checking queue...")
 
                     val hasWork = processQueueWithResult()
 
-                    if (!hasWork) {
-                        delay(2000)
-                    } else {
-                        delay(300)
-                    }
+                    delay(if (hasWork) 300 else 2000)
 
                 } catch (e: Exception) {
-                    Log.e("SYNC", "LOOP CRASH", e)
+
+                    Log.e("SYNC_LIST", "LOOP CRASH", e)
+
                     delay(2000)
                 }
             }
+
+            Log.d("SYNC_LIST", "LOOP STOPPED")
         }
     }
+
+    fun startSingleListSync(listId: String) {
+
+        if (activeListSyncs.containsKey(listId)) {
+            Log.d("SYNC_LIST", "Sync already running for list=$listId")
+            return
+        }
+
+        Log.d("SYNC_LIST", "Start sync for list=$listId")
+
+        val job = appScope.scope.launch {
+
+            // 🔁 LIST FLOW
+            launch {
+                firestore.observeListById(listId).collect { list ->
+                    Log.d("SYNC_DEBUG", "LIST FLOW EMIT: $listId -> $list")
+                    if (list != null) {
+                        listDao.upsert(list)
+                    }
+                }
+            }
+
+            // 🔁 ITEM FLOW
+            launch {
+                firestore.observeItems(listId).collect { items ->
+                    Log.d("SYNC_DEBUG", "ITEM FLOW EMIT: $listId size=${items.size}")
+                    itemDao.insertAll(items)
+                }
+            }
+        }
+
+        activeListSyncs[listId] = job
+    }
+
+    fun stopSingleListSync(listId: String) {
+
+        val job = activeListSyncs[listId]
+
+        if (job != null) {
+            Log.d("SYNC_LIST", "Stop sync for list=$listId")
+            job.cancel()
+            activeListSyncs.remove(listId)
+        } else {
+            Log.d("SYNC_LIST", "No active sync for list=$listId")
+        }
+    }
+
+    suspend fun deleteLocalList(listId: String) {
+
+        Log.d("SYNC_LIST", "Deleting local list=$listId")
+
+        itemDao.deleteByListId(listId)
+        listDao.deleteById(listId)
+    }
+
+    fun deleteLocalListAsync(listId: String) {
+
+        appScope.scope.launch {
+
+            Log.d("SYNC_LIST", "Async delete local list=$listId")
+
+            deleteLocalList(listId)
+        }
+    }
+
+
 
     private suspend fun processQueue() {
 
@@ -78,21 +150,25 @@ class SyncCoordinator(
                         when (change.operation) {
 
                             "CREATE" -> {
+
                                 val list = listDao.getListOnce(change.entityId) ?: continue
+
                                 firestore.createList(list)
+
+                                // 🆕 AUTO MEMBERSHIP
+                                firestore.addMembership(
+                                    userId = list.ownerId,
+                                    listId = list.id
+                                )
+
                                 changeQueueDao.updateState(change.id, "DONE")
                             }
 
                             "DELETE" -> {
-
-                                Log.d("SYNC", "Processing DELETE for list=${change.listId}")
-
                                 // 👉 falls deine Methode anders heißt, HIER anpassen
                                 firestore.softDeleteList(change.listId)
 
                                 changeQueueDao.updateState(change.id, "DONE")
-
-                                Log.d("SYNC", "DELETE SUCCESS → DONE")
                             }
                         }
                     }
@@ -144,8 +220,6 @@ class SyncCoordinator(
                 val now = System.currentTimeMillis()
                 val newRetry = change.retryCount + 1
 
-                Log.e("SYNC", "Sync failed id=${change.id} retry=$newRetry", e)
-
                 if (newRetry >= 5) {
 
                     // 👉 da markFailed fehlt → fallback auf FAILED state
@@ -185,7 +259,6 @@ class SyncCoordinator(
 
         } catch (e: Exception) {
 
-            Log.e("SYNC", "Conflict handling failed", e)
             changeQueueDao.updateState(
                 change.id,
                 "FAILED"
@@ -210,7 +283,12 @@ class SyncCoordinator(
     private suspend fun processQueueWithResult(): Boolean {
 
         val changes = changeQueueDao.getPending(limit = 20)
-        Log.d("SYNC", "Queue size=${changes.size}")
+
+        Log.d("SYNC_DEBUG", "Queue fetched size=${changes.size}")
+
+        changes.forEach {
+            Log.d("SYNC_DEBUG", "Queue item: ${it.operation} ${it.entityType} ${it.entityId} state=${it.state}")
+        }
 
         if (changes.isEmpty()) return false
 

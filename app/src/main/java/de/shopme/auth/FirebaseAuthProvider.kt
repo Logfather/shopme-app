@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.tasks.await
 import de.shopme.domain.auth.AuthProvider
+import kotlinx.coroutines.delay
 
 class FirebaseAuthProvider : AuthProvider {
 
@@ -11,8 +12,19 @@ class FirebaseAuthProvider : AuthProvider {
 
     override suspend fun ensureAuthenticated() {
 
+        if (auth.currentUser != null) return
+
+        auth.signInAnonymously().await()
+
+        // 🔥 Warten bis Firebase wirklich gesetzt ist
+        var attempts = 0
+        while (auth.currentUser == null && attempts < 10) {
+            delay(100)
+            attempts++
+        }
+
         if (auth.currentUser == null) {
-            auth.signInAnonymously().await()
+            throw IllegalStateException("Auth failed: user still null after signIn")
         }
     }
 
@@ -52,12 +64,12 @@ class FirebaseAuthProvider : AuthProvider {
     }
 
     override fun currentUserId(): String {
-        return auth.currentUser?.uid
+        return FirebaseAuth.getInstance().currentUser?.uid
             ?: throw IllegalStateException("User not authenticated")
     }
 
-    override fun getCurrentUserId(): String? {
-        return FirebaseAuth.getInstance().currentUser?.uid
+    override fun currentUserIdOrNull(): String? {
+        return auth.currentUser?.uid
     }
 
     override fun isAnonymous(): Boolean {

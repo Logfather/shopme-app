@@ -25,70 +25,8 @@ class FirestoreListener(
 
     fun startListSync(userId: String) {
 
-        Log.d("LIST_DEBUG", "startListSync CALLED for user=$userId")
+        Log.d("LIST_DEBUG", "startListSync DISABLED (replaced by MembershipListener) for user=$userId")
 
-        appScope.scope.launch {
-
-            dataSource.observeListsForUser(userId)
-                .collectLatest { remoteLists ->
-
-                    Log.d("LIST_DEBUG", "LIST LISTENER TRIGGERED size=${remoteLists.size}")
-
-                    remoteLists.forEach {
-                        Log.d(
-                            "LIST_DEBUG",
-                            "REMOTE list=${it.name} id=${it.id} owner=${it.ownerId}"
-                        )
-                    }
-
-                    val uniqueLists = remoteLists.distinctBy { it.id }
-
-                    uniqueLists.forEach { list ->
-
-                        val local = listDao.getListOnce(list.id)
-
-                        // 🔥 FIX: Undo erlauben, Zombie-Reinsert verhindern
-                        if (local?.deletedAt != null && list.deletedAt != null) {
-                            Log.d("SYNC", "IGNORE remote delete for already deleted ${list.id}")
-                            return@forEach
-                        }
-
-                        // 🔥 FIX: Remote ist Quelle der Wahrheit
-                        if (list.deletedAt != null) {
-                            Log.d("SYNC", "APPLY remote delete for ${list.id}")
-                            listDao.markDeleted(list.id, list.deletedAt)
-                        } else {
-                            Log.d("SYNC", "UPSERT remote list ${list.id}")
-                            listDao.upsert(list)
-                        }
-
-                        if (!activeItemSyncs.contains(list.id)) {
-                            activeItemSyncs.add(list.id)
-                            startItemSync(list.id)
-                        }
-                    }
-                }
-        }
-    }
-
-    private fun observeMemberships(userId: String) {
-
-        appScope.scope.launch {
-
-            dataSource.observeMemberships(userId)
-                .collectLatest { listIds ->
-
-                    Log.d("LIST_DEBUG", "Membership listIds=$listIds")
-
-                    listIds.forEach { listId ->
-
-                        if (!activeListSyncs.contains(listId)) {
-                            activeListSyncs.add(listId)
-                            startSingleListSync(listId)
-                        }
-                    }
-                }
-        }
     }
 
     private fun startSingleListSync(listId: String) {
@@ -112,7 +50,12 @@ class FirestoreListener(
 
     fun startItemSync(listId: String) {
 
-        activeItemListeners[listId]?.cancel()
+        if (activeItemListeners.containsKey(listId)) {
+            Log.d("ITEM_SYNC", "Already running for list=$listId → skip")
+            return
+        }
+
+        Log.d("ITEM_SYNC", "Start sync for list=$listId")
 
         val job = appScope.scope.launch {
 
