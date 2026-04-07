@@ -7,8 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.domain.model.ShoppingItem
+import de.shopme.presentation.viewmodel.ShoppingViewModel
 
 @Composable
 fun ItemsScreen(

@@ -1,6 +1,7 @@
 package de.shopme.data.repository
 
 import android.util.Log
+import de.shopme.data.datasource.firestore.FirestoreDataSource
 import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
 import de.shopme.data.sync.ChangeQueueDao
@@ -8,25 +9,22 @@ import de.shopme.data.sync.ChangeQueueEntity
 import de.shopme.domain.model.ListDeleteSnapshot
 import de.shopme.domain.model.ShoppingItemEntity
 import de.shopme.domain.model.ShoppingListEntity
-import de.shopme.domain.sync.toSyncStatus
 import de.shopme.domain.model.SyncStatus
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.*
 import java.util.UUID
 
 class RoomShoppingRepository(
     private val itemDao: ItemDao,
     private val listDao: ListDao,
-    private val changeQueueDao: ChangeQueueDao
-) {
+    private val changeQueueDao: ChangeQueueDao,
+    private val firestoreDataSource: FirestoreDataSource
+){
 
     // ============================================================
     // LISTS
     // ============================================================
 
     fun observeLists(): Flow<List<ShoppingListEntity>> {
-
         return listDao.observeLists()
     }
 
@@ -34,10 +32,26 @@ class RoomShoppingRepository(
         listDao.insertLists(lists)
     }
 
+    fun observeAndStoreList(listId: String): Flow<Unit> {
+        return firestoreDataSource
+            .observeList(listId)
+            .filterNotNull()
+            .distinctUntilChanged()
+            .map { entity ->
+                listDao.insert(entity)
+                Unit
+            }
+    }
+
     suspend fun deleteList(listId: String) {
 
-        val current = listDao.getListById(listId)
+        val now = System.currentTimeMillis()
 
+        // 🔥 BESTEHENDES Verhalten beibehalten:
+        listDao.deleteById(listId)
+        itemDao.deleteByListId(listId)
+
+        // 🔥 NEU: Queue Event
         changeQueueDao.insert(
             ChangeQueueEntity(
                 id = UUID.randomUUID().toString(),
@@ -46,14 +60,12 @@ class RoomShoppingRepository(
                 listId = listId,
                 operation = "DELETE",
                 payload = null,
-                createdAt = System.currentTimeMillis(),
+                createdAt = now,
                 state = "PENDING",
                 progress = 0f,
-                baseVersion = (current?.updatedAt ?: 0)
+                baseVersion = 0L
             )
         )
-
-        listDao.markDeleted(listId, System.currentTimeMillis())
     }
 
     suspend fun deleteAllLists() {
@@ -72,7 +84,7 @@ class RoomShoppingRepository(
                     createdAt = System.currentTimeMillis(),
                     state = "PENDING",
                     progress = 0f,
-                    baseVersion = (list.updatedAt / 1000)
+                    baseVersion = list.updatedAt   // ✅ FIX: keine /1000
                 )
             )
         }
@@ -120,7 +132,7 @@ class RoomShoppingRepository(
             entityId = item.id,
             listId = item.listId,
             operation = "CREATE",
-            baseVersion = 0L
+            baseVersion = 0L   // ✅ korrekt: existiert remote noch nicht
         )
     }
 
@@ -134,7 +146,7 @@ class RoomShoppingRepository(
             entityId = item.id,
             listId = item.listId,
             operation = "UPDATE",
-            baseVersion = current?.updatedAt ?: 0L
+            baseVersion = current?.updatedAt ?: 0L   // ✅ korrekt (Millis!)
         )
     }
 
@@ -153,7 +165,7 @@ class RoomShoppingRepository(
             entityId = item.id,
             listId = item.listId,
             operation = "DELETE",
-            baseVersion = current?.updatedAt ?: 0L
+            baseVersion = current?.updatedAt ?: 0L   // ✅ korrekt
         )
     }
 
@@ -165,7 +177,7 @@ class RoomShoppingRepository(
         entityId: String,
         listId: String,
         operation: String,
-        baseVersion: Long = 0L
+        baseVersion: Long
     ) {
         changeQueueDao.insert(
             ChangeQueueEntity(
@@ -178,7 +190,7 @@ class RoomShoppingRepository(
                 createdAt = System.currentTimeMillis(),
                 state = "PENDING",
                 progress = 0f,
-                baseVersion = baseVersion // ⚠️ wegen aktuellem Schema
+                baseVersion = baseVersion   // ✅ immer updatedAt in Millis
             )
         )
     }
@@ -190,23 +202,18 @@ class RoomShoppingRepository(
             changeQueueDao.observeSyncStates()
         ) { items, syncStates ->
 
-            val stateMap = syncStates
-                .groupBy { it.entityId }
+            val stateMap = syncStates.groupBy { it.entityId }
 
             items.map { item ->
 
                 val states = stateMap[item.id]
 
                 val status = when {
-
-                    // ❌ höchste Priorität
                     states?.any { it.state == "FAILED" } == true -> {
                         SyncStatus.Failed()
                     }
 
-                    // 🔄 irgendwas läuft
                     states?.any { it.state == "SYNCING" } == true -> {
-
                         val progress = states
                             .filter { it.state == "SYNCING" }
                             .mapNotNull { it.progress }
@@ -217,16 +224,15 @@ class RoomShoppingRepository(
                         SyncStatus.Syncing(progress = progress)
                     }
 
-                    // 🕓 wartet
                     states?.any { it.state == "PENDING" } == true -> {
                         SyncStatus.Pending
                     }
 
-                    // ✅ nichts offen
                     else -> {
                         SyncStatus.Synced
                     }
                 }
+
                 item to status
             }
         }
@@ -258,11 +264,9 @@ class RoomShoppingRepository(
         )
     }
 
-
     suspend fun markListDeleted(listId: String) {
         listDao.markDeleted(listId, System.currentTimeMillis())
     }
-
 
     suspend fun createListDeleteSnapshot(listId: String): ListDeleteSnapshot {
 
@@ -287,8 +291,6 @@ class RoomShoppingRepository(
             now
         )
 
-
-
         // 1. Queue
         changeQueueDao.insert(
             ChangeQueueEntity(
@@ -301,7 +303,7 @@ class RoomShoppingRepository(
                 createdAt = now,
                 state = "PENDING",
                 progress = 0f,
-                baseVersion = (snapshot.list.updatedAt / 1000)
+                baseVersion = 0L   // ✅ FIX: neue Creation → kein Remote-Vergleich
             )
         )
 

@@ -1,4 +1,4 @@
-package de.shopme.ui.illustration
+package de.shopme.ui.illustration.icons.bags
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border

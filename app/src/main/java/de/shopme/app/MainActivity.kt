@@ -39,9 +39,11 @@ import de.shopme.domain.catalog.CatalogIndex
 import de.shopme.domain.service.*
 import de.shopme.domain.usecase.CreateListUseCase
 import de.shopme.domain.usecase.DeleteListUseCase
-import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.R
 import de.shopme.data.remote.MembershipListener
+import de.shopme.data.sync.ChangeQueue
+import de.shopme.presentation.effect.UIEffect
+import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.ui.app.ShopMeApp
 import de.shopme.ui.theme.ShopMeTheme
 import kotlinx.coroutines.delay
@@ -51,6 +53,7 @@ import kotlinx.coroutines.tasks.await
 class MainActivity : ComponentActivity() {
 
     private val authProvider: AuthProvider = FirebaseAuthProvider()
+
 
     private val googleSignInLauncher =
         registerForActivityResult(
@@ -92,10 +95,6 @@ class MainActivity : ComponentActivity() {
         val inviteId = uri?.getQueryParameter("inviteId")
 
         Log.d("DEEPLINK", "listId=$listId inviteId=$inviteId")
-
-
-
-
         super.onCreate(savedInstanceState)
 
         val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
@@ -144,12 +143,14 @@ class MainActivity : ComponentActivity() {
                 val listDao = remember { database.listDao() }
                 val itemDao = remember { database.itemDao() }
                 val changeQueueDao = remember { database.changeQueueDao() }
+                val firestoreDataSource = remember { FirestoreDataSource() }
 
                 val roomRepository = remember {
                     RoomShoppingRepository(
-                        itemDao = itemDao,
-                        listDao = listDao,
-                        changeQueueDao = changeQueueDao
+                        itemDao,
+                        listDao,
+                        changeQueueDao,
+                        firestoreDataSource // 🔥 NEU
                     )
                 }
 
@@ -165,8 +166,6 @@ class MainActivity : ComponentActivity() {
                 val speechParser = remember {
                     SpeechItemParser(catalogService)
                 }
-
-                val firestoreDataSource = remember { FirestoreDataSource() }
                 val conflictResolver = remember { ConflictResolver() }
 
                 val firestoreListener = remember {
@@ -185,7 +184,8 @@ class MainActivity : ComponentActivity() {
                         itemDao = itemDao,
                         listDao = listDao,
                         firestore = firestoreDataSource,
-                        appScope = appScope
+                        appScope = appScope,
+                        firebaseAuth = FirebaseAuth.getInstance() // 🔥 HIER
                     )
                 }
 
@@ -216,6 +216,18 @@ class MainActivity : ComponentActivity() {
                     val deleteListUseCase =
                         DeleteListUseCase(roomRepository, firestoreDataSource)
 
+                    // 🔥 NEU
+                    val syncCoordinator = SyncCoordinator(
+                        changeQueueDao = changeQueueDao,
+                        itemDao = itemDao,
+                        listDao = listDao,
+                        firestore = firestoreDataSource,
+                        appScope = appScope,
+                        firebaseAuth = FirebaseAuth.getInstance() // 🔥 HIER
+                    )
+
+                    val inMemoryChangeQueue = ChangeQueue()
+
                     viewModelFactory {
                         initializer {
                             ShoppingViewModel(
@@ -224,11 +236,16 @@ class MainActivity : ComponentActivity() {
                                 roomRepository = roomRepository,
                                 quantityMapper = quantityMapper,
                                 categoryMapper = categoryMapper,
+                                networkMonitor = networkMonitor,
                                 authProvider = authProvider,
                                 speechItemParser = speechParser,
                                 firestoreDataSource = firestoreDataSource,
+                                itemDao = itemDao,
                                 listDao = listDao,
-                                firestoreListener = firestoreListener
+                                firestoreListener = firestoreListener,
+                                changeQueue = inMemoryChangeQueue,
+                                syncCoordinator = syncCoordinator,
+                                changeQueueDao = changeQueueDao,
                             )
                         }
                     }
@@ -247,7 +264,7 @@ class MainActivity : ComponentActivity() {
                 val auth = FirebaseAuth.getInstance()
                 var bootstrapped by remember { mutableStateOf(false) }
 
-                LaunchedEffect(Unit) {
+                LaunchedEffect(intent?.data) {
 
                     if (bootstrapped) return@LaunchedEffect
 
@@ -257,17 +274,34 @@ class MainActivity : ComponentActivity() {
 
                         Log.d("BOOT", "START BOOTSTRAP")
 
-                        val user = auth.currentUser?.let { current ->
+                        val user = try {
 
-                            Log.d("BOOT", "TRY EXISTING USER → ${current.uid}")
+                            val current = auth.currentUser
 
-                            current.getIdToken(true).await()
+                            if (current != null) {
+                                Log.d("BOOT", "TRY EXISTING USER → ${current.uid}")
 
-                            current
+                                try {
+                                    current.getIdToken(true).await()
+                                    current
+                                } catch (e: Exception) {
+                                    Log.w("BOOT", "USER INVALID → FORCE RECREATE", e)
 
-                        } ?: run {
+                                    auth.signOut()
+                                    val result = auth.signInAnonymously().await()
 
-                            Log.w("BOOT", "USER INVALID → RECREATE")
+                                    Log.d("BOOT", "ANON LOGIN SUCCESS (recreated)")
+
+                                    result.user ?: throw IllegalStateException("User null after recreate")
+                                }
+
+                            } else {
+                                throw Exception("No user")
+                            }
+
+                        } catch (e: Exception) {
+
+                            Log.w("BOOT", "USER INVALID → RECREATE", e)
 
                             auth.signOut()
 
@@ -281,19 +315,21 @@ class MainActivity : ComponentActivity() {
                         Log.d("BOOT", "USER READY → ${user.uid}")
 
                         syncCoordinator.start()
-                        membershipListener.start(user.uid)
 
-                        // 🔥 EINZIGER Bootstrap-Aufruf (hier!)
-                        vm.bootstrap(
-                            deepLinkListId = listId,
-                            deepLinkInviteId = inviteId
-                        )
+                        // 🔥 HIER HINZUFÜGEN
+                        //membershipListener.start(user.uid)
 
                         // 🔥 KEIN zweiter Token Call mehr!
 
                         val uri: Uri? = intent?.data
                         val listId = uri?.getQueryParameter("listId")
                         val inviteId = uri?.getQueryParameter("inviteId")
+
+                        // 🔥 EINZIGER Bootstrap-Aufruf (hier!)
+                        vm.bootstrap(
+                            deepLinkListId = listId,
+                            deepLinkInviteId = inviteId
+                        )
 
                     } catch (e: Exception) {
                         Log.e("BOOT", "BOOT FAILED", e)

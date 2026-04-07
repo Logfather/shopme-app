@@ -14,26 +14,23 @@ class CreateListUseCase(
         storeTypes: List<StoreType>
     ): String {
 
-            val listId = java.util.UUID.randomUUID().toString()
+        val listId = java.util.UUID.randomUUID().toString()
 
-            val now = System.currentTimeMillis()
+        val now = System.currentTimeMillis()
 
-            val list = ShoppingListEntity(
-                id = listId,
-                name = name,
-                ownerId = "", // später optional setzen
-                storeTypes = storeTypes,
-                itemCount = 0,
-                createdAt = now,
-                updatedAt = now
-            )
+        val list = ShoppingListEntity(
+            id = listId,
+            name = name,
+            ownerId = "", // später optional setzen
+            storeTypes = storeTypes,
+            itemCount = 0,
+            createdAt = now,
+            updatedAt = now
+        )
 
-            roomRepository.upsertLists(listOf(list))
+        // 🔥 WICHTIG: v6-konformer Einstieg
+        roomRepository.createList(list)
 
-            // optional: ChangeQueue (kann später erweitert werden)
-
-            return listId
-
+        return listId
     }
-
 }

@@ -1,4 +1,4 @@
-package de.shopme.ui.illustration
+package de.shopme.ui.illustration.icons.bags
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,7 +23,7 @@ import de.shopme.R
 import de.shopme.ui.theme.ShopMeTheme
 
 @Composable
-fun HeroBagIllustration(
+fun SadBagIllustration(
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -50,7 +50,7 @@ fun HeroBagIllustration(
 
 @Preview(showBackground = true, backgroundColor = 0xFF000000)
 @Composable
-private fun HeroBagIllustrationPreview() {
+private fun SadBagIllustrationPreview() {
     ShopMeTheme {
         Box(
             modifier = Modifier
@@ -58,7 +58,7 @@ private fun HeroBagIllustrationPreview() {
                 .padding(48.dp),
             contentAlignment = Alignment.Center
         ) {
-            HeroBagIllustration(
+            SadBagIllustration(
                 modifier = Modifier.size(320.dp)
             )
         }

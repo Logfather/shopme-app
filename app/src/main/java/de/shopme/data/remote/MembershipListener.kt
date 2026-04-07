@@ -1,9 +1,9 @@
 package de.shopme.data.remote
 
+import android.util.Log
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import android.util.Log
 import de.shopme.data.sync.SyncCoordinator
 
 class MembershipListener(
@@ -12,64 +12,51 @@ class MembershipListener(
 ) {
 
     private var registration: ListenerRegistration? = null
+    private var isStarted = false
+    private var isInitialSnapshot = true   // 🔥 CRITICAL
 
     fun start(userId: String) {
 
+        if (isStarted) {
+            Log.d("MEMBERSHIP", "Already started → skip")
+            return
+        }
+
         Log.d("MEMBERSHIP", "Start listening for user: $userId")
 
-        registration?.remove()
+        isStarted = true
 
         registration = firestore
-            .collection("list_members")
-            .whereEqualTo("userId", userId)
+            .collection("lists")
+            .whereArrayContains("sharedWith", userId)
             .addSnapshotListener { snapshot, error ->
 
                 if (error != null) {
-
                     Log.e("MEMBERSHIP", "Listener error", error)
-
-                    // 🔥 WICHTIG: Permission Fehler sichtbar behandeln
-                    if (error.message?.contains("PERMISSION_DENIED") == true) {
-                        Log.e("MEMBERSHIP", "PERMISSION_DENIED → check Firestore rules")
-                    }
-
                     return@addSnapshotListener
                 }
 
-                if (snapshot == null) {
-                    Log.w("MEMBERSHIP", "Snapshot is null")
-                    return@addSnapshotListener
-                }
-
-                if (snapshot.isEmpty) {
-                    Log.d("MEMBERSHIP", "No memberships found")
-                }
+                if (snapshot == null) return@addSnapshotListener
 
                 snapshot.documentChanges.forEach { change ->
 
-                    val listId = change.document.getString("listId")
-
-                    if (listId == null) {
-                        Log.w("MEMBERSHIP", "Missing listId in document")
-                        return@forEach
-                    }
+                    val listId = change.document.id
 
                     when (change.type) {
 
                         DocumentChange.Type.ADDED -> {
-                            Log.d("MEMBERSHIP", "ADDED: $listId")
+                            Log.d("MEMBERSHIP", "ADDED → start sync: $listId")
                             syncCoordinator.startSingleListSync(listId)
                         }
 
                         DocumentChange.Type.REMOVED -> {
-                            Log.d("MEMBERSHIP", "REMOVED: $listId")
+                            Log.d("MEMBERSHIP", "REMOVED → stop sync: $listId")
                             syncCoordinator.stopSingleListSync(listId)
                             syncCoordinator.deleteLocalListAsync(listId)
                         }
 
                         DocumentChange.Type.MODIFIED -> {
                             Log.d("MEMBERSHIP", "MODIFIED: $listId")
-                            // aktuell keine Aktion nötig
                         }
                     }
                 }
@@ -78,12 +65,12 @@ class MembershipListener(
 
     fun stop() {
 
-        if (registration != null) {
-            Log.d("MEMBERSHIP", "Stopping listener")
-            registration?.remove()
-            registration = null
-        } else {
-            Log.d("MEMBERSHIP", "Stop called but no active listener")
-        }
+        if (!isStarted) return
+
+        Log.d("MEMBERSHIP", "Stopping listener")
+
+        registration?.remove()
+        registration = null
+        isStarted = false
     }
 }

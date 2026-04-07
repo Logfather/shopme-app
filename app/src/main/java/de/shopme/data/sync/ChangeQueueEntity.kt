@@ -31,6 +31,7 @@ data class ChangeQueueEntity(
 
     val errorMessage: String? = null,
 
+    // 🔥 baseVersion = updatedAt snapshot zum Zeitpunkt der Änderung (Millis!)
     val baseVersion: Long
 )
 

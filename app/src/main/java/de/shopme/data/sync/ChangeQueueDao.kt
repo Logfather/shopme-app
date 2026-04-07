@@ -29,13 +29,22 @@ interface ChangeQueueDao {
     @Query("SELECT * FROM change_queue WHERE state = 'PENDING' ORDER BY createdAt ASC")
     suspend fun getPendingChanges(): List<ChangeQueueEntity>
 
-    @Query("UPDATE change_queue SET state = :state WHERE id = :id")
+    @Query("""
+    UPDATE change_queue
+    SET state = :state
+    WHERE id = :id AND state = 'SYNCING'
+    """)
     suspend fun updateState(id: String, state: String)
 
     @Query("DELETE FROM change_queue WHERE state = 'DONE'")
     suspend fun deleteCompleted()
 
-    @Query("SELECT * FROM change_queue WHERE state = 'PENDING' ORDER BY createdAt ASC LIMIT :limit")
+    @Query("""
+    SELECT * FROM change_queue
+    WHERE state = 'PENDING'
+    ORDER BY createdAt ASC
+    LIMIT :limit
+""")
     suspend fun getPending(limit: Int): List<ChangeQueueEntity>
 
     @Query("""
@@ -79,10 +88,22 @@ interface ChangeQueueDao {
     @Query("""
     UPDATE change_queue
     SET state = 'SYNCING',
-    lastAttemptAt = :timestamp
-    WHERE id = :id
-    """)
+        lastAttemptAt = :timestamp
+    WHERE id = :id AND state = 'PENDING'
+""")
     suspend fun markSyncing(id: String, timestamp: Long)
+
+    @Query("""
+        UPDATE change_queue
+        SET state = 'SYNCING',
+            lastAttemptAt = :timestamp
+        WHERE id = :id AND state = 'PENDING'
+        """)
+    suspend fun markSyncingIfPendingInternal(id: String, timestamp: Long)
+
+    @Query("SELECT state FROM change_queue WHERE id = :id")
+    suspend fun getState(id: String): String?
+
 }
 
 

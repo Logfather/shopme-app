@@ -29,24 +29,24 @@ class FirestoreListener(
 
     }
 
-    private fun startSingleListSync(listId: String) {
-
-        appScope.scope.launch {
-
-            dataSource.observeListById(listId)
-                .collectLatest { list ->
-
-                    if (list == null) return@collectLatest
-
-                    listDao.upsert(list)
-
-                    if (!activeItemSyncs.contains(list.id)) {
-                        activeItemSyncs.add(list.id)
-                        startItemSync(list.id)
-                    }
-                }
-        }
-    }
+//    private fun startSingleListSync(listId: String) {
+//
+//        appScope.scope.launch {
+//
+//            dataSource.observeListById(listId)
+//                .collectLatest { list ->
+//
+//                    if (list == null) return@collectLatest
+//
+//                    listDao.upsert(list)
+//
+//                    if (!activeItemSyncs.contains(list.id)) {
+//                        activeItemSyncs.add(list.id)
+//                        startItemSync(list.id)
+//                    }
+//                }
+//        }
+//    }
 
     fun startItemSync(listId: String) {
 

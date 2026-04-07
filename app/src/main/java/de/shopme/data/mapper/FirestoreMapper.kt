@@ -25,4 +25,17 @@ class FirestoreMapper {
             updatedAt = data["updatedAt"] as Long
         )
     }
+
+    fun toFirestore(entity: ShoppingListEntity, authUid: String): Map<String, Any?> {
+        return mapOf(
+            "name" to entity.name,
+            "ownerId" to authUid, // 🔥 HIER liegt der Fix
+            "storeTypes" to entity.storeTypes.map { it.name },
+            "sharedWith" to entity.sharedWith,
+            "itemCount" to entity.itemCount,
+            "createdAt" to entity.createdAt,
+            "updatedAt" to entity.updatedAt,
+            "deletedAt" to entity.deletedAt
+        )
+    }
 }

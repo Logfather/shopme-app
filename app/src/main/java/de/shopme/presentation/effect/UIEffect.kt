@@ -54,4 +54,6 @@ sealed class UIEffect {
 
     object DeleteAllLists : UIEffect()
 
+    object StartGoogleSignIn : UIEffect()
+
 }

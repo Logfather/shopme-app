@@ -17,6 +17,19 @@ data class ShoppingState(
 
     val isLoading: Boolean = false,
 
-    val error: String? = null
+    val error: String? = null,
 
+    val isJoining: Boolean = false,
+
+    val inviteListIds: List<String> = emptyList(),   // ✅ EINZIGER SOURCE OF TRUTH
+
+    val inviteSenderName: String? = null,
+
+    val showProfileScreen: Boolean = false,
+
+    val profileTriggeredByShare: Boolean = false,
+
+    val isDataLoaded: Boolean = false,
+
+    val showInviteDialog: Boolean = false
 )

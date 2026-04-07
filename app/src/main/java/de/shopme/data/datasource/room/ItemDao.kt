@@ -42,4 +42,17 @@ interface ItemDao {
 
     @Query("DELETE FROM items WHERE listId = :listId")
     suspend fun deleteByListId(listId: String)
+
+    @Query("""
+    SELECT entityId FROM change_queue
+    WHERE entityType = :type AND state IN ('PENDING', 'SYNCING')
+    """)
+    suspend fun getPendingEntityIds(type: String): List<String>
+
+    @Query("""
+    SELECT entityId FROM change_queue
+    WHERE entityType = 'item'
+    AND state IN ('PENDING', 'SYNCING')
+""")
+    suspend fun getPendingItemIds(): List<String>
 }
