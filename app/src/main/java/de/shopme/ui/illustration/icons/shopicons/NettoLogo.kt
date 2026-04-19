@@ -22,7 +22,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
@@ -105,11 +104,9 @@ fun NettoLogo(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun NettoLogoPreview() {
-    ShopMeTheme {
-        NettoLogo(
-            modifier = Modifier
-                .padding(16.dp)
-                .size(200.dp)
-        )
-    }
+    NettoLogo(
+        modifier = Modifier
+            .padding(16.dp)
+            .size(200.dp)
+    )
 }

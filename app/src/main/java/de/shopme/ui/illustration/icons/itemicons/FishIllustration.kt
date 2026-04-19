@@ -1,5 +1,4 @@
 package de.shopme.ui.illustration.icons.itemicons
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,8 +21,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
-
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 @Composable
 fun FishIllustration(
     modifier: Modifier = Modifier
@@ -42,7 +41,6 @@ fun FishIllustration(
                 .align(Alignment.Center)
                 .offset(y = 20.dp)
         )
-
         // Lemon slice behind fish (top right)
         LemonSlice(
             modifier = Modifier
@@ -52,7 +50,6 @@ fun FishIllustration(
                 .rotate(15f),
             isFull = true
         )
-
         // Tomatoes (bottom left)
         Box(
             modifier = Modifier
@@ -62,7 +59,6 @@ fun FishIllustration(
             Tomato(modifier = Modifier.size(70.dp).offset(x = 0.dp, y = 20.dp))
             Tomato(modifier = Modifier.size(85.dp).offset(x = 50.dp, y = 35.dp))
         }
-
         // Lemon slices on lettuce
         LemonSlice(
             modifier = Modifier
@@ -78,7 +74,6 @@ fun FishIllustration(
                 .offset(x = (-60).dp, y = (-80).dp)
                 .rotate(-20f)
         )
-
         // Fish Skeleton (at the bottom center)
         FishSkeleton(
             modifier = Modifier
@@ -88,7 +83,6 @@ fun FishIllustration(
                 .offset(y = (-10).dp)
                 .rotate(-5f)
         )
-
         // Main Fish
         Fish(
             modifier = Modifier
@@ -96,7 +90,6 @@ fun FishIllustration(
                 .align(Alignment.Center)
                 .offset(y = (-10).dp)
         )
-
         // Water Droplets (top left)
         WaterDroplets(
             modifier = Modifier
@@ -106,7 +99,6 @@ fun FishIllustration(
         )
     }
 }
-
 @Composable
 private fun LettuceBed(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -119,26 +111,26 @@ private fun LettuceBed(modifier: Modifier = Modifier) {
                 val angle = i * (360f / points)
                 val nextAngle = (i + 1) * (360f / points)
                 val midAngle = (angle + nextAngle) / 2f
-                
+
                 val r1 = radius + (if (i % 2 == 0) 15f else -10f)
                 val r2 = radius + (if ((i + 1) % 2 == 0) 15f else -10f)
                 val rMid = radius + 40f
-                
+
                 val x1 = centerX + Math.cos(Math.toRadians(angle.toDouble())).toFloat() * r1
                 val y1 = centerY + Math.sin(Math.toRadians(angle.toDouble())).toFloat() * r1
                 val xMid = centerX + Math.cos(Math.toRadians(midAngle.toDouble())).toFloat() * rMid
                 val yMid = centerY + Math.sin(Math.toRadians(midAngle.toDouble())).toFloat() * rMid
                 val x2 = centerX + Math.cos(Math.toRadians(nextAngle.toDouble())).toFloat() * r2
                 val y2 = centerY + Math.sin(Math.toRadians(nextAngle.toDouble())).toFloat() * r2
-                
+
                 if (i == 0) moveTo(x1, y1)
                 quadraticTo(xMid, yMid, x2, y2)
             }
             close()
         }
         drawPath(path, Color(0xFF8BC34A))
-        drawPath(path, Color.Black, style = Stroke(width = 4f))
-        
+        drawPath(path, BrandBlack, style = Stroke(width = 4f))
+
         // Lettuce details
         for (i in 0 until 8) {
             rotate(i * 45f) {
@@ -152,13 +144,12 @@ private fun LettuceBed(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun Tomato(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val center = Offset(size.width / 2, size.height / 2)
         val radius = size.minDimension / 2.2f
-        
+
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(Color(0xFFFF5252), Color(0xFFD32F2F)),
@@ -169,12 +160,12 @@ private fun Tomato(modifier: Modifier = Modifier) {
             center = center
         )
         drawCircle(
-            color = Color.Black,
+            color = BrandBlack,
             radius = radius,
             center = center,
             style = Stroke(width = 4f)
         )
-        
+
         // Stem
         val stemPath = Path().apply {
             moveTo(center.x, center.y - radius)
@@ -182,24 +173,23 @@ private fun Tomato(modifier: Modifier = Modifier) {
                 val angle = i * 72f - 90f
                 val rOut = radius * 0.45f
                 val rIn = radius * 0.15f
-                
+
                 val x1 = center.x + Math.cos(Math.toRadians(angle.toDouble())).toFloat() * rOut
                 val y1 = (center.y - radius) + Math.sin(Math.toRadians(angle.toDouble())).toFloat() * rOut
-                
+
                 val midAngle = angle + 36f
                 val x2 = center.x + Math.cos(Math.toRadians(midAngle.toDouble())).toFloat() * rIn
                 val y2 = (center.y - radius) + Math.sin(Math.toRadians(midAngle.toDouble())).toFloat() * rIn
-                
+
                 lineTo(x1, y1)
                 lineTo(x2, y2)
             }
             close()
         }
         drawPath(stemPath, Color(0xFF2E7D32))
-        drawPath(stemPath, Color.Black, style = Stroke(width = 3f))
+        drawPath(stemPath, BrandBlack, style = Stroke(width = 3f))
     }
 }
-
 @Composable
 private fun LemonSlice(
     modifier: Modifier = Modifier,
@@ -208,12 +198,12 @@ private fun LemonSlice(
     Canvas(modifier = modifier) {
         val center = Offset(size.width / 2, size.height / 2)
         val radius = size.minDimension / 2.2f
-        
+
         if (isFull) {
             drawCircle(Color(0xFFFFEB3B), radius = radius)
-            drawCircle(Color.Black, radius = radius, style = Stroke(width = 4f))
-            drawCircle(Color.White, radius = radius * 0.9f, style = Stroke(width = 6f))
-            
+            drawCircle(BrandBlack, radius = radius, style = Stroke(width = 4f))
+            drawCircle(BrandWhite, radius = radius * 0.9f, style = Stroke(width = 6f))
+
             for (i in 0 until 8) {
                 rotate(i * 45f + 22.5f) {
                     val segmentPath = Path().apply {
@@ -241,7 +231,7 @@ private fun LemonSlice(
                 size = Size(radius * 2, radius * 2)
             )
             drawArc(
-                color = Color.Black,
+                color = BrandBlack,
                 startAngle = 0f,
                 sweepAngle = 180f,
                 useCenter = true,
@@ -249,19 +239,18 @@ private fun LemonSlice(
                 size = Size(radius * 2, radius * 2),
                 style = Stroke(width = 4f)
             )
-            drawLine(Color.Black, Offset(center.x - radius, center.y), Offset(center.x + radius, center.y), strokeWidth = 4f)
-            
+            drawLine(BrandBlack, Offset(center.x - radius, center.y), Offset(center.x + radius, center.y), strokeWidth = 4f)
+
             // Segments
             for (i in 1 until 5) {
                 val angle = i * 36f
                 val x = center.x + Math.cos(Math.toRadians(angle.toDouble())).toFloat() * radius * 0.85f
                 val y = center.y + Math.sin(Math.toRadians(angle.toDouble())).toFloat() * radius * 0.85f
-                drawLine(Color.White, center, Offset(x, y), strokeWidth = 4f)
+                drawLine(BrandWhite, center, Offset(x, y), strokeWidth = 4f)
             }
         }
     }
 }
-
 @Composable
 private fun Fish(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
@@ -269,7 +258,7 @@ private fun Fish(modifier: Modifier = Modifier) {
             val bodyWidth = size.width * 0.8f
             val bodyHeight = size.height * 0.6f
             val center = Offset(size.width * 0.45f, size.height * 0.5f)
-            
+
             // Tail
             val tailPath = Path().apply {
                 moveTo(center.x + bodyWidth * 0.3f, center.y)
@@ -278,18 +267,17 @@ private fun Fish(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(tailPath, Color(0xFF1976D2))
-            drawPath(tailPath, Color.Black, style = Stroke(width = 5f))
-            
+            drawPath(tailPath, BrandBlack, style = Stroke(width = 5f))
+
             // Tail detail
             for (i in 0 until 5) {
                 drawLine(
-                    color = Color.Black.copy(alpha = 0.2f),
+                    color = BrandBlack.copy(alpha = 0.2f),
                     start = Offset(center.x + bodyWidth * 0.35f, center.y - 15f + i * 8f),
                     end = Offset(size.width * 0.95f, center.y - 40f + i * 20f),
                     strokeWidth = 2f
                 )
             }
-
             // Top Fin
             val topFin = Path().apply {
                 moveTo(center.x - bodyWidth * 0.15f, center.y - bodyHeight * 0.45f)
@@ -297,11 +285,10 @@ private fun Fish(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(topFin, Color(0xFF1565C0))
-            drawPath(topFin, Color.Black, style = Stroke(width = 5f))
-
+            drawPath(topFin, BrandBlack, style = Stroke(width = 5f))
             // Body
             val bodyBrush = Brush.verticalGradient(
-                colors = listOf(Color(0xFF0D47A1), Color(0xFF1E88E5), Color.White),
+                colors = listOf(Color(0xFF0D47A1), Color(0xFF1E88E5), BrandWhite),
                 startY = center.y - bodyHeight / 2,
                 endY = center.y + bodyHeight / 2
             )
@@ -311,12 +298,12 @@ private fun Fish(modifier: Modifier = Modifier) {
                 size = Size(bodyWidth, bodyHeight)
             )
             drawOval(
-                color = Color.Black,
+                color = BrandBlack,
                 topLeft = Offset(center.x - bodyWidth / 2, center.y - bodyHeight / 2),
                 size = Size(bodyWidth, bodyHeight),
                 style = Stroke(width = 6f)
             )
-            
+
             // Side Fin
             val sideFin = Path().apply {
                 moveTo(center.x + bodyWidth * 0.1f, center.y + bodyHeight * 0.1f)
@@ -324,8 +311,7 @@ private fun Fish(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(sideFin, Color(0xFF1565C0))
-            drawPath(sideFin, Color.Black, style = Stroke(width = 4f))
-
+            drawPath(sideFin, BrandBlack, style = Stroke(width = 4f))
             // Scales
             for (i in 0..7) {
                 for (j in 0..5) {
@@ -333,7 +319,7 @@ private fun Fish(modifier: Modifier = Modifier) {
                     val y = center.y + j * 25f - 50f
                     if (Rect(center.x - bodyWidth / 2, center.y - bodyHeight / 2, center.x + bodyWidth / 2, center.y + bodyHeight / 2).contains(Offset(x, y))) {
                         drawArc(
-                            color = Color.White.copy(alpha = 0.3f),
+                            color = BrandWhite.copy(alpha = 0.3f),
                             startAngle = 130f,
                             sweepAngle = 100f,
                             useCenter = false,
@@ -345,7 +331,7 @@ private fun Fish(modifier: Modifier = Modifier) {
                 }
             }
         }
-        
+
         FishFace(
             modifier = Modifier
                 .fillMaxSize(0.65f)
@@ -353,7 +339,6 @@ private fun Fish(modifier: Modifier = Modifier) {
         )
     }
 }
-
 @Composable
 private fun FishFace(modifier: Modifier = Modifier) {
     Column(
@@ -369,32 +354,30 @@ private fun FishFace(modifier: Modifier = Modifier) {
         FishMouth(modifier = Modifier.size(70.dp))
     }
 }
-
 @Composable
 private fun FishEye(eyeSize: Dp) {
     Box(
         modifier = Modifier
             .size(eyeSize)
-            .background(Color.White, CircleShape)
-            .border(5.dp, Color.Black, CircleShape),
+            .background(BrandWhite, CircleShape)
+            .border(5.dp, BrandBlack, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val pupilRadius = size.minDimension * 0.4f
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = pupilRadius,
                 center = center
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = pupilRadius * 0.4f,
                 center = center.minus(Offset(pupilRadius * 0.3f, pupilRadius * 0.3f))
             )
         }
     }
 }
-
 @Composable
 private fun FishMouth(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -405,8 +388,8 @@ private fun FishMouth(modifier: Modifier = Modifier) {
             close()
         }
         drawPath(path, Color(0xFFB71C1C))
-        drawPath(path, Color.Black, style = Stroke(width = 5f))
-        
+        drawPath(path, BrandBlack, style = Stroke(width = 5f))
+
         // Tongue
         val tonguePath = Path().apply {
             moveTo(size.width * 0.35f, size.height * 0.7f)
@@ -415,14 +398,13 @@ private fun FishMouth(modifier: Modifier = Modifier) {
         drawPath(tonguePath, Color(0xFFFF5252))
     }
 }
-
 @Composable
 private fun FishSkeleton(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
-        val strokeColor = Color.Black
+        val strokeColor = BrandBlack
         val fillColor = Color(0xFFF5F5F5)
         val strokeWidth = 5f
-        
+
         // Skull
         val skullPath = Path().apply {
             moveTo(70f, size.height / 2)
@@ -432,10 +414,10 @@ private fun FishSkeleton(modifier: Modifier = Modifier) {
         }
         drawPath(skullPath, fillColor)
         drawPath(skullPath, strokeColor, style = Stroke(width = strokeWidth))
-        
+
         // Skull Eye Hole
         drawCircle(strokeColor, radius = 12f, center = Offset(25f, size.height * 0.4f))
-        
+
         // Spine
         drawLine(
             color = strokeColor,
@@ -443,7 +425,7 @@ private fun FishSkeleton(modifier: Modifier = Modifier) {
             end = Offset(size.width * 0.9f, size.height / 2),
             strokeWidth = strokeWidth
         )
-        
+
         // Ribs
         for (i in 0 until 5) {
             val x = 100f + i * 35f
@@ -454,7 +436,7 @@ private fun FishSkeleton(modifier: Modifier = Modifier) {
                 strokeWidth = strokeWidth
             )
         }
-        
+
         // Tail bone
         val tailBone = Path().apply {
             moveTo(size.width * 0.9f, size.height / 2)
@@ -466,13 +448,12 @@ private fun FishSkeleton(modifier: Modifier = Modifier) {
         drawPath(tailBone, strokeColor, style = Stroke(width = strokeWidth))
     }
 }
-
 @Composable
 private fun WaterDroplets(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val dropletColor = Color(0xFF4FC3F7)
-        val strokeColor = Color.Black
-        
+        val strokeColor = BrandBlack
+
         fun drawDroplet(offset: Offset, scale: Float, rotation: Float) {
             rotate(rotation, offset) {
                 val path = Path().apply {
@@ -483,34 +464,31 @@ private fun WaterDroplets(modifier: Modifier = Modifier) {
                 }
                 drawPath(path, dropletColor)
                 drawPath(path, strokeColor, style = Stroke(width = 4f))
-                
+
                 // Highlight
                 drawCircle(
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = BrandWhite.copy(alpha = 0.6f),
                     radius = 4f * scale,
                     center = Offset(offset.x - 5f * scale, offset.y + 5f * scale)
                 )
             }
         }
-        
+
         drawDroplet(Offset(size.width * 0.2f, size.height * 0.8f), 1.2f, -30f)
         drawDroplet(Offset(size.width * 0.5f, size.height * 0.4f), 1.6f, 10f)
         drawDroplet(Offset(size.width * 0.8f, size.height * 0.7f), 1.1f, 40f)
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 private fun FishIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            FishIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        FishIllustration()
     }
 }

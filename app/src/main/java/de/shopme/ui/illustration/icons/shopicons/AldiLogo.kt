@@ -22,7 +22,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
@@ -70,7 +70,7 @@ fun AldiLogo(modifier: Modifier = Modifier) {
 
         // Draw "ALDI" text
         val textStyle = TextStyle(
-            color = Color.White,
+            color = BrandWhite,
             fontSize = (radius * 0.38f).toSp(),
             fontWeight = FontWeight.Black
         )
@@ -147,11 +147,9 @@ private fun DrawScope.drawAldiStripes(center: Offset, radius: Float) {
 @Preview(showBackground = true)
 @Composable
 private fun AldiLogoPreview() {
-    ShopMeTheme {
-        AldiLogo(
-            modifier = Modifier
-                .padding(16.dp)
-                .size(200.dp)
-        )
-    }
+    AldiLogo(
+        modifier = Modifier
+            .padding(16.dp)
+            .size(200.dp)
+    )
 }

@@ -1,14 +1,73 @@
-package de.shopme.data.auth
+package de.shopme.auth
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.tasks.await
+import com.google.firebase.auth.GoogleAuthProvider
 import de.shopme.domain.auth.AuthProvider
+import de.shopme.domain.auth.AuthUser
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
 
 class FirebaseAuthProvider : AuthProvider {
 
     private val auth = FirebaseAuth.getInstance()
+
+    // ============================================================
+    // AUTH STATE
+    // ============================================================
+
+    override fun observeAuthState(): Flow<String?> = callbackFlow {
+
+        val listener = FirebaseAuth.AuthStateListener { auth ->
+            trySend(auth.currentUser?.uid)
+        }
+
+        FirebaseAuth.getInstance().addAuthStateListener(listener)
+
+        awaitClose {
+            FirebaseAuth.getInstance().removeAuthStateListener(listener)
+        }
+    }
+
+    // ============================================================
+    // USER
+    // ============================================================
+
+    override fun currentUserId(): String {
+        return auth.currentUser?.uid
+            ?: throw IllegalStateException("User not authenticated")
+    }
+
+    override fun getCurrentUserUidOrNull(): String? {
+        return auth.currentUser?.uid
+    }
+
+    override fun isAnonymous(): Boolean {
+        return auth.currentUser?.isAnonymous ?: true
+    }
+
+    override fun getDisplayName(): String? {
+        return auth.currentUser?.displayName
+    }
+
+    override fun updateDisplayName(name: String) {
+
+        val user = auth.currentUser ?: return
+
+        val profileUpdates =
+            com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                .setDisplayName(name)
+                .build()
+
+        user.updateProfile(profileUpdates)
+    }
+
+    // ============================================================
+    // AUTH ACTIONS
+    // ============================================================
 
     override suspend fun ensureAuthenticated() {
 
@@ -16,7 +75,6 @@ class FirebaseAuthProvider : AuthProvider {
 
         auth.signInAnonymously().await()
 
-        // 🔥 Warten bis Firebase wirklich gesetzt ist
         var attempts = 0
         while (auth.currentUser == null && attempts < 10) {
             delay(100)
@@ -24,26 +82,48 @@ class FirebaseAuthProvider : AuthProvider {
         }
 
         if (auth.currentUser == null) {
-            throw IllegalStateException("Auth failed: user still null after signIn")
+            throw IllegalStateException("Auth failed: user still null")
+        }
+    }
+
+    override suspend fun signInAnonymously(): String {
+
+        val result = auth.signInAnonymously().await()
+
+        val user = result.user
+            ?: throw IllegalStateException("Anonymous sign-in failed")
+
+        return user.uid
+    }
+
+    override suspend fun signInWithGoogle(idToken: String): Result<Unit> {
+        return try {
+
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+
+            auth.signInWithCredential(credential).await()
+
+            Result.success(Unit)
+
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
     override suspend fun linkWithGoogle(idToken: String): Result<Unit> {
         return try {
 
-            val credential = com.google.firebase.auth.GoogleAuthProvider
-                .getCredential(idToken, null)
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
 
-            val user = FirebaseAuth.getInstance().currentUser
-                ?: return Result.failure(IllegalStateException("No current user"))
+            val user = auth.currentUser
+                ?: return Result.failure(IllegalStateException("No user"))
 
-            // 🔥 NEU: Prüfen ob schon verknüpft
             val alreadyLinked = user.providerData.any {
-                it.providerId == com.google.firebase.auth.GoogleAuthProvider.PROVIDER_ID
+                it.providerId == GoogleAuthProvider.PROVIDER_ID
             }
 
             if (alreadyLinked) {
-                Log.d("AUTH", "Google already linked → skip linking")
+                Log.d("AUTH", "Already linked → skip")
                 return Result.success(Unit)
             }
 
@@ -53,9 +133,7 @@ class FirebaseAuthProvider : AuthProvider {
 
         } catch (e: Exception) {
 
-            // 🔥 Fallback: falls Firebase trotzdem meckert
             if (e.message?.contains("already been linked") == true) {
-                Log.d("AUTH", "Google already linked (exception fallback)")
                 return Result.success(Unit)
             }
 
@@ -63,17 +141,116 @@ class FirebaseAuthProvider : AuthProvider {
         }
     }
 
-    override fun currentUserId(): String {
-        return FirebaseAuth.getInstance().currentUser?.uid
-            ?: throw IllegalStateException("User not authenticated")
+    override fun getEmail(): String? {
+        return auth.currentUser?.email
     }
 
-    override fun currentUserIdOrNull(): String? {
-        return auth.currentUser?.uid
+    override fun isGoogleUser(): Boolean {
+        return auth.currentUser
+            ?.providerData
+            ?.any { it.providerId == "google.com" } == true
     }
 
-    override fun isAnonymous(): Boolean {
-        val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-        return user?.isAnonymous ?: true
+    override suspend fun requireUserId(): String {
+        return getCurrentUserUidOrNull()
+            ?: signInAnonymously()
+    }
+
+
+
+    override fun getCurrentUser(): AuthUser? {
+        val user = FirebaseAuth.getInstance().currentUser ?: return null
+
+        val isGoogle = user.providerData.any {
+            it.providerId == "google.com"
+        }
+
+        return AuthUser(
+            uid = user.uid,
+            displayName = user.displayName,
+            email = user.email,
+            isAnonymous = user.isAnonymous,
+            isGoogleUser = isGoogle
+        )
+    }
+
+    override suspend fun unlinkGoogle(): Result<Unit> {
+        return try {
+
+            val user = auth.currentUser
+                ?: return Result.failure(IllegalStateException("No user"))
+
+            val providers = user.providerData.map { it.providerId }
+
+            val hasGoogle = providers.contains(GoogleAuthProvider.PROVIDER_ID)
+
+            if (!hasGoogle) {
+                Log.d("AUTH", "Google not linked → nothing to unlink")
+                return Result.success(Unit)
+            }
+
+            // 🔴 CRITICAL: letzter Provider?
+            val realProviders = providers.filter { it != "firebase" }
+
+            if (realProviders.size <= 1) {
+                return Result.failure(
+                    IllegalStateException("Cannot unlink last provider")
+                )
+            }
+
+            user.unlink(GoogleAuthProvider.PROVIDER_ID).await()
+
+            Log.d("AUTH", "Google successfully unlinked")
+
+            Result.success(Unit)
+
+        } catch (e: Exception) {
+
+            Log.e("AUTH", "unlinkGoogle failed", e)
+
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit> {
+        return try {
+
+            val user = auth.currentUser
+                ?: return Result.failure(IllegalStateException("No user"))
+
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+
+            user.reauthenticate(credential).await()
+
+            Log.d("AUTH", "Reauthentication successful")
+
+            Result.success(Unit)
+
+        } catch (e: Exception) {
+
+            Log.e("AUTH", "Reauthentication failed", e)
+
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteUser(): Result<Unit> {
+        return try {
+
+            val user = auth.currentUser
+                ?: return Result.failure(IllegalStateException("No user"))
+
+            user.delete().await()
+
+            Log.d("AUTH", "User deleted successfully")
+
+            Result.success(Unit)
+
+        } catch (e: Exception) {
+
+            Log.e("AUTH", "deleteUser failed", e)
+
+            Result.failure(e)
+        }
     }
 }

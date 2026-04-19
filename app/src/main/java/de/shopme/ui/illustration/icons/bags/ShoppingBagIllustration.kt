@@ -17,7 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun ShoppingBagIllustration(
@@ -29,7 +29,7 @@ fun ShoppingBagIllustration(
             .clip(CircleShape)
             .border(
                 width = 2.dp,
-                color = Color.White,
+                color = BrandWhite,
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
@@ -46,9 +46,7 @@ fun ShoppingBagIllustration(
 @Preview(showBackground = true, backgroundColor = 0xFF000000)
 @Composable
 private fun ShoppingBagIllustrationPreview() {
-    ShopMeTheme {
-        ShoppingBagIllustration(
-            modifier = Modifier.padding(24.dp)
-        )
-    }
+    ShoppingBagIllustration(
+        modifier = Modifier.padding(24.dp)
+    )
 }

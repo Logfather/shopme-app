@@ -23,7 +23,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandRed
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun BakeryIllustration(
@@ -153,7 +155,7 @@ private fun Donut(modifier: Modifier = Modifier) {
 
             // Hole
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = radius * 0.3f,
                 center = center
             )
@@ -165,7 +167,7 @@ private fun Donut(modifier: Modifier = Modifier) {
             )
 
             // Sprinkles
-            val sprinkleColors = listOf(Color.Red, Color.Yellow, Color.Cyan, Color.Green, Color.Magenta)
+            val sprinkleColors = listOf(BrandRed, Color.Yellow, Color.Cyan, Color.Green, Color.Magenta)
             for (i in 0..15) {
                 val angle = (i * 24).toDouble()
                 val dist = radius * 0.6f
@@ -360,18 +362,18 @@ private fun CharacterEye(
     Box(
         modifier = modifier
             .size(eyeSize)
-            .background(Color.White, CircleShape)
-            .border(1.dp, Color.Black, CircleShape),
+            .background(BrandWhite, CircleShape)
+            .border(1.dp, BrandBlack, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = size.minDimension * 0.3f,
                 center = center.copy(x = center.x + size.width * 0.1f, y = center.y + size.height * 0.1f)
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = size.minDimension * 0.1f,
                 center = center.copy(x = center.x + size.width * 0.2f, y = center.y - size.height * 0.1f)
             )
@@ -388,7 +390,7 @@ private fun Mouth(modifier: Modifier = Modifier) {
             close()
         }
         drawPath(path, Color(0xFF8B0000))
-        drawPath(path, Color.Black, style = Stroke(width = 2f))
+        drawPath(path, BrandBlack, style = Stroke(width = 2f))
         
         // Tongue
         val tonguePath = Path().apply {
@@ -402,14 +404,13 @@ private fun Mouth(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun BakeryIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            BakeryIllustration(modifier = Modifier.size(400.dp))
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        BakeryIllustration(modifier = Modifier.size(400.dp))
     }
 }
+

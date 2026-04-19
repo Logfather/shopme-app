@@ -27,7 +27,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 import kotlin.random.Random
 
 @Composable
@@ -86,7 +87,7 @@ private fun DrawScope.drawSalamiBody(w: Float, h: Float) {
     }
 
     // Body outline
-    drawPath(bodyPath, Color.Black, style = Stroke(width = 4f))
+    drawPath(bodyPath, BrandBlack, style = Stroke(width = 4f))
 
     // Strings wrapping around
     val stringColor = Color(0xFFFFF9C4)
@@ -114,7 +115,7 @@ private fun DrawScope.drawSalamiBody(w: Float, h: Float) {
         addOval(Rect(center = Offset(w * 0.58f, h * 0.48f), radius = w * 0.25f))
     }
     drawPath(surfacePath, Color(0xFFEF5350))
-    drawPath(surfacePath, Color.Black, style = Stroke(width = 4f))
+    drawPath(surfacePath, BrandBlack, style = Stroke(width = 4f))
 
     // Fat spots on surface
     clipPath(surfacePath) {
@@ -133,7 +134,7 @@ private fun DrawScope.drawSalamiSlice(center: Offset, radius: Float, rotation: F
         }
         
         drawPath(slicePath, Color(0xFFEF5350))
-        drawPath(slicePath, Color.Black, style = Stroke(width = 4f))
+        drawPath(slicePath, BrandBlack, style = Stroke(width = 4f))
 
         clipPath(slicePath) {
             drawFatSpots(center, radius)
@@ -170,13 +171,13 @@ private fun DrawScope.drawShockedFace(center: Offset, radius: Float) {
         moveTo(center.x - eyeOffset - eyeWidth * 0.5f, center.y - radius * 0.55f)
         quadraticTo(center.x - eyeOffset, center.y - radius * 0.7f, center.x - eyeOffset + eyeWidth * 0.5f, center.y - radius * 0.55f)
     }
-    drawPath(browPathL, Color.Black, style = Stroke(width = 5f))
+    drawPath(browPathL, BrandBlack, style = Stroke(width = 5f))
 
     val browPathR = Path().apply {
         moveTo(center.x + eyeOffset - eyeWidth * 0.5f, center.y - radius * 0.55f)
         quadraticTo(center.x + eyeOffset, center.y - radius * 0.7f, center.x + eyeOffset + eyeWidth * 0.5f, center.y - radius * 0.55f)
     }
-    drawPath(browPathR, Color.Black, style = Stroke(width = 5f))
+    drawPath(browPathR, BrandBlack, style = Stroke(width = 5f))
 
     // Mouth
     val mouthPath = Path().apply {
@@ -189,7 +190,7 @@ private fun DrawScope.drawShockedFace(center: Offset, radius: Float) {
         close()
     }
     drawPath(mouthPath, Color(0xFF421010))
-    drawPath(mouthPath, Color.Black, style = Stroke(width = 3f))
+    drawPath(mouthPath, BrandBlack, style = Stroke(width = 3f))
 
     // Tongue
     clipPath(mouthPath) {
@@ -201,13 +202,13 @@ private fun DrawScope.drawEye(center: Offset, width: Float, height: Float) {
     val eyePath = Path().apply {
         addOval(Rect(center.x - width / 2, center.y - height / 2, center.x + width / 2, center.y + height / 2))
     }
-    drawPath(eyePath, Color.White)
-    drawPath(eyePath, Color.Black, style = Stroke(width = 3f))
+    drawPath(eyePath, BrandWhite)
+    drawPath(eyePath, BrandBlack, style = Stroke(width = 3f))
 
     // Pupil
-    drawCircle(Color.Black, radius = width * 0.3f, center = center.plus(Offset(0f, height * 0.1f)))
+    drawCircle(BrandBlack, radius = width * 0.3f, center = center.plus(Offset(0f, height * 0.1f)))
     // Highlight
-    drawCircle(Color.White, radius = width * 0.1f, center = center.plus(Offset(width * 0.1f, -height * 0.1f)))
+    drawCircle(BrandWhite, radius = width * 0.1f, center = center.plus(Offset(width * 0.1f, -height * 0.1f)))
 }
 
 private fun DrawScope.drawTiedEnd(center: Offset) {
@@ -221,25 +222,23 @@ private fun DrawScope.drawTiedEnd(center: Offset) {
         close()
     }
     drawPath(endPath, Color(0xFFD32F2F))
-    drawPath(endPath, Color.Black, style = Stroke(width = 3f))
+    drawPath(endPath, BrandBlack, style = Stroke(width = 3f))
     
     // String tie
     drawCircle(Color(0xFFFFF9C4), radius = 6f, center = center)
-    drawCircle(Color.Black, radius = 6f, center = center, style = Stroke(width = 2f))
+    drawCircle(BrandBlack, radius = 6f, center = center, style = Stroke(width = 2f))
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun SalamiIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            SalamiIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(300.dp)
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        SalamiIllustration()
     }
 }

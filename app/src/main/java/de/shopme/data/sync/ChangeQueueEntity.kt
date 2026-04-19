@@ -2,8 +2,14 @@ package de.shopme.data.sync
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.Index
 
-@Entity(tableName = "change_queue")
+@Entity(
+    tableName = "change_queue",
+    indices = [
+        Index(value = ["entityId"], unique = true)
+    ]
+)
 data class ChangeQueueEntity(
 
     @PrimaryKey
@@ -31,7 +37,6 @@ data class ChangeQueueEntity(
 
     val errorMessage: String? = null,
 
-    // 🔥 baseVersion = updatedAt snapshot zum Zeitpunkt der Änderung (Millis!)
     val baseVersion: Long
 )
 

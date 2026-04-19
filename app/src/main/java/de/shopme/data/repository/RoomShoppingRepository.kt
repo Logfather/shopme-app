@@ -1,12 +1,15 @@
 package de.shopme.data.repository
 
 import android.util.Log
+import com.google.gson.Gson
 import de.shopme.data.datasource.firestore.FirestoreDataSource
 import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
+import de.shopme.data.mapper.EntityMapper.toDomain
 import de.shopme.data.sync.ChangeQueueDao
 import de.shopme.data.sync.ChangeQueueEntity
 import de.shopme.domain.model.ListDeleteSnapshot
+import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.model.ShoppingItemEntity
 import de.shopme.domain.model.ShoppingListEntity
 import de.shopme.domain.model.SyncStatus
@@ -43,15 +46,22 @@ class RoomShoppingRepository(
             }
     }
 
+    suspend fun getItemById(itemId: String): ShoppingItem? {
+        return itemDao.getItemById(itemId)?.toDomain()
+    }
+
     suspend fun deleteList(listId: String) {
 
         val now = System.currentTimeMillis()
 
-        // 🔥 BESTEHENDES Verhalten beibehalten:
+        // 🔥 1. LOCAL DELETE
         listDao.deleteById(listId)
         itemDao.deleteByListId(listId)
 
-        // 🔥 NEU: Queue Event
+        // 🔥 2. REMOTE DELETE (JETZT EINBAUEN)
+        firestoreDataSource.softDeleteList(listId)
+
+        // 🔥 3. OPTIONAL: Queue behalten (später für Offline relevant)
         changeQueueDao.insert(
             ChangeQueueEntity(
                 id = UUID.randomUUID().toString(),
@@ -96,9 +106,9 @@ class RoomShoppingRepository(
 
     suspend fun createList(list: ShoppingListEntity) {
 
-        Log.d("CREATE_DEBUG", "Repository.createList CALLED for ${list.id}")
+        val now = System.currentTimeMillis()
 
-        listDao.upsert(list)
+        listDao.insert(list)
 
         changeQueueDao.insert(
             ChangeQueueEntity(
@@ -107,8 +117,8 @@ class RoomShoppingRepository(
                 entityId = list.id,
                 listId = list.id,
                 operation = "CREATE",
-                payload = null,
-                createdAt = System.currentTimeMillis(),
+                payload = Gson().toJson(list),   // 🔥 WICHTIG
+                createdAt = now,
                 state = "PENDING",
                 progress = 0f,
                 baseVersion = 0L
@@ -122,6 +132,11 @@ class RoomShoppingRepository(
 
     fun observeItems(listId: String): Flow<List<ShoppingItemEntity>> {
         return itemDao.observeItemsForList(listId)
+            .onEach { items ->
+                items.forEach {
+                    Log.d("DB_FLOW", "EMIT item=${it.id} checked=${it.isChecked}")
+                }
+            }
     }
 
     suspend fun addItem(item: ShoppingItemEntity) {
@@ -140,13 +155,17 @@ class RoomShoppingRepository(
 
         val current = itemDao.getById(item.id)
 
-        itemDao.upsert(item)
+        itemDao.updateChecked(   // ✅ HIER ändern
+            id = item.id,
+            checked = item.isChecked,
+            updatedAt = item.updatedAt
+        )
 
         enqueueChange(
             entityId = item.id,
             listId = item.listId,
             operation = "UPDATE",
-            baseVersion = current?.updatedAt ?: 0L   // ✅ korrekt (Millis!)
+            baseVersion = current?.updatedAt ?: 0L
         )
     }
 
@@ -179,9 +198,26 @@ class RoomShoppingRepository(
         operation: String,
         baseVersion: Long
     ) {
+
+        val existing = changeQueueDao.getActiveByEntityId(entityId)
+            .firstOrNull { it.operation == operation }
+
+        if (existing != null) {
+            Log.d("QUEUE_MERGE", "Replace existing $operation for $entityId")
+
+            changeQueueDao.insert(
+                existing.copy(
+                    createdAt = System.currentTimeMillis(),
+                    baseVersion = baseVersion,
+                    state = "PENDING"
+                )
+            )
+            return
+        }
+
         changeQueueDao.insert(
             ChangeQueueEntity(
-                id = UUID.randomUUID().toString(),
+                id = entityId + "_" + operation, // 🔥 KEY FIX
                 entityType = "item",
                 entityId = entityId,
                 listId = listId,
@@ -190,52 +226,47 @@ class RoomShoppingRepository(
                 createdAt = System.currentTimeMillis(),
                 state = "PENDING",
                 progress = 0f,
-                baseVersion = baseVersion   // ✅ immer updatedAt in Millis
+                baseVersion = baseVersion
             )
         )
     }
 
-    fun observeItemsWithSyncStatus(listId: String): Flow<List<Pair<ShoppingItemEntity, SyncStatus>>> {
+    fun observeItemsWithSyncStatus(
+        listId: String
+    ): Flow<List<Pair<ShoppingItemEntity, SyncStatus>>> {
 
-        return combine(
-            itemDao.observeItemsForList(listId),
-            changeQueueDao.observeSyncStates()
-        ) { items, syncStates ->
+        val itemsFlow = itemDao.observeItemsForList(listId)
 
-            val stateMap = syncStates.groupBy { it.entityId }
-
-            items.map { item ->
-
-                val states = stateMap[item.id]
-
-                val status = when {
-                    states?.any { it.state == "FAILED" } == true -> {
-                        SyncStatus.Failed()
+        val syncFlow = changeQueueDao.observeSyncStates()
+            .map { syncStates ->
+                syncStates
+                    .groupBy { it.entityId }
+                    .mapValues { (_, states) ->
+                        states.maxByOrNull { it.createdAt }
                     }
-
-                    states?.any { it.state == "SYNCING" } == true -> {
-                        val progress = states
-                            .filter { it.state == "SYNCING" }
-                            .mapNotNull { it.progress }
-                            .average()
-                            .toFloat()
-                            .takeIf { !it.isNaN() }
-
-                        SyncStatus.Syncing(progress = progress)
-                    }
-
-                    states?.any { it.state == "PENDING" } == true -> {
-                        SyncStatus.Pending
-                    }
-
-                    else -> {
-                        SyncStatus.Synced
-                    }
-                }
-
-                item to status
             }
-        }
+
+        return itemsFlow
+            .combine(syncFlow) { items, latestStateMap ->
+
+                items.map { item ->
+
+                    val latest = latestStateMap[item.id]
+
+                    val status = when (latest?.state) {
+                        "FAILED" -> SyncStatus.Failed()
+                        "SYNCING" -> SyncStatus.Syncing(progress = latest.progress)
+                        "PENDING" -> SyncStatus.Pending
+                        else -> SyncStatus.Synced
+                    }
+
+                    item to status
+                }
+            }
+            // 🔥 DAS ist der echte Fix:
+            .distinctUntilChangedBy { list ->
+                list.map { it.first.updatedAt to it.second }
+            }
     }
 
     suspend fun retrySyncForItem(itemId: String) {
@@ -323,6 +354,47 @@ class RoomShoppingRepository(
                     updatedAt = maxOf(it.updatedAt, now)
                 )
             }
+        )
+    }
+
+    suspend fun addMembership(listId: String, userId: String) {
+
+        val now = System.currentTimeMillis()
+
+        // 🔥 Queue Event (v6)
+        changeQueueDao.insert(
+            ChangeQueueEntity(
+                id = UUID.randomUUID().toString(),
+                entityType = "membership",
+                entityId = "${userId}_$listId",
+                listId = listId,
+                operation = "ADD",
+                payload = userId,
+                createdAt = now,
+                state = "PENDING",
+                progress = 0f,
+                baseVersion = 0L
+            )
+        )
+    }
+
+    suspend fun consumeInvite(inviteId: String) {
+
+        val now = System.currentTimeMillis()
+
+        changeQueueDao.insert(
+            ChangeQueueEntity(
+                id = UUID.randomUUID().toString(),
+                entityType = "invite",
+                entityId = inviteId,
+                listId = "",
+                operation = "CONSUME",
+                payload = inviteId,
+                createdAt = now,
+                state = "PENDING",
+                progress = 0f,
+                baseVersion = 0L
+            )
         )
     }
 }

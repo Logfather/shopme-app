@@ -21,7 +21,8 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun CartoonMicrophone(
@@ -52,7 +53,7 @@ fun CartoonMicrophone(
 
         // Draw shadow
         drawOval(
-            color = Color.Black.copy(alpha = 0.1f),
+            color = BrandBlack.copy(alpha = 0.1f),
             topLeft = Offset(canvasWidth * 0.25f, canvasHeight * 0.85f),
             size = Size(canvasWidth * 0.5f, canvasHeight * 0.1f)
         )
@@ -72,7 +73,7 @@ fun CartoonMicrophone(
                 cornerRadius = CornerRadius(canvasHeight * 0.04f)
             )
             drawRoundRect(
-                brush = Brush.verticalGradient(listOf(Color.White, silverBandColor)),
+                brush = Brush.verticalGradient(listOf(BrandWhite, silverBandColor)),
                 topLeft = Offset(centerX - canvasWidth * 0.17f, canvasHeight * 0.82f),
                 size = Size(canvasWidth * 0.34f, canvasHeight * 0.06f),
                 cornerRadius = CornerRadius(canvasHeight * 0.03f)
@@ -102,7 +103,7 @@ fun CartoonMicrophone(
             drawPath(
                 path = bodyPath,
                 brush = Brush.horizontalGradient(
-                    colors = listOf(bodyDark, Color.White, bodyDark),
+                    colors = listOf(bodyDark, BrandWhite, bodyDark),
                     startX = centerX - canvasWidth * 0.18f,
                     endX = centerX + canvasWidth * 0.18f
                 )
@@ -124,7 +125,7 @@ fun CartoonMicrophone(
                 cornerRadius = CornerRadius(canvasHeight * 0.04f)
             )
             drawRoundRect(
-                brush = Brush.verticalGradient(listOf(Color.White, silverBandColor)),
+                brush = Brush.verticalGradient(listOf(BrandWhite, silverBandColor)),
                 topLeft = Offset(centerX - canvasWidth * 0.2f, canvasHeight * 0.33f),
                 size = Size(canvasWidth * 0.4f, canvasHeight * 0.06f),
                 cornerRadius = CornerRadius(canvasHeight * 0.03f)
@@ -151,13 +152,13 @@ fun CartoonMicrophone(
                 val step = canvasWidth * 0.04f
                 for (i in -10..10) {
                     drawLine(
-                        color = Color.Black.copy(alpha = 0.3f),
+                        color = BrandBlack.copy(alpha = 0.3f),
                         start = Offset(centerX + i * step - 100, 0f),
                         end = Offset(centerX + i * step + 100, canvasHeight),
                         strokeWidth = 1f
                     )
                     drawLine(
-                        color = Color.Black.copy(alpha = 0.3f),
+                        color = BrandBlack.copy(alpha = 0.3f),
                         start = Offset(centerX + i * step + 100, 0f),
                         end = Offset(centerX + i * step - 100, canvasHeight),
                         strokeWidth = 1f
@@ -177,7 +178,7 @@ fun CartoonMicrophone(
                 size = Size(eyeRadiusX * 2 + 4, eyeRadiusY * 2 + 4)
             )
             drawOval(
-                color = Color.White,
+                color = BrandWhite,
                 topLeft = Offset(centerX - canvasWidth * 0.15f, canvasHeight * 0.45f),
                 size = Size(eyeRadiusX * 2, eyeRadiusY * 2)
             )
@@ -187,7 +188,7 @@ fun CartoonMicrophone(
                 center = Offset(centerX - canvasWidth * 0.08f, canvasHeight * 0.55f)
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = eyeRadiusX * 0.15f,
                 center = Offset(centerX - canvasWidth * 0.09f, canvasHeight * 0.53f)
             )
@@ -199,7 +200,7 @@ fun CartoonMicrophone(
                 size = Size(eyeRadiusX * 2 + 4, eyeRadiusY * 2 + 4)
             )
             drawOval(
-                color = Color.White,
+                color = BrandWhite,
                 topLeft = Offset(centerX + canvasWidth * 0.01f, canvasHeight * 0.46f),
                 size = Size(eyeRadiusX * 2, eyeRadiusY * 2)
             )
@@ -209,7 +210,7 @@ fun CartoonMicrophone(
                 center = Offset(centerX + canvasWidth * 0.08f, canvasHeight * 0.56f)
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = eyeRadiusX * 0.15f,
                 center = Offset(centerX + canvasWidth * 0.07f, canvasHeight * 0.54f)
             )
@@ -311,15 +312,13 @@ fun CartoonMicrophone(
 @Preview(showBackground = true)
 @Composable
 private fun CartoonMicrophonePreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .padding(24.dp)
-        ) {
-            CartoonMicrophone(
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .padding(24.dp)
+    ) {
+        CartoonMicrophone(
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

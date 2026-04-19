@@ -28,7 +28,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 import java.util.Random
 
 @Composable
@@ -146,7 +146,7 @@ private fun GoldenCheckmark(modifier: Modifier = Modifier) {
             moveTo(size.width * 0.45f, size.height * 0.68f)
             lineTo(size.width * 0.88f, size.height * 0.22f)
         }
-        drawPath(highlightPath, Color.White.copy(alpha = 0.5f), style = Stroke(width = 12f, cap = StrokeCap.Round))
+        drawPath(highlightPath, BrandWhite.copy(alpha = 0.5f), style = Stroke(width = 12f, cap = StrokeCap.Round))
     }
 }
 
@@ -245,7 +245,7 @@ private fun StandardRibbon(modifier: Modifier = Modifier) {
 
         Text(
             text = stringResource(R.string.standard_label),
-            color = Color.White,
+            color = BrandWhite,
             fontSize = 32.sp,
             fontWeight = FontWeight.Black,
             modifier = Modifier
@@ -300,14 +300,12 @@ private fun Sparkles(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun StandardBadgeIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            StandardBadgeIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        StandardBadgeIllustration()
     }
 }

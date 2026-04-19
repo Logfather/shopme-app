@@ -21,4 +21,6 @@ sealed class UndoAction {
     data class DeleteList(
         val snapshot: ListDeleteSnapshot
     ) : UndoAction()
+
+    data class AddItem(val name: String) : UndoAction()
 }

@@ -41,7 +41,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun CannedFoodIllustration(
@@ -268,18 +269,18 @@ private fun Eye(eyeSize: Dp) {
     Box(
         modifier = Modifier
             .size(eyeSize)
-            .background(Color.White, CircleShape)
+            .background(BrandWhite, CircleShape)
             .border(2.dp, Color(0xFF424242), CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = eyeSize.toPx() * 0.25f,
                 center = center.plus(Offset(2f, 2f))
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = eyeSize.toPx() * 0.08f,
                 center = center.minus(Offset(eyeSize.toPx() * 0.1f, eyeSize.toPx() * 0.1f))
             )
@@ -431,14 +432,12 @@ private fun Modifier.customBorder(width: Dp, color: Color): Modifier = this.then
 @Preview(showBackground = true)
 @Composable
 private fun CannedFoodIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            CannedFoodIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CannedFoodIllustration()
     }
 }

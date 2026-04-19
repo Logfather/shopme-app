@@ -24,7 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun FailedIllustration(
@@ -78,11 +78,11 @@ fun FailedIllustration(
             )
 
             // Scared face on laptop
-            drawCircle(Color.White, radius = lW * 0.08f, center = Offset(lW * 0.35f, lH * 0.35f))
+            drawCircle(BrandWhite, radius = lW * 0.08f, center = Offset(lW * 0.35f, lH * 0.35f))
             drawCircle(outlineColor, radius = lW * 0.08f, center = Offset(lW * 0.35f, lH * 0.35f), style = Stroke(width = 2f))
             drawCircle(outlineColor, radius = lW * 0.025f, center = Offset(lW * 0.35f, lH * 0.35f))
 
-            drawCircle(Color.White, radius = lW * 0.08f, center = Offset(lW * 0.65f, lH * 0.35f))
+            drawCircle(BrandWhite, radius = lW * 0.08f, center = Offset(lW * 0.65f, lH * 0.35f))
             drawCircle(outlineColor, radius = lW * 0.08f, center = Offset(lW * 0.65f, lH * 0.35f), style = Stroke(width = 2f))
             drawCircle(outlineColor, radius = lW * 0.025f, center = Offset(lW * 0.65f, lH * 0.35f))
 
@@ -132,11 +132,11 @@ fun FailedIllustration(
             )
 
             // Scared face on phone
-            drawCircle(Color.White, radius = pW * 0.15f, center = Offset(pW * 0.35f, pH * 0.35f))
+            drawCircle(BrandWhite, radius = pW * 0.15f, center = Offset(pW * 0.35f, pH * 0.35f))
             drawCircle(outlineColor, radius = pW * 0.15f, center = Offset(pW * 0.35f, pH * 0.35f), style = Stroke(width = 2f))
             drawCircle(outlineColor, radius = pW * 0.04f, center = Offset(pW * 0.35f, pH * 0.35f))
 
-            drawCircle(Color.White, radius = pW * 0.15f, center = Offset(pW * 0.65f, pH * 0.35f))
+            drawCircle(BrandWhite, radius = pW * 0.15f, center = Offset(pW * 0.65f, pH * 0.35f))
             drawCircle(outlineColor, radius = pW * 0.15f, center = Offset(pW * 0.65f, pH * 0.35f), style = Stroke(width = 2f))
             drawCircle(outlineColor, radius = pW * 0.04f, center = Offset(pW * 0.65f, pH * 0.35f))
 
@@ -201,9 +201,9 @@ fun FailedIllustration(
             drawPath(exTop, warningRed, style = Stroke(width = 15f, cap = StrokeCap.Round))
             
             // Face on triangle
-            drawCircle(Color.White, radius = tW * 0.08f, center = Offset(-tW * 0.15f, tH * 0.25f))
+            drawCircle(BrandWhite, radius = tW * 0.08f, center = Offset(-tW * 0.15f, tH * 0.25f))
             drawCircle(outlineColor, radius = tW * 0.02f, center = Offset(-tW * 0.15f, tH * 0.25f))
-            drawCircle(Color.White, radius = tW * 0.08f, center = Offset(tW * 0.15f, tH * 0.25f))
+            drawCircle(BrandWhite, radius = tW * 0.08f, center = Offset(tW * 0.15f, tH * 0.25f))
             drawCircle(outlineColor, radius = tW * 0.02f, center = Offset(tW * 0.15f, tH * 0.25f))
             
             val mouthPath = Path().apply {
@@ -258,15 +258,13 @@ fun FailedIllustration(
 @Preview(showBackground = true)
 @Composable
 fun SyncErrorIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .padding(16.dp)
-        ) {
-            FailedIllustration(
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .padding(16.dp)
+    ) {
+        FailedIllustration(
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

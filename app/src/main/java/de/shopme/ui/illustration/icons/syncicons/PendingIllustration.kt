@@ -24,7 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun PendingIllustration(
@@ -112,7 +112,7 @@ fun PendingIllustration(
                 drawPath(bellPath, outlineColor, style = Stroke(width = 4f, join = StrokeJoin.Round))
                 
                 // Bell highlight
-                drawCircle(Color.White.copy(alpha = 0.3f), radius = 10f, center = Offset(-15f, -15f))
+                drawCircle(BrandWhite.copy(alpha = 0.3f), radius = 10f, center = Offset(-15f, -15f))
             }
         }
 
@@ -146,11 +146,11 @@ fun PendingIllustration(
         val leftEyeCenter = Offset(clockCenter.x - eyeW * 0.6f, clockCenter.y - eyeH * 0.3f)
         val rightEyeCenter = Offset(clockCenter.x + eyeW * 0.6f, clockCenter.y - eyeH * 0.3f)
 
-        drawOval(Color.White, topLeft = Offset(leftEyeCenter.x - eyeW/2, leftEyeCenter.y - eyeH/2), size = Size(eyeW, eyeH))
+        drawOval(BrandWhite, topLeft = Offset(leftEyeCenter.x - eyeW/2, leftEyeCenter.y - eyeH/2), size = Size(eyeW, eyeH))
         drawOval(outlineColor, topLeft = Offset(leftEyeCenter.x - eyeW/2, leftEyeCenter.y - eyeH/2), size = Size(eyeW, eyeH), style = Stroke(width = 4f))
         drawCircle(outlineColor, radius = 10f, center = Offset(leftEyeCenter.x + 5f, leftEyeCenter.y))
 
-        drawOval(Color.White, topLeft = Offset(rightEyeCenter.x - eyeW/2, rightEyeCenter.y - eyeH/2), size = Size(eyeW, eyeH))
+        drawOval(BrandWhite, topLeft = Offset(rightEyeCenter.x - eyeW/2, rightEyeCenter.y - eyeH/2), size = Size(eyeW, eyeH))
         drawOval(outlineColor, topLeft = Offset(rightEyeCenter.x - eyeW/2, rightEyeCenter.y - eyeH/2), size = Size(eyeW, eyeH), style = Stroke(width = 4f))
         drawCircle(outlineColor, radius = 10f, center = Offset(rightEyeCenter.x - 5f, rightEyeCenter.y))
 
@@ -205,7 +205,7 @@ fun PendingIllustration(
                 cubicTo(hgW * 0.1f, hgH * 0.7f, hgW * 0.4f, hgH * 0.55f, hgW * 0.5f, hgH * 0.5f)
                 cubicTo(hgW * 0.6f, hgH * 0.55f, hgW * 0.9f, hgH * 0.7f, hgW, hgH)
             }
-            drawPath(glassPath, Color.White.copy(alpha = 0.5f))
+            drawPath(glassPath, BrandWhite.copy(alpha = 0.5f))
             drawPath(glassPath, outlineColor, style = Stroke(width = 4f))
 
             // Sand
@@ -260,15 +260,13 @@ fun PendingIllustration(
 @Preview(showBackground = true)
 @Composable
 fun OutOfTimeIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .padding(16.dp)
-        ) {
-            PendingIllustration(
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .padding(16.dp)
+    ) {
+        PendingIllustration(
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

@@ -26,7 +26,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun TomatoIllustration(
@@ -158,7 +159,7 @@ fun TomatoIllustration(
 
                 // Highlights
                 drawOval(
-                    color = Color.White.copy(alpha = 0.3f),
+                    color = BrandWhite.copy(alpha = 0.3f),
                     topLeft = Offset(size.width * 0.2f, size.height * 0.2f),
                     size = Size(size.width * 0.2f, size.height * 0.15f)
                 )
@@ -219,19 +220,19 @@ fun TomatoIllustration(
 private fun Eye(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .background(Color.White, CircleShape)
+            .background(BrandWhite, CircleShape)
             .padding(2.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = size.minDimension / 4f,
                 center = center
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = size.minDimension / 12f,
                 center = Offset(center.x + 4f, center.y - 4f)
             )
@@ -253,14 +254,12 @@ private fun DrawScope.drawSparkle(center: Offset, size: Float) {
 @Preview(showBackground = true)
 @Composable
 private fun TomatoIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            TomatoIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(300.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        TomatoIllustration()
     }
 }

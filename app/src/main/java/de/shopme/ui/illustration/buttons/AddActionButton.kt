@@ -22,7 +22,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun AddActionButton(
@@ -53,7 +53,7 @@ fun AddActionButton(
             )
             // White border
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = radius * 0.96f,
                 center = center
             )
@@ -68,7 +68,7 @@ fun AddActionButton(
             val platformSize = radius * 1.1f
             val platformThickness = radius * 0.55f
             drawPlusPlatform(center, platformSize, platformThickness, Color(0xFFE0E0E0))
-            drawPlusPlatform(center, platformSize * 0.95f, platformThickness * 0.92f, Color.White)
+            drawPlusPlatform(center, platformSize * 0.95f, platformThickness * 0.92f, BrandWhite)
 
             // The Plus sign
             val plusLength = radius * 0.85f
@@ -82,12 +82,12 @@ fun AddActionButton(
             withTransform({
                 translate(left = -radius * 0.03f, top = -radius * 0.03f)
             }) {
-                drawPlusHighlight(center, plusLength * 0.7f, plusThickness * 0.3f, Color.White.copy(alpha = 0.6f))
+                drawPlusHighlight(center, plusLength * 0.7f, plusThickness * 0.3f, BrandWhite.copy(alpha = 0.6f))
             }
             
             // Glossy spot
             drawCircle(
-                color = Color.White.copy(alpha = 0.8f),
+                color = BrandWhite.copy(alpha = 0.8f),
                 radius = radius * 0.06f,
                 center = Offset(center.x - plusLength * 0.35f, center.y - plusThickness * 0.25f)
             )
@@ -189,9 +189,7 @@ private fun DrawScope.drawSparkle(
 @Preview(showBackground = true, backgroundColor = 0xFF000000)
 @Composable
 private fun AddActionButtonPreview() {
-    ShopMeTheme {
-        Box(modifier = Modifier.padding(16.dp)) {
-            AddActionButton(onClick = {})
-        }
+    Box(modifier = Modifier.padding(16.dp)) {
+        AddActionButton(onClick = {})
     }
 }

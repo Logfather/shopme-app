@@ -27,7 +27,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun SodaIllustration(
@@ -240,7 +240,7 @@ private fun Grape(modifier: Modifier = Modifier) {
             )
             // Shine
             drawOval(
-                color = Color.White.copy(alpha = 0.4f),
+                color = BrandWhite.copy(alpha = 0.4f),
                 topLeft = Offset(size.width * 0.2f, size.height * 0.2f),
                 size = Size(size.width * 0.4f, size.height * 0.3f)
             )
@@ -269,14 +269,12 @@ private fun DrawScope.drawSparkle(center: Offset, size: Float) {
 @Preview(showBackground = true)
 @Composable
 private fun SodaIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            SodaIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(300.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        SodaIllustration()
     }
 }

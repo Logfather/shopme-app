@@ -21,7 +21,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
@@ -51,7 +51,7 @@ fun NormaLogo(modifier: Modifier = Modifier) {
 
         // Draw "NORMA" text
         val textStyle = TextStyle(
-            color = Color.White,
+            color = BrandWhite,
             fontSize = (logoHeight * 0.55f).toSp(),
             fontWeight = FontWeight.Black
         )
@@ -70,7 +70,7 @@ fun NormaLogo(modifier: Modifier = Modifier) {
 
         // Draw Registered Trademark symbol
         val rStyle = TextStyle(
-            color = Color.White,
+            color = BrandWhite,
             fontSize = (logoHeight * 0.12f).toSp(),
             fontWeight = FontWeight.Bold
         )
@@ -128,11 +128,9 @@ private fun DrawScope.drawNormaBackground(
 @Preview(showBackground = true)
 @Composable
 private fun NormaLogoPreview() {
-    ShopMeTheme {
-        NormaLogo(
-            modifier = Modifier
-                .padding(16.dp)
-                .size(300.dp)
-        )
-    }
+    NormaLogo(
+        modifier = Modifier
+            .padding(16.dp)
+            .size(300.dp)
+    )
 }

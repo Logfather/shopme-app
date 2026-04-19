@@ -19,6 +19,6 @@
   },
   "homepage": "https://github.com/Logfather/shopme-app#readme",
   "dependencies": {
-    "firebase-admin": "^13.7.0"
+    "firebase-admin": "^13.8.0"
   }
 }

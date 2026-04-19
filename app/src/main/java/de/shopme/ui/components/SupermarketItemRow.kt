@@ -22,13 +22,14 @@ import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.model.SyncStatus
 import de.shopme.presentation.mapper.toUiState
 import de.shopme.presentation.model.SyncUiState
+import de.shopme.ui.theme.BrandBlack
 import de.shopme.ui.theme.BrandOlive
 
 @Composable
 fun SupermarketItemRow(
     item: ShoppingItem,
     categoryColor: Color,
-    onToggle: () -> Unit,
+    onToggle: (Boolean) -> Unit,
     onDelete: () -> Unit,
     onRetry: (String) -> Unit,
     onUpdate: (String) -> Unit
@@ -80,9 +81,12 @@ fun SupermarketItemRow(
 
         Checkbox(
             checked = item.isChecked,
-            onCheckedChange = {
-                onToggle()
-                isEditing = !it
+            onCheckedChange = { checked ->
+                onToggle(checked)
+
+                if (!checked) {
+                    isEditing = true   // nur öffnen wenn unchecked
+                }
             }
         )
 
@@ -121,7 +125,7 @@ fun SupermarketItemRow(
                 Text(
                     text = "Fertig",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black
+                    color = BrandBlack
                 )
             }
         } else {
@@ -139,7 +143,7 @@ fun SupermarketItemRow(
             ) {
                 Text(
                     text = "Löschen",
-                    color = Color.Black,
+                    color = BrandBlack,
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -150,8 +154,11 @@ fun SupermarketItemRow(
 
         Box(modifier = Modifier.size(24.dp)) {
 
-            val uiState = item.syncStatus.toUiState()
+            val stableStatus = item.syncStatus
 
+            val uiState = remember(stableStatus) {
+                stableStatus.toUiState()
+            }
             SyncStatusIcon(
                 state = uiState,
                 onRetry = {

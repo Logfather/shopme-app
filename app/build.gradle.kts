@@ -7,9 +7,23 @@ plugins {
     id("kotlin-kapt")
 }
 
+kapt {
+    correctErrorTypes = true
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        if (name.contains("UnitTest")) {
+            kapt.includeCompileClasspath = false
+        }
+    }
+}
+
+
+
 android {
     namespace = "de.shopme"
     compileSdk = 35
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 
     defaultConfig {
         applicationId = "de.shopme"
@@ -67,6 +81,10 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.engage.core)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.compose.ui.text)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
@@ -88,9 +106,6 @@ dependencies {
     // JSON
     implementation("com.google.code.gson:gson:2.10.1")
 
-    // Testing
-    testImplementation("junit:junit:4.13.2")
-
     implementation(platform("androidx.compose:compose-bom:2024.04.01"))
 
     implementation("androidx.navigation:navigation-compose:2.7.7")
@@ -102,4 +117,15 @@ dependencies {
 
     // Google Play Store SignIn
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
+    testImplementation("io.mockk:mockk:1.13.5")
+
+    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.0")
+
+    implementation("androidx.compose.animation:animation")
 }

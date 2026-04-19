@@ -1,5 +1,4 @@
 package de.shopme.ui.illustration.icons.itemicons
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,8 +37,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
-
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 @Composable
 fun FrozenFoodIllustration(
     modifier: Modifier = Modifier
@@ -57,7 +56,6 @@ fun FrozenFoodIllustration(
                 .align(Alignment.Center)
                 .offset(y = 20.dp)
         )
-
         FishSticksBox(
             modifier = Modifier
                 .size(160.dp)
@@ -65,7 +63,6 @@ fun FrozenFoodIllustration(
                 .offset(x = 40.dp, y = 40.dp)
                 .rotate(-10f)
         )
-
         PeasBag(
             modifier = Modifier
                 .size(140.dp)
@@ -73,7 +70,6 @@ fun FrozenFoodIllustration(
                 .offset(x = (-80).dp, y = 60.dp)
                 .rotate(5f)
         )
-
         IceCreamTub(
             modifier = Modifier
                 .size(150.dp)
@@ -81,7 +77,6 @@ fun FrozenFoodIllustration(
                 .offset(x = (-20).dp, y = 100.dp)
                 .rotate(10f)
         )
-
         ShrimpBag(
             modifier = Modifier
                 .size(160.dp)
@@ -89,21 +84,18 @@ fun FrozenFoodIllustration(
                 .offset(x = 20.dp, y = 20.dp)
                 .rotate(-15f)
         )
-
         PizzaBag(
             modifier = Modifier
                 .size(170.dp)
                 .align(Alignment.Center)
                 .offset(x = 10.dp, y = 40.dp)
         )
-
         CoolerBagFront(
             modifier = Modifier
                 .fillMaxSize(0.9f)
                 .align(Alignment.Center)
                 .offset(y = 20.dp)
         )
-
         Popsicle(
             modifier = Modifier
                 .size(140.dp)
@@ -111,17 +103,14 @@ fun FrozenFoodIllustration(
                 .offset(x = (-60).dp, y = (-20).dp)
                 .rotate(20f)
         )
-
         IceCube(modifier = Modifier.size(50.dp).align(Alignment.BottomStart).offset(x = 40.dp, y = (-40).dp).rotate(-15f))
         IceCube(modifier = Modifier.size(45.dp).align(Alignment.BottomStart).offset(x = 80.dp, y = (-20).dp).rotate(10f))
         IceCube(modifier = Modifier.size(55.dp).align(Alignment.BottomEnd).offset(x = (-20).dp, y = (-60).dp).rotate(5f))
-
         Bubble(modifier = Modifier.size(12.dp).align(Alignment.TopStart).offset(x = 50.dp, y = 100.dp))
         Bubble(modifier = Modifier.size(10.dp).align(Alignment.TopEnd).offset(x = (-100).dp, y = 40.dp))
         Bubble(modifier = Modifier.size(15.dp).align(Alignment.TopEnd).offset(x = (-40).dp, y = 80.dp))
     }
 }
-
 @Composable
 private fun CoolerBagBack(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -136,7 +125,6 @@ private fun CoolerBagBack(modifier: Modifier = Modifier) {
         drawPath(path, Color(0xFF01579B), style = Stroke(width = 4f))
     }
 }
-
 @Composable
 private fun CoolerBagFront(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -149,7 +137,6 @@ private fun CoolerBagFront(modifier: Modifier = Modifier) {
         }
         drawPath(path, Color(0xFF29B6F6))
         drawPath(path, Color(0xFF01579B), style = Stroke(width = 6f))
-
         val frostPath = Path().apply {
             moveTo(size.width * 0.02f, size.height * 0.45f)
             for (i in 0 until 10) {
@@ -158,9 +145,8 @@ private fun CoolerBagFront(modifier: Modifier = Modifier) {
                 quadraticTo(x + size.width * 0.05f, y + size.height * 0.05f, x + size.width * 0.1f, size.height * 0.45f)
             }
         }
-        drawPath(frostPath, Color.White)
+        drawPath(frostPath, BrandWhite)
         drawPath(frostPath, Color(0xFFB3E5FC), style = Stroke(width = 2f))
-
         val centerX = size.width * 0.25f
         val centerY = size.height * 0.7f
         val flakeSize = 60f
@@ -168,15 +154,14 @@ private fun CoolerBagFront(modifier: Modifier = Modifier) {
             val angle = i * 60f
             val x = centerX + Math.cos(Math.toRadians(angle.toDouble())).toFloat() * flakeSize
             val y = centerY + Math.sin(Math.toRadians(angle.toDouble())).toFloat() * flakeSize
-            drawLine(Color.White, Offset(centerX, centerY), Offset(x, y), strokeWidth = 8f, cap = StrokeCap.Round)
+            drawLine(BrandWhite, Offset(centerX, centerY), Offset(x, y), strokeWidth = 8f, cap = StrokeCap.Round)
             val xSub = centerX + Math.cos(Math.toRadians(angle.toDouble())).toFloat() * flakeSize * 0.6f
             val ySub = centerY + Math.sin(Math.toRadians(angle.toDouble())).toFloat() * flakeSize * 0.6f
-            drawLine(Color.White, Offset(xSub, ySub), Offset(xSub + 10f, ySub + 10f), strokeWidth = 4f)
-            drawLine(Color.White, Offset(xSub, ySub), Offset(xSub - 10f, ySub - 10f), strokeWidth = 4f)
+            drawLine(BrandWhite, Offset(xSub, ySub), Offset(xSub + 10f, ySub + 10f), strokeWidth = 4f)
+            drawLine(BrandWhite, Offset(xSub, ySub), Offset(xSub - 10f, ySub - 10f), strokeWidth = 4f)
         }
     }
 }
-
 @Composable
 private fun FishSticksBox(modifier: Modifier = Modifier) {
     Box(modifier = modifier) {
@@ -186,7 +171,7 @@ private fun FishSticksBox(modifier: Modifier = Modifier) {
                 cornerRadius = CornerRadius(20f, 20f)
             )
             drawRoundRect(
-                color = Color.Black,
+                color = BrandBlack,
                 style = Stroke(width = 4f),
                 cornerRadius = CornerRadius(20f, 20f)
             )
@@ -208,7 +193,6 @@ private fun FishSticksBox(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun PeasBag(modifier: Modifier = Modifier) {
     Box(modifier = modifier) {
@@ -221,8 +205,8 @@ private fun PeasBag(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(path, Color(0xFF43A047))
-            drawPath(path, Color.Black, style = Stroke(width = 4f))
-            
+            drawPath(path, BrandBlack, style = Stroke(width = 4f))
+
             for (i in 0 until 15) {
                 drawCircle(
                     color = Color(0xFF2E7D32).copy(alpha = 0.6f),
@@ -237,24 +221,23 @@ private fun PeasBag(modifier: Modifier = Modifier) {
         ) {
             Text(
                 text = stringResource(R.string.peas_label),
-                style = TextStyle(color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                style = TextStyle(color = BrandWhite, fontWeight = FontWeight.Black, fontSize = 22.sp)
             )
             Spacer(modifier = Modifier.weight(1f))
             Face(modifier = Modifier.size(50.dp))
         }
     }
 }
-
 @Composable
 private fun ShrimpBag(modifier: Modifier = Modifier) {
     Box(modifier = modifier) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawRoundRect(
-                color = Color.White.copy(alpha = 0.4f),
+                color = BrandWhite.copy(alpha = 0.4f),
                 cornerRadius = CornerRadius(15f, 15f)
             )
             drawRoundRect(
-                color = Color.Black,
+                color = BrandBlack,
                 style = Stroke(width = 4f),
                 cornerRadius = CornerRadius(15f, 15f)
             )
@@ -282,14 +265,13 @@ private fun ShrimpBag(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun PizzaBag(modifier: Modifier = Modifier) {
     Box(modifier = modifier) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(Color(0xFFFFF176), radius = size.minDimension * 0.45f)
-            drawCircle(Color.Black, radius = size.minDimension * 0.45f, style = Stroke(width = 4f))
-            
+            drawCircle(BrandBlack, radius = size.minDimension * 0.45f, style = Stroke(width = 4f))
+
             for (i in 0 until 8) {
                 drawCircle(
                     color = Color(0xFFFF9100),
@@ -312,7 +294,6 @@ private fun PizzaBag(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun IceCreamTub(modifier: Modifier = Modifier) {
     Box(modifier = modifier) {
@@ -325,8 +306,7 @@ private fun IceCreamTub(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(path, Color(0xFFF06292))
-            drawPath(path, Color.Black, style = Stroke(width = 4f))
-
+            drawPath(path, BrandBlack, style = Stroke(width = 4f))
             drawArc(
                 color = Color(0xFFFFF9C4),
                 startAngle = 180f,
@@ -350,14 +330,13 @@ private fun IceCreamTub(modifier: Modifier = Modifier) {
         ) {
             Text(
                 text = stringResource(R.string.ice_cream_label),
-                style = TextStyle(color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                style = TextStyle(color = BrandWhite, fontWeight = FontWeight.Black, fontSize = 18.sp)
             )
             Spacer(modifier = Modifier.weight(1f))
             Face(modifier = Modifier.size(50.dp).offset(y = (-10).dp))
         }
     }
 }
-
 @Composable
 private fun Popsicle(modifier: Modifier = Modifier) {
     Box(modifier = modifier) {
@@ -370,7 +349,7 @@ private fun Popsicle(modifier: Modifier = Modifier) {
                 size = Size(stickWidth, stickHeight),
                 cornerRadius = CornerRadius(10f, 10f)
             )
-            
+
             drawRoundRect(
                 color = Color(0xFFE53935),
                 topLeft = Offset(size.width * 0.2f, size.height * 0.1f),
@@ -378,7 +357,7 @@ private fun Popsicle(modifier: Modifier = Modifier) {
                 cornerRadius = CornerRadius(20f, 20f)
             )
             drawRect(
-                color = Color.White,
+                color = BrandWhite,
                 topLeft = Offset(size.width * 0.2f, size.height * 0.35f),
                 size = Size(size.width * 0.6f, size.height * 0.15f)
             )
@@ -388,9 +367,9 @@ private fun Popsicle(modifier: Modifier = Modifier) {
                 size = Size(size.width * 0.6f, size.height * 0.25f),
                 cornerRadius = CornerRadius(0f, 0f)
             )
-            
+
             drawRoundRect(
-                color = Color.Black,
+                color = BrandBlack,
                 topLeft = Offset(size.width * 0.2f, size.height * 0.1f),
                 size = Size(size.width * 0.6f, size.height * 0.65f),
                 cornerRadius = CornerRadius(20f, 20f),
@@ -400,7 +379,6 @@ private fun Popsicle(modifier: Modifier = Modifier) {
         Face(modifier = Modifier.size(50.dp).align(Alignment.Center).offset(y = (-10).dp))
     }
 }
-
 @Composable
 private fun IceCube(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -415,7 +393,6 @@ private fun IceCube(modifier: Modifier = Modifier) {
         )
     }
 }
-
 @Composable
 private fun Bubble(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -424,13 +401,12 @@ private fun Bubble(modifier: Modifier = Modifier) {
             radius = size.minDimension / 2f
         )
         drawCircle(
-            color = Color.White.copy(alpha = 0.8f),
+            color = BrandWhite.copy(alpha = 0.8f),
             radius = size.minDimension / 4f,
             center = Offset(size.width * 0.3f, size.height * 0.3f)
         )
     }
 }
-
 @Composable
 private fun Face(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
@@ -445,48 +421,44 @@ private fun Face(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(mouthPath, Color(0xFFB71C1C))
-            drawPath(mouthPath, Color.Black, style = Stroke(width = 2f))
+            drawPath(mouthPath, BrandBlack, style = Stroke(width = 2f))
         }
     }
 }
-
 @Composable
 private fun Eye(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .background(Color.White, CircleShape)
-            .border(2.dp, Color.Black, CircleShape)
+            .background(BrandWhite, CircleShape)
+            .border(2.dp, BrandBlack, CircleShape)
             .padding(2.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = size.minDimension / 4f,
                 center = center
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = size.minDimension / 10f,
                 center = Offset(center.x + 2f, center.y - 2f)
             )
         }
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 private fun FrozenFoodIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            FrozenFoodIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        FrozenFoodIllustration()
     }
 }

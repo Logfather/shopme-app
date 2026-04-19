@@ -1,20 +1,9 @@
 package de.shopme.presentation.screens
-
-import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -22,240 +11,276 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import de.shopme.presentation.state.ShoppingState
-import de.shopme.ui.illustration.icons.bags.SadBagIllustration
+import de.shopme.ui.components.CartoonLoader
 import de.shopme.ui.illustration.icons.bags.HappyBagIllustration
+import de.shopme.ui.illustration.icons.bags.InviteBagIcon
+import de.shopme.ui.theme.BrandBlack
 import de.shopme.ui.theme.BrandGreen
-
+import de.shopme.ui.theme.BrandOlive
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InviteScreen(
     state: ShoppingState,
-    message: String? = null,
-    onAccept: (() -> Unit)? = null,
-    onDecline: (() -> Unit)? = null
+    onAccept: () -> Unit,
+    onDecline: () -> Unit
 ) {
-
-    var startAnimation by remember { mutableStateOf(false) }
-
-    val scale by animateFloatAsState(
-        targetValue = if (startAnimation) 1f else 0.95f,
-        animationSpec = tween(260, easing = FastOutSlowInEasing),
-        label = "dialogScale"
+    if (!state.showInviteDialog) return
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
     )
-
-    LaunchedEffect(Unit) {
-        startAnimation = true
-    }
-
-    val bounceOffset by animateDpAsState(
-        targetValue = if (startAnimation) (-4).dp else 0.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "buttonBounce"
-    )
-
-    val pulse = rememberInfiniteTransition(label = "buttonPulse")
-
-    val glow by pulse.animateFloat(
-        initialValue = 6f,
-        targetValue = 14f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1400, easing = FastOutSlowInEasing, delayMillis = 400),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowAnim"
-    )
-
-    val dialogGradient = Brush.verticalGradient(
-        colors = listOf(
-            Color.White.copy(alpha = 0.85f),
-            Color.White.copy(alpha = 0.65f)
-        )
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f)),
-        contentAlignment = Alignment.Center
+    ModalBottomSheet(
+        onDismissRequest = onDecline,
+        sheetState = sheetState,
+        containerColor = BrandOlive,
+        tonalElevation = 8.dp,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
-
-        Box(
+        Column(
             modifier = Modifier
-                .padding(24.dp)
-                .scale(scale)
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = Color.Transparent,
-                tonalElevation = 6.dp,
+            // ============================================================
+            // HEADER (aligned with ChooseLists)
+            // ============================================================
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
-
+                val scale by animateFloatAsState(
+                    targetValue = 1f,
+                    animationSpec = spring(dampingRatio = 0.6f)
+                )
+                HappyBagIllustration(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .scale(scale)
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Einladung",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = BrandBlack
+                )
+                Spacer(Modifier.height(4.dp))
+                val sender = state.inviteSenderName?.takeIf { it.isNotBlank() } ?: "Jemand"
+                val listCount = state.inviteListIds.size
+                val inviteText = buildAnnotatedString {
+                    append("$sender hat dich zu ")
+                    when (listCount) {
+                        0 -> {
+                            append("einer Einladung")
+                        }
+                        1 -> {
+                            withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
+                                append("einer Liste")
+                            }
+                        }
+                        else -> {
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append("$listCount Listen")
+                            }
+                        }
+                    }
+                    append(" eingeladen")
+                }
+                Text(
+                    text = inviteText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = BrandBlack.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    InviteBagIcon(
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = when (listCount) {
+                            0 -> "Du kannst dieser Einladung beitreten"
+                            1 -> "Du trittst dieser Liste bei"
+                            else -> "Du trittst diesen Listen bei"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = BrandBlack.copy(alpha = 0.5f)
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                if (listCount > 0) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Gemeinsam einkaufen & Listen teilen",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = BrandBlack.copy(alpha = 0.5f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            // ============================================================
+            // STATE: LOADING
+            // ============================================================
+            if (state.isInviteLoading) {
                 Box(
                     modifier = Modifier
-                        .background(dialogGradient)
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-
-                        SadBagIllustration(
-                            modifier = Modifier.size(22.dp)
-                        )
-
-                        Spacer(Modifier.height(10.dp))
-
-                        val senderName = state.inviteSenderName
-
-                        Log.d("INVITE", "InviteScreen: senderName=$senderName")
-
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-
-                            Text(
-                                text = senderName.takeUnless { it.isNullOrBlank() } ?: "Jemand",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Text(
-                                text = "hat dich eingeladen",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = "Gemeinsamen Einkauf starten",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        AnimatedVisibility(
-                            visible = startAnimation,
-                            enter = slideInVertically(
-                                initialOffsetY = { it },
-                                animationSpec = tween(420)
-                            ) + fadeIn(tween(350))
-                        ) {
-
-                            val spotlight = Brush.radialGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                                    Color.Transparent
-                                )
-                            )
-
-                            Box(
-                                contentAlignment = Alignment.Center,
+                    CartoonLoader()
+                }
+                Text(
+                    text = "Einladung wird geladen…",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(20.dp))
+                OutlinedButton(
+                    onClick = onDecline,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Abbrechen", color = BrandBlack)
+                }
+                Spacer(Modifier.height(12.dp))
+                return@Column
+            }
+            // ============================================================
+            // STATE: ERROR
+            // ============================================================
+            state.inviteError?.let { error ->
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp)
+                )
+                OutlinedButton(
+                    onClick = onDecline,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Schließen", color = BrandBlack)
+                }
+                Spacer(Modifier.height(12.dp))
+                return@Column
+            }
+            // ============================================================
+            // LIST PREVIEW (aligned style)
+            // ============================================================
+            val lists = state.inviteResolvedLists
+            if (lists.isNullOrEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CartoonLoader()
+                }
+                Text(
+                    text = "Listen werden geladen…",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 350.dp)
+                ) {
+                    lists.forEach { list ->
+                        Column {
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(160.dp)
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-
-                                Box(
-                                    modifier = Modifier
-                                        .matchParentSize()
-                                        .background(spotlight)
-                                        .pointerInput(Unit) {}
-                                )
-
-                                val floating = rememberInfiniteTransition(label = "bagFloat")
-
-                                val floatAnim by floating.animateFloat(
-                                    initialValue = -6f,
-                                    targetValue = 6f,
-                                    animationSpec = infiniteRepeatable(
-                                        animation = tween(2600, easing = FastOutSlowInEasing),
-                                        repeatMode = RepeatMode.Reverse
-                                    ),
-                                    label = "floatAnim"
-                                )
-
                                 HappyBagIllustration(
-                                    modifier = Modifier
-                                        .offset(y = floatAnim.dp)
-                                        .fillMaxWidth(0.6f)
-                                        .aspectRatio(1f)
+                                    modifier = Modifier.size(22.dp)
                                 )
+                                Spacer(Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = list.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = BrandBlack
+                                    )
+                                    Text(
+                                        text = "${list.itemCount} Artikel",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = BrandBlack.copy(alpha = 0.6f)
+                                    )
+                                }
                             }
-                        }
-
-                        Spacer(modifier = Modifier.height(30.dp))
-
-                        // 🔥 FIX: Loading State integriert
-                        if (state.isJoining) {
-
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .padding(vertical = 8.dp),
-                                color = BrandGreen
-                            )
-
-                        } else if (onAccept != null && onDecline != null) {
-
-                            Button(
-                                onClick = {
-                                    if (!state.isJoining) {
-                                        onAccept?.invoke()
-                                    }
-                                },
-                                enabled = !state.isJoining,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(54.dp)
-                                    .offset(y = bounceOffset)
-                                    .shadow(
-                                        elevation = glow.coerceAtMost(12f).dp,
-                                        shape = RoundedCornerShape(18.dp),
-                                        ambientColor = BrandGreen,
-                                        spotColor = BrandGreen
-                                    ),
-                                shape = RoundedCornerShape(18.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = BrandGreen,
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                Text("Jetzt öffnen")
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            OutlinedButton(
-                                onClick = onDecline,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(50.dp),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Text("Später")
-                            }
+                            Divider(color = BrandBlack.copy(alpha = 0.08f))
                         }
                     }
                 }
             }
+            Spacer(Modifier.height(20.dp))
+            // ============================================================
+            // ACTIONS (ChooseLists-like behavior)
+            // ============================================================
+            if (state.isJoining) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CartoonLoader()
+                }
+            } else {
+                val enabled = !state.inviteResolvedLists.isNullOrEmpty()
+                if (!enabled) {
+                    Text(
+                        text = "Warte auf gültige Listen…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = BrandBlack.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp)
+                    )
+                } else {
+                    Button(
+                        onClick = onAccept,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BrandGreen,
+                            contentColor = BrandBlack
+                        )
+                    ) {
+                        Text("Beitreten")
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = onDecline,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Abbrechen", color = BrandBlack)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
         }
     }
 }

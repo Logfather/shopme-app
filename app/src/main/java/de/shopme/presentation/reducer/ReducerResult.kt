@@ -1,12 +1,14 @@
 package de.shopme.presentation.reducer
 
+import android.util.Log
 import de.shopme.domain.model.SyncStatus
 import de.shopme.presentation.action.ShoppingAction
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.state.ShoppingScreenMode
 import de.shopme.presentation.state.ShoppingState
 import de.shopme.presentation.effect.UIEffect
-import de.shopme.presentation.undo.UndoAction
+import de.shopme.presentation.state.SortingPhase
+
 
 data class ReducerResult(
     val state: ShoppingState,
@@ -24,7 +26,7 @@ fun reduce(
     var effects: List<UIEffect> = emptyList()
 
     // ------------------------------------------------------------
-    // EVENTS (Item / List mutations)
+    // EVENTS
     // ------------------------------------------------------------
 
     event?.let {
@@ -32,22 +34,18 @@ fun reduce(
         newState = when (it) {
 
             is ShopEvent.Item.Add -> {
-
-                effects = listOf(
-                    UIEffect.AddItem(it.name)   // ✅ Effect setzen
-                )
-
-                state   // ✅ State bleibt gleich
+                effects = listOf(UIEffect.AddItem(it.name))
+                state
             }
 
             is ShopEvent.Item.Toggle -> {
 
-                effects = listOf(
-                    UIEffect.ToggleItem(it.item),
+                val newChecked = !it.item.isChecked
 
-                    UIEffect.ShowUndo(
-                        action = de.shopme.presentation.undo.UndoAction.ToggleItem(it.item),
-                        message = "Status geändert"
+                effects = listOf(
+                    UIEffect.ToggleItem(
+                        itemId = it.item.id,
+                        newChecked = newChecked
                     )
                 )
 
@@ -55,69 +53,102 @@ fun reduce(
             }
 
             is ShopEvent.Item.RetrySync -> {
-
-                effects = listOf(
-                    UIEffect.RetrySync(it.itemId)
-                )
-
+                effects = listOf(UIEffect.RetrySync(it.itemId))
                 state
             }
 
             is ShopEvent.Item.Delete -> {
-
                 effects = listOf(
                     UIEffect.DeleteItem(it.item),
-
-                    UIEffect.ShowUndo(
-                        action = UndoAction.DeleteItem(it.item),
-                        message = "Item gelöscht"
-                    )
+                    UIEffect.ShowUndo("Item gelöscht")
                 )
-
                 state
             }
 
             is ShopEvent.Item.Update -> {
 
+                val updatedItem = it.item.copy(
+                    name = it.newName,
+                    isChecked = true,
+                    updatedAt = System.currentTimeMillis()
+                )
+
                 effects = listOf(
-                    UIEffect.UpdateItem(it.item, it.newName),
-
-                    UIEffect.ShowUndo(
-                        action = UndoAction.UpdateItem(it.item),
-                        message = "Item geändert"
-                    )
+                    UIEffect.UpdateItem(
+                        item = updatedItem,
+                        newName = it.newName
+                    ),
+                    UIEffect.ShowUndo("Item geändert (Update)")
                 )
 
-                state.copy(
-                    items = state.items.map { item ->
-                        if (item.id == it.item.id) {
-                            item.copy(
-                                name = it.newName,
-                                isChecked = true,
-                                updatedAt = System.currentTimeMillis(),
-                                syncStatus = SyncStatus.Pending
-                            )
-                        } else item
-                    }
-                )
+                state // ✅ das ist der Return für den when-Block
             }
 
             is ShopEvent.List.DeleteAllLists -> {
-
-                effects = listOf(
-                    UIEffect.DeleteAllLists
-                )
-
+                effects = listOf(UIEffect.DeleteAllLists)
                 state
             }
 
             is ShopEvent.List.Delete -> {
-
-                effects = listOf(
-                    UIEffect.RequestDeleteList(it.listId)
-                )
-
+                effects = listOf(UIEffect.RequestDeleteList(it.listId))
                 state
+            }
+
+            is ShopEvent.List.StartSorting -> {
+                state.copy(isSorting = true, sortingPhase = SortingPhase.Preparing)
+            }
+
+            is ShopEvent.List.SetSortingPhase -> {
+                state.copy(sortingPhase = it.phase)
+            }
+
+            is ShopEvent.List.FinishSorting -> {
+                state.copy(isSorting = false, sortingPhase = SortingPhase.Idle)
+            }
+
+            is ShopEvent.List.StartDeleteAll -> {
+                state.copy(isDeletingAll = true)
+            }
+
+            is ShopEvent.List.FinishDeleteAll -> {
+                state.copy(isDeletingAll = false)
+            }
+
+            is ShopEvent.List.StartSharing -> {
+                Log.d("SHARE_FLOW", "Reducer → StartSharing")
+                state.copy(isSharing = true)
+            }
+
+            is ShopEvent.List.FinishSharing -> {
+                state.copy(isSharing = false)
+            }
+
+            is ShopEvent.System.OpenProfileScreen -> {
+                state.copy(showProfileScreen = false)
+            }
+
+            is ShopEvent.System.ShowSaveChoice -> {
+                state.copy(showSaveChoice = true)
+            }
+
+            is ShopEvent.System.HideSaveChoice -> {
+                state.copy(showSaveChoice = false)
+            }
+
+            is ShopEvent.System.ConfirmGoogleSave -> {
+                effects = effects + UIEffect.StartGoogleSignIn
+                state.copy(showSaveChoice = false)
+            }
+
+            is ShopEvent.System.ConfirmManualSave -> {
+                effects = effects + UIEffect.UpdateUserProfile(
+                    uid = "",
+                    nickName = it.nickName,
+                    firstName = it.firstName,
+                    lastName = it.lastName,
+                    email = it.email
+                )
+                state.copy(showSaveChoice = false)
             }
 
             else -> state
@@ -125,96 +156,135 @@ fun reduce(
     }
 
     // ------------------------------------------------------------
-    // ACTIONS (UI navigation / flows)
+    // ACTIONS
     // ------------------------------------------------------------
 
     action?.let {
 
-        when (state.screenMode) {
+        when (it) {
 
-            ShoppingScreenMode.Loading -> when (it) {
+            is ShoppingAction.ToggleItem -> {
+                val newChecked = !it.item.isChecked
 
-                ShoppingAction.StartMultiStoreCreation -> {
-                    newState = newState.copy(
-                        screenMode = ShoppingScreenMode.MultiSelect(emptyList())
+                effects = listOf(
+                    UIEffect.ToggleItem(
+                        itemId = it.item.id,
+                        newChecked = newChecked
                     )
-                }
-
-                else -> Unit
+                )
             }
 
-            ShoppingScreenMode.Normal -> when (it) {
+            is ShoppingAction.UpdateUserProfile -> {
+                effects = effects + UIEffect.UpdateUserProfile(
+                    uid = it.uid,
+                    nickName = it.nickName,
+                    firstName = it.firstName,
+                    lastName = it.lastName,
+                    email = it.email
+                )
 
-                ShoppingAction.StartMultiStoreCreation -> {
-                    newState = newState.copy(
-                        screenMode = ShoppingScreenMode.MultiSelect(emptyList())
-                    )
-                }
-
-                ShoppingAction.CancelMultiCreation -> {
-                    newState = newState.copy(
-                        screenMode = ShoppingScreenMode.MultiOverview
-                    )
-                }
-
-                else -> Unit
+                newState = newState.copy(
+                    displayName = it.nickName,
+                    hasProfile = true,
+                    firstName = it.firstName,
+                    lastName = it.lastName,
+                    email = it.email
+                )
             }
 
-            ShoppingScreenMode.MultiOverview -> when (it) {
-
-                ShoppingAction.StartMultiStoreCreation -> {
-                    newState = newState.copy(
-                        screenMode = ShoppingScreenMode.MultiSelect(emptyList())
-                    )
-                }
-
-                else -> Unit
+            is ShoppingAction.LoadUserProfile -> {
+                effects = effects + UIEffect.LoadUserProfile(it.uid)
             }
 
-            is ShoppingScreenMode.MultiSelect -> when (it) {
+            is ShoppingAction.UserProfileLoaded -> {
+                val profileName = it.profileName?.trim()
+                val hasValidProfile = !profileName.isNullOrBlank()
 
-                is ShoppingAction.ToggleStore -> {
+                newState = newState.copy(
+                    displayName = profileName,
+                    hasProfile = hasValidProfile,
+                    firstName = it.firstName,
+                    lastName = it.lastName,
+                    email = it.email
+                )
+            }
 
-                    val current = state.screenMode as ShoppingScreenMode.MultiSelect
+            else -> Unit
+        }
 
-                    val updated =
-                        if (it.store in current.selectedStores)
-                            current.selectedStores - it.store
-                        else
-                            current.selectedStores + it.store
+        // ------------------------------------------------------------
+        // SCREEN MODE HANDLING
+        // ------------------------------------------------------------
 
-                    newState = newState.copy(
-                        screenMode = ShoppingScreenMode.MultiSelect(updated)
-                    )
-                }
+        when (screenMode) {
 
-                is ShoppingAction.ConfirmStores -> {
+            ShoppingScreenMode.Loading,
+            ShoppingScreenMode.Normal,
+            ShoppingScreenMode.MultiOverview -> {
 
-                    val stores =
-                        (screenMode as? ShoppingScreenMode.MultiSelect)
-                            ?.selectedStores
-                            ?: emptyList()
+                when (it) {
 
-                    effects = listOf(
-                        UIEffect.CreateLists(
-                            stores = stores,
-                            customLists = it.customLists
+                    ShoppingAction.StartMultiStoreCreation -> {
+                        newState = newState.copy(
+                            screenMode = ShoppingScreenMode.MultiSelect(emptyList())
                         )
-                    )
+                    }
 
-                    newState = newState.copy(
-                        screenMode = ShoppingScreenMode.MultiOverview
-                    )
+                    is ShoppingAction.DeleteAllLists -> {
+                        effects = listOf(UIEffect.DeleteAllLists)
+                    }
+
+                    else -> Unit
                 }
+            }
 
-                ShoppingAction.CancelMultiCreation -> {
+            is ShoppingScreenMode.MultiSelect -> {
 
-                    newState = newState.copy(
-                        screenMode = ShoppingScreenMode.MultiOverview
-                    )
+                when (it) {
+
+                    is ShoppingAction.ToggleStore -> {
+
+                        val current = screenMode
+
+                        val updated =
+                            if (it.store in current.selectedStores)
+                                current.selectedStores - it.store
+                            else
+                                current.selectedStores + it.store
+
+                        newState = newState.copy(
+                            screenMode = ShoppingScreenMode.MultiSelect(updated)
+                        )
+                    }
+
+                    is ShoppingAction.ConfirmStores -> {
+
+                        val stores = screenMode.selectedStores
+
+                        effects = listOf(
+                            UIEffect.CreateLists(
+                                stores = stores,
+                                customLists = it.customLists
+                            )
+                        )
+
+                        newState = newState.copy(
+                            screenMode = ShoppingScreenMode.MultiOverview
+                        )
+                    }
+
+                    ShoppingAction.CancelMultiCreation -> {
+                        newState = newState.copy(
+                            screenMode = ShoppingScreenMode.MultiOverview
+                        )
+                    }
+
+                    is ShoppingAction.DeleteAllLists -> {
+                        effects = listOf(UIEffect.DeleteAllLists)
+                    }
+
+                    else -> Unit
                 }
-
-                else -> Unit
             }
         }
     }

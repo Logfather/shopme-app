@@ -18,7 +18,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
 
 @Composable
 fun BreadIllustration(
@@ -285,14 +284,12 @@ private fun Sparkles(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun BreadIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            BreadIllustration(modifier = Modifier.fillMaxSize())
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        BreadIllustration(modifier = Modifier.fillMaxSize())
     }
 }

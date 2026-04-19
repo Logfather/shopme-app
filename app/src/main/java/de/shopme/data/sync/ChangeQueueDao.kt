@@ -7,6 +7,7 @@ import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 import de.shopme.data.sync.ChangeQueueEntity
+import de.shopme.domain.model.ShoppingItemEntity
 
 
 @Dao
@@ -62,9 +63,9 @@ interface ChangeQueueDao {
     )
 
     @Query("""
-    SELECT entityId, state, progress
+    SELECT entityId, state, progress, createdAt
     FROM change_queue
-    WHERE state IN ('PENDING', 'SYNCING', 'FAILED')
+    WHERE state IN ('PENDING', 'SYNCING', 'FAILED', 'DONE')
 """)
     fun observeSyncStates(): Flow<List<SyncStateTuple>>
 
@@ -104,6 +105,48 @@ interface ChangeQueueDao {
     @Query("SELECT state FROM change_queue WHERE id = :id")
     suspend fun getState(id: String): String?
 
+    @Query("DELETE FROM change_queue")
+    suspend fun clearAll()
+
+    @Query("UPDATE change_queue SET state = 'PENDING' WHERE entityId = :itemId")
+    suspend fun markPendingByEntityId(itemId: String)
+
+    @Query("""
+    SELECT * FROM change_queue 
+    WHERE entityId = :entityId 
+    AND state = 'PENDING'
+""")
+    suspend fun getPendingForEntity(entityId: String): List<ChangeQueueEntity>
+
+    @Query("SELECT * FROM change_queue WHERE entityId = :entityId AND state = 'PENDING'")
+    suspend fun getPendingByEntityId(entityId: String): List<ChangeQueueEntity>
+
+    @Query("""
+    SELECT * FROM change_queue 
+    WHERE entityId = :entityId 
+    AND state IN ('PENDING', 'SYNCING')
+""")
+    suspend fun getActiveByEntityId(entityId: String): List<ChangeQueueEntity>
+
+    @Query("""
+    UPDATE change_queue 
+    SET state = 'DONE' 
+    WHERE entityId = :entityId
+""")
+    suspend fun markDoneByEntityId(entityId: String)
+
+    @Query("""
+    DELETE FROM change_queue
+    WHERE entityId = :entityId
+    AND entityType = 'item'
+    AND operation = 'UPDATE'
+    AND state IN ('PENDING', 'SYNCING')
+""")
+    suspend fun deletePendingUpdatesForEntity(entityId: String)
+
+    @Query("UPDATE items SET isChecked = :checked, updatedAt = :timestamp WHERE id = :itemId")
+    suspend fun updateChecked(itemId: String, checked: Boolean, timestamp: Long)
+
 }
 
 
@@ -111,5 +154,6 @@ interface ChangeQueueDao {
 data class SyncStateTuple(
     val entityId: String,
     val state: String,
-    val progress: Float?
+    val progress: Float?,
+    val createdAt: Long // 🔥 NEU
 )

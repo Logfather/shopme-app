@@ -55,4 +55,28 @@ interface ItemDao {
     AND state IN ('PENDING', 'SYNCING')
 """)
     suspend fun getPendingItemIds(): List<String>
+
+    @Query("""
+    SELECT * FROM items 
+    WHERE listId = :listId 
+    AND deletedAt IS NULL
+    ORDER BY createdAt ASC
+""")
+    fun observeItems(listId: String): Flow<List<ShoppingItemEntity>>
+
+    @Query("SELECT * FROM items WHERE id = :itemId LIMIT 1")
+    suspend fun getItemById(itemId: String): ShoppingItemEntity?
+
+    @Query("""
+    UPDATE items 
+    SET isChecked = :checked, updatedAt = :updatedAt 
+    WHERE id = :id
+""")
+    suspend fun updateChecked(
+        id: String,
+        checked: Boolean,
+        updatedAt: Long
+    )
+
+
 }

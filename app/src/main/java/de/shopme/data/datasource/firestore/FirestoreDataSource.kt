@@ -6,6 +6,9 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.SetOptions
+import de.shopme.domain.model.InviteData
 import de.shopme.domain.model.ShoppingItemEntity
 import de.shopme.domain.model.ShoppingListEntity
 import de.shopme.domain.model.StoreType
@@ -13,10 +16,12 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
-class FirestoreDataSource {
+
+class FirestoreDataSource : FirestoreGateway {
 
     private val firestore = FirebaseFirestore.getInstance()
 
@@ -28,7 +33,7 @@ class FirestoreDataSource {
     // LISTS
     // ============================================================
 
-    suspend fun addMembership(userId: String, listId: String) {
+    override suspend fun addMembership(userId: String, listId: String) {
 
         Log.d("MEMBERSHIP_WRITE", "authUid=${FirebaseAuth.getInstance().currentUser?.uid}")
         Log.d("MEMBERSHIP_WRITE", "targetUserId=$userId listId=$listId")
@@ -43,7 +48,7 @@ class FirestoreDataSource {
             .await()
     }
 
-    suspend fun isUserMemberOfList(
+    override suspend fun isUserMemberOfList(
         userId: String,
         listId: String
     ): Boolean {
@@ -73,7 +78,21 @@ class FirestoreDataSource {
         }
     }
 
-    fun observeListById(listId: String): Flow<ShoppingListEntity?> = callbackFlow {
+    override suspend fun removeUserFromList(
+        listId: String,
+        userId: String
+    ) {
+        firestore
+            .collection("lists")
+            .document(listId)
+            .update(
+                "sharedWith",
+                FieldValue.arrayRemove(userId)
+            )
+            .await()
+    }
+
+    override fun observeListById(listId: String): Flow<ShoppingListEntity?> = callbackFlow {
 
         val listener = firestore
             .collection("lists")
@@ -102,7 +121,7 @@ class FirestoreDataSource {
                 .addSnapshotListener { snapshot, error ->
 
                     if (error != null) {
-                        close(error)
+                        Log.e("LIST_FLOW", "Owned listener error", error)
                         return@addSnapshotListener
                     }
 
@@ -110,7 +129,7 @@ class FirestoreDataSource {
                         ?.mapNotNull { it.toShoppingListEntity() }
                         ?: emptyList()
 
-                    trySend(lists).isSuccess
+                    trySend(lists)
                 }
 
             awaitClose { listener.remove() }
@@ -123,7 +142,7 @@ class FirestoreDataSource {
                 .addSnapshotListener { snapshot, error ->
 
                     if (error != null) {
-                        close(error)
+                        Log.e("LIST_FLOW", "Shared listener error", error)
                         return@addSnapshotListener
                     }
 
@@ -132,7 +151,7 @@ class FirestoreDataSource {
                         ?.filter { uid in it.sharedWith }
                         ?: emptyList()
 
-                    trySend(lists).isSuccess
+                    trySend(lists)
                 }
 
             awaitClose { listener.remove() }
@@ -143,7 +162,7 @@ class FirestoreDataSource {
         }
     }
 
-    suspend fun softDeleteList(listId: String) {
+    override suspend fun softDeleteList(listId: String) {
         try {
             firestore
                 .collection("lists")
@@ -162,7 +181,7 @@ class FirestoreDataSource {
             .addSnapshotListener { snapshot, error ->
 
                 if (error != null) {
-                    close(error)
+                    Log.e("LIST_FLOW", "Listener error", error)
                     return@addSnapshotListener
                 }
 
@@ -200,7 +219,7 @@ class FirestoreDataSource {
         }
     }
 
-    suspend fun getItemVersion(
+    override suspend fun getItemVersion(
         listId: String,
         itemId: String
     ): Long? {
@@ -217,32 +236,34 @@ class FirestoreDataSource {
         }
     }
 
-    fun observeItems(listId: String): Flow<List<ShoppingItemEntity>> =
+    override fun observeItems(listId: String): Flow<List<ShoppingItemEntity>> =
         callbackFlow {
 
             val listener = itemsRef(listId)
                 .whereEqualTo("deletedAt", null)
                 .addSnapshotListener { snapshot, error ->
 
-
                     val items = snapshot?.documents?.mapNotNull { doc ->
 
                         val createdAt =
-                            (doc.get("createdAt") as? Timestamp)
+                            (doc.get("createdAt") as? com.google.firebase.Timestamp)
                                 ?.toDate()?.time ?: 0L
 
                         val updatedAt =
-                            (doc.get("updatedAt") as? Timestamp)
+                            (doc.get("updatedAt") as? com.google.firebase.Timestamp)
                                 ?.toDate()?.time ?: 0L
 
                         val deletedAt =
-                            (doc.get("deletedAt") as? Timestamp)
+                            (doc.get("deletedAt") as? com.google.firebase.Timestamp)
                                 ?.toDate()?.time
 
+                        val name = doc.getString("name") ?: return@mapNotNull null
+
+                        // ✅ DAS ist entscheidend
                         ShoppingItemEntity(
                             id = doc.id,
                             listId = listId,
-                            name = doc.getString("name") ?: return@mapNotNull null,
+                            name = name,
                             quantity = (doc.getLong("quantity") ?: 1).toInt(),
                             category = doc.getString("category") ?: "Sonstiges",
                             isChecked = doc.getBoolean("isChecked") ?: false,
@@ -253,7 +274,7 @@ class FirestoreDataSource {
 
                     } ?: emptyList()
 
-                    trySend(items).isSuccess
+                    trySend(items)
                 }
 
             awaitClose { listener.remove() }
@@ -263,83 +284,110 @@ class FirestoreDataSource {
     // WRITE OPERATIONS
     // ============================================================
 
-    suspend fun addItem(listId: String, item: ShoppingItemEntity) {
-        itemsRef(listId)
-            .document(item.id)
-            .set(
-                mapOf(
-                    "name" to item.name,
-                    "quantity" to item.quantity,
-                    "category" to item.category,
-                    "isChecked" to item.isChecked,
-                    "deletedAt" to item.deletedAt,
+    override suspend fun addItem(listId: String, item: ShoppingItemEntity): Boolean {
+        return try {
 
-                    // 🔥 CRITICAL FIXES
-                    "createdAt" to item.createdAt,
-                    "updatedAt" to item.updatedAt,
-
-                    // optional:
-                    "version" to item.updatedAt
-                ),
-                com.google.firebase.firestore.SetOptions.merge()
-            )
-            .await()
-    }
-
-    suspend fun updateItem(listId: String, item: ShoppingItemEntity) {
-        itemsRef(listId)
-            .document(item.id)
-            .set(
-                mapOf(
-                    "name" to item.name,
-                    "quantity" to item.quantity,
-                    "category" to item.category,
-                    "isChecked" to item.isChecked,
-                    "deletedAt" to item.deletedAt,
-
-                    // 🔥 CRITICAL
-                    "updatedAt" to item.updatedAt,
-
-                    // optional:
-                    "version" to item.updatedAt
-                ),
-                com.google.firebase.firestore.SetOptions.merge()
-            )
-            .await()
-    }
-
-    suspend fun deleteItem(listId: String, itemId: String) {
-        itemsRef(listId)
-            .document(itemId)
-            .update(
-                mapOf(
-                    "deletedAt" to FieldValue.serverTimestamp()
+            itemsRef(listId)
+                .document(item.id)
+                .set(
+                    mapOf(
+                        "name" to item.name,
+                        "quantity" to item.quantity,
+                        "category" to item.category,
+                        "isChecked" to item.isChecked,
+                        "deletedAt" to item.deletedAt,
+                        "createdAt" to item.createdAt,
+                        "updatedAt" to item.updatedAt,
+                        "version" to item.updatedAt
+                    ),
+                    SetOptions.merge()
                 )
-            )
-            .await()
+                .await()
+
+            true
+
+        } catch (e: Exception) {
+            Log.e("FIRESTORE", "addItem FAILED", e)
+            false
+        }
     }
 
-    suspend fun createList(list: ShoppingListEntity, authUid: String) {
+    override suspend fun updateItem(listId: String, item: ShoppingItemEntity): Boolean {
+        return try {
 
-        firestore
-            .collection("lists")
-            .document(list.id)
-            .set(
-                mapOf(
-                    "name" to list.name,
-                    "ownerId" to authUid, // 🔥 FIX
-                    "storeTypes" to list.storeTypes.map { it.name },
-                    "itemCount" to list.itemCount,
-                    "createdAt" to FieldValue.serverTimestamp(),
-                    "updatedAt" to FieldValue.serverTimestamp(),
-                    "sharedWith" to emptyList<String>(),
-                    "deletedAt" to null
+            itemsRef(listId)
+                .document(item.id)
+                .set(
+                    mapOf(
+                        "name" to item.name,
+                        "quantity" to item.quantity,
+                        "category" to item.category,
+                        "isChecked" to item.isChecked,
+                        "deletedAt" to item.deletedAt,
+                        "updatedAt" to item.updatedAt,
+                        "version" to item.updatedAt
+                    ),
+                    SetOptions.merge()
                 )
-            )
-            .await()
+                .await()
+
+            true
+
+        } catch (e: Exception) {
+            Log.e("FIRESTORE", "updateItem FAILED", e)
+            false
+        }
     }
 
-    suspend fun addUserToList(
+    override suspend fun deleteItem(listId: String, itemId: String): Boolean {
+        return try {
+
+            itemsRef(listId)
+                .document(itemId)
+                .update(
+                    mapOf(
+                        "deletedAt" to FieldValue.serverTimestamp()
+                    )
+                )
+                .await()
+
+            true
+
+        } catch (e: Exception) {
+            Log.e("FIRESTORE", "deleteItem FAILED", e)
+            false
+        }
+    }
+
+    override suspend fun createList(list: ShoppingListEntity, authUid: String): Boolean {
+        return try {
+
+            firestore
+                .collection("lists")
+                .document(list.id)
+                .set(
+                    mapOf(
+                        "name" to list.name,
+                        "ownerId" to authUid,
+                        "storeTypes" to list.storeTypes.map { it.name },
+                        "itemCount" to list.itemCount,
+                        "createdAt" to FieldValue.serverTimestamp(),
+                        "updatedAt" to FieldValue.serverTimestamp(),
+                        "sharedWith" to emptyList<String>(),
+                        "deletedAt" to null
+                    )
+                )
+                .await()
+
+            true
+
+        } catch (e: Exception) {
+            Log.e("FIRESTORE", "createList FAILED", e)
+            false
+        }
+    }
+
+    override suspend fun addUserToList(
         listId: String,
         userId: String
     ) {
@@ -398,7 +446,8 @@ class FirestoreDataSource {
 
     suspend fun createInvite(
         listIds: List<String>,
-        createdByName: String
+        createdByName: String,
+        ownerId: String
     ): String {
 
         val inviteId = UUID.randomUUID().toString()
@@ -406,6 +455,7 @@ class FirestoreDataSource {
         val data = mapOf(
             "listIds" to listIds,
             "createdByName" to createdByName,
+            "ownerId" to ownerId, // 🔥 NEU
             "createdAt" to System.currentTimeMillis()
         )
 
@@ -418,7 +468,7 @@ class FirestoreDataSource {
         return inviteId
     }
 
-    suspend fun getInviteData(inviteId: String): Pair<List<String>, String>? {
+    suspend fun getInviteData(inviteId: String): InviteData? {
 
         return try {
 
@@ -432,8 +482,15 @@ class FirestoreDataSource {
 
             val listIds = doc.get("listIds") as? List<String> ?: emptyList()
             val sender = doc.getString("createdByName") ?: "Unbekannt"
+            val createdAt = doc.getLong("createdAt") ?: 0L
+            val consumedAt = doc.getLong("consumedAt")
 
-            listIds to sender
+            InviteData(
+                listIds = listIds,
+                senderName = sender,
+                createdAt = createdAt,
+                consumedAt = consumedAt
+            )
 
         } catch (e: Exception) {
 
@@ -462,105 +519,154 @@ class FirestoreDataSource {
         return snapshot.documents.mapNotNull { it.toShoppingListEntity() }
     }
 
-    fun observeMembership(
-        userId: String,
-        listId: String
-    ): Flow<Boolean> = callbackFlow {
+    override suspend fun markInviteConsumed(inviteId: String) {
 
-        val membershipId = "${userId}_${listId}"
+        firestore
+            .collection("invites")
+            .document(inviteId)
+            .update(
+                "consumedAt",
+                FieldValue.serverTimestamp()
+            )
+            .await()
+    }
 
-        val listener = firestore
-            .collection("list_members")
-            .document(membershipId)
+    suspend fun saveUserProfile(
+        uid: String,
+        firstName: String,
+        lastName: String,
+        email: String
+    ) {
+        val data = mapOf(
+            "firstName" to firstName,
+            "lastName" to lastName,
+            "email" to email,
+            "updatedAt" to System.currentTimeMillis()
+        )
+
+        firestore
+            .collection("users")
+            .document(uid)
+            .set(data)
+            .await()
+    }
+
+    suspend fun upsertUserProfile(
+        uid: String,
+        firstName: String?,
+        lastName: String?,
+        email: String?,
+        profileName: String?
+    ) {
+        val updates = mutableMapOf<String, Any>(
+            "updatedAt" to System.currentTimeMillis()
+        )
+
+        // 🔥 NUR setzen wenn sinnvoll
+        if (!firstName.isNullOrBlank()) {
+            updates["firstName"] = firstName
+        }
+
+        if (!lastName.isNullOrBlank()) {
+            updates["lastName"] = lastName
+        }
+
+        if (!email.isNullOrBlank()) {
+            updates["email"] = email
+        }
+
+        if (!profileName.isNullOrBlank()) {
+            updates["profileName"] = profileName.trim()
+        }
+
+        firestore.collection("users")
+            .document(uid)
+            .set(updates, SetOptions.merge())
+    }
+
+    suspend fun getUserProfile(uid: String): Map<String, Any>? {
+        return firestore.collection("users")
+            .document(uid)
+            .get()
+            .await()
+            .data
+    }
+
+    fun listenToUserProfile(
+        uid: String,
+        onChange: (Map<String, Any>?) -> Unit
+    ): ListenerRegistration {
+
+        return firestore.collection("users")
+            .document(uid)
             .addSnapshotListener { snapshot, error ->
 
                 if (error != null) {
-                    Log.e("MEMBERSHIP_FLOW", "Listener error", error)
-                    return@addSnapshotListener   // 🔥 NICHT close(error)
+                    Log.e("PROFILE", "Listener error", error)
+                    return@addSnapshotListener
                 }
 
-                val exists = snapshot?.exists() == true
-
-                Log.d("MEMBERSHIP_FLOW", "Membership update → $membershipId exists=$exists")
-
-                trySend(exists).isSuccess
+                onChange(snapshot?.data)
             }
-
-        awaitClose { listener.remove() }
     }
 
-    fun observeMemberships(userId: String): Flow<List<String>> = callbackFlow {
+    suspend fun deleteUserCompletely(uid: String) {
 
-        Log.d("MEMBERSHIP", "Start listening for user: $userId")
+        val db = firestore
 
-        var isInitial = true
-        var lastEmitted: Set<String> = emptySet()
+        // ============================================================
+        // 1. USER
+        // ============================================================
+        db.collection("users")
+            .document(uid)
+            .delete()
+            .await()
 
-        val listener = firestore
-            .collection("list_members")
-            .whereEqualTo("userId", userId)
-            .addSnapshotListener { snapshot, error ->
+        // ============================================================
+        // 2. REMOVE USER FROM ALL sharedWith ARRAYS
+        // ============================================================
+        val allLists = db.collection("lists")
+            .get()
+            .await()
 
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
+        allLists.documents.forEach { doc ->
+            val sharedWith = doc.get("sharedWith") as? List<*>
+                ?: emptyList<Any>()
 
-                val current = snapshot?.documents
-                    ?.mapNotNull { it.getString("listId") }
-                    ?.toSet()
-                    ?: emptySet()
-
-                // 🔥 1. Initial Snapshot skippen
-                if (isInitial) {
-                    Log.d("MEMBERSHIP", "Initial snapshot → skip")
-                    lastEmitted = current
-                    isInitial = false
-                    return@addSnapshotListener
-                }
-
-                // 🔥 2. Nur echte Änderungen
-                if (current == lastEmitted) {
-                    return@addSnapshotListener
-                }
-
-                // 🔥 3. Diff berechnen
-                val added = current - lastEmitted
-
-                Log.d("SYNC_MEMBERSHIP", "Membership update: $current")
-
-                lastEmitted = current
-
-                // 🔥 4. Nur wenn wirklich neue Listen dazu kamen
-                if (added.isNotEmpty()) {
-                    trySend(current.toList()).isSuccess
+            if (uid in sharedWith) {
+                try {
+                    doc.reference.update(
+                        "sharedWith",
+                        FieldValue.arrayRemove(uid)
+                    ).await()
+                } catch (e: Exception) {
+                    Log.e("DELETE", "Failed removing user from sharedWith ${doc.id}", e)
                 }
             }
+        }
 
-        awaitClose { listener.remove() }
-    }
+        // ============================================================
+        // 3. DELETE OWNED LISTS
+        // ============================================================
+        val lists = db.collection("lists")
+            .whereEqualTo("ownerId", uid)
+            .get()
+            .await()
 
-    suspend fun getUserListIds(userId: String): List<String> {
+        lists.documents.forEach {
+            it.reference.delete().await()
+        }
 
-        return try {
+        // ============================================================
+        // 4. CLEAN LEGACY MEMBERSHIPS (optional)
+        // ============================================================
+        val memberships = db.collection("memberships")
+            .whereEqualTo("userId", uid)
+            .get()
+            .await()
 
-            val snapshot = firestore
-                .collection("lists")
-                .whereArrayContains("sharedWith", userId)
-                .get()
-                .await()
-
-            val result = snapshot.documents.mapNotNull { it.id }
-
-            Log.d("MEMBERSHIP_FETCH", "Fetched memberships (sharedWith) = $result")
-
-            result
-
-        } catch (e: Exception) {
-
-            Log.e("MEMBERSHIP_FETCH", "Failed to fetch memberships", e)
-
-            emptyList()
+        memberships.documents.forEach {
+            it.reference.delete().await()
         }
     }
 }

@@ -15,7 +15,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
 
 @Composable
 fun DmLogo(modifier: Modifier = Modifier) {
@@ -105,11 +104,9 @@ private fun DrawScope.drawDmText(width: Float, height: Float, color: Color) {
 @Preview(showBackground = true)
 @Composable
 private fun DmLogoPreview() {
-    ShopMeTheme {
-        DmLogo(
-            modifier = Modifier
-                .padding(16.dp)
-                .size(200.dp)
-        )
-    }
+    DmLogo(
+        modifier = Modifier
+            .padding(16.dp)
+            .size(200.dp)
+    )
 }

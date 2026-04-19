@@ -2,11 +2,14 @@ package de.shopme.data.sync
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
+import com.google.gson.Gson
 import de.shopme.core.AppScope
 import de.shopme.data.datasource.firestore.FirestoreDataSource
+import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
 import de.shopme.domain.model.ShoppingItemEntity
+import de.shopme.domain.model.ShoppingListEntity
 import kotlinx.coroutines.*
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -14,7 +17,7 @@ class SyncCoordinator(
     private val changeQueueDao: ChangeQueueDao,
     private val itemDao: ItemDao,
     private val listDao: ListDao,
-    private val firestore: FirestoreDataSource,
+    private val firestore: FirestoreGateway,
     private val appScope: AppScope,
     private val firebaseAuth: FirebaseAuth // 🔥 NEU
 ) {
@@ -23,12 +26,25 @@ class SyncCoordinator(
 
     private val activeListSyncs = mutableMapOf<String, Job>()
 
+    private val isProcessing = AtomicBoolean(false)
+
+    private val startMutex = Any()
+
+    private val isShuttingDown = AtomicBoolean(false)
+
     fun start() {
+
+        Log.d(
+            "SYNC_GUARD",
+            "start() called from ${Throwable().stackTrace.first()}"
+        )
 
         if (!isRunning.compareAndSet(false, true)) {
             Log.d("SYNC_LIST", "Already running → skip")
             return
         }
+
+        isShuttingDown.set(false)
 
         Log.d("SYNC_LIST", "START CALLED")
 
@@ -36,24 +52,39 @@ class SyncCoordinator(
 
             Log.d("SYNC_LIST", "LOOP STARTED")
 
-            while (isActive) {
-
-                try {
+            try {
+                while (isActive && isRunning.get() && !isShuttingDown.get()) {
 
                     val hasWork = processQueueWithResult()
 
                     delay(if (hasWork) 300 else 2000)
-
-                } catch (e: Exception) {
-
-                    Log.e("SYNC_LIST", "LOOP CRASH", e)
-
-                    delay(2000)
                 }
-            }
 
-            Log.d("SYNC_LIST", "LOOP STOPPED")
+            } catch (e: Exception) {
+                Log.e("SYNC_LIST", "LOOP CRASH", e)
+            } finally {
+                Log.d("SYNC_LIST", "LOOP STOPPED")
+                isRunning.set(false)
+            }
         }
+    }
+
+    fun stop() {
+        if (!isRunning.compareAndSet(true, false)) {
+            Log.d("SYNC_LIST", "Already stopped → skip")
+            return
+        }
+
+        Log.d("SYNC_LIST", "STOP CALLED")
+
+        // 🔴 Shutdown Flag setzen
+        isShuttingDown.set(true)
+
+        // 🔴 Alle List Syncs hart abbrechen
+        activeListSyncs.values.forEach { job ->
+            job.cancel()
+        }
+        activeListSyncs.clear()
     }
 
     fun startSingleListSync(listId: String) {
@@ -83,20 +114,37 @@ class SyncCoordinator(
 
                     Log.d("SYNC_DEBUG", "ITEM FLOW EMIT: $listId size=${remoteItems.size}")
 
-                    val pendingIds = changeQueueDao
-                        .getPending(limit = 1000)
-                        .filter { it.entityType == "item" }
-                        .map { it.entityId }
-                        .toSet()
+                    remoteItems.forEach { remote ->
 
-                    val safeItems = remoteItems.filterNot { it.id in pendingIds }
+                        // 🔥 GUARD: invalid remote timestamps ignorieren
+                        if (remote.updatedAt <= 0L) {
+                            Log.d("SYNC_SKIP", "IGNORE remote id=${remote.id} updatedAt=${remote.updatedAt}")
+                            return@forEach
+                        }
 
-                    Log.d(
-                        "SYNC_DEBUG",
-                        "Filtered remote items: ${remoteItems.size} → ${safeItems.size}"
-                    )
+                        val local = itemDao.getById(remote.id)
 
-                    itemDao.insertAll(safeItems)
+                        when {
+
+                            local == null -> {
+                                Log.d("SYNC_APPLY", "LOCAL null → insert remote id=${remote.id}")
+                                itemDao.upsert(remote)
+                            }
+
+                            remote.updatedAt > local.updatedAt -> {
+                                Log.d("SYNC_APPLY", "REMOTE newer id=${remote.id}")
+                                itemDao.upsert(remote)
+                            }
+
+                            remote.updatedAt < local.updatedAt -> {
+                                Log.d("SYNC_RESOLVE", "LOCAL newer → keep local id=${remote.id}")
+                            }
+
+                            else -> {
+                                Log.d("SYNC_RESOLVE", "EQUAL → no-op id=${remote.id}")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -137,9 +185,9 @@ class SyncCoordinator(
 
 
 
-    private suspend fun processQueue() {
-
-        val changes = changeQueueDao.getPending(limit = 20)
+    private suspend fun processQueue(
+        changes: List<ChangeQueueEntity>
+    ) {
 
         for (change in changes) {
 
@@ -149,60 +197,23 @@ class SyncCoordinator(
             }
 
             try {
+                // ------------------------------------------------------------
+                // STATE GUARD
+                // ------------------------------------------------------------
 
                 val beforeState = changeQueueDao.getState(change.id)
+                if (beforeState != "PENDING") continue
 
-                if (beforeState != "PENDING") {
-                    continue
-                }
-
-                changeQueueDao.markSyncing(
-                    change.id,
-                    System.currentTimeMillis()
-                )
+                changeQueueDao.markSyncing(change.id, System.currentTimeMillis())
 
                 val afterState = changeQueueDao.getState(change.id)
+                if (afterState != "SYNCING") continue
 
-                if (afterState != "SYNCING") {
-                    continue
-                }
+                // ------------------------------------------------------------
+                // ENTITY SWITCH
+                // ------------------------------------------------------------
 
                 when (change.entityType) {
-
-                    // ============================================================
-                    // LISTS
-                    // ============================================================
-
-                    "list" -> {
-                        when (change.operation) {
-
-                            "CREATE" -> {
-
-                                val list = listDao.getListOnce(change.entityId) ?: continue
-
-                                val uid = firebaseAuth.currentUser?.uid
-
-                                if (uid == null) {
-                                    Log.e("SHARE", "User not authenticated → abort invite")
-                                    return
-                                }
-
-                                firestore.createList(list, uid)
-
-                                firestore.addMembership(
-                                    userId = uid,
-                                    listId = list.id
-                                )
-
-                                changeQueueDao.updateState(change.id, "DONE")
-                            }
-
-                            "DELETE" -> {
-                                firestore.softDeleteList(change.listId)
-                                changeQueueDao.updateState(change.id, "DONE")
-                            }
-                        }
-                    }
 
                     // ============================================================
                     // ITEMS
@@ -210,50 +221,114 @@ class SyncCoordinator(
 
                     "item" -> {
 
-                        // 🔍 Conflict Check (nur bei CREATE / UPDATE)
-                        if (change.operation != "DELETE") {
+                        val item = itemDao.getById(change.entityId)
 
-                            val remoteVersion =
-                                firestore.getItemVersion(change.listId, change.entityId)
-
-                            if (remoteVersion != null && remoteVersion != change.baseVersion) {
-                                handleConflict(change, remoteVersion)
-                                continue
-                            }
+                        if (item == null) {
+                            Log.w("SYNC_ITEM", "Missing local → DONE id=${change.entityId}")
+                            changeQueueDao.updateState(change.id, "DONE")
+                            continue
                         }
+
+                        // 🔍 Conflict Check (nur CREATE / UPDATE)
+                        val remoteVersion = firestore.getItemVersion(item.listId, item.id)
 
                         when (change.operation) {
 
                             "CREATE" -> {
-
-                                val isMember = firestore.isUserMemberOfList(
-                                    userId = FirebaseAuth.getInstance().uid!!,
-                                    listId = change.listId
-                                )
-
-                                if (!isMember) {
-                                    Log.w("SYNC_SKIP", "Skip item, not member yet")
-                                    continue
-                                }
-
-                                val item = itemDao.getById(change.entityId) ?: continue
-                                firestore.addItem(change.listId, item)
+                                // 🔥 CREATE darf NIE durch Version blockiert werden
+                                // immer senden
                             }
 
                             "UPDATE" -> {
-                                val item = itemDao.getById(change.entityId) ?: continue
-                                firestore.updateItem(change.listId, item)
+                                if (remoteVersion != null && remoteVersion != change.baseVersion) {
+                                    Log.d(
+                                        "SYNC_UPDATE",
+                                        "VERSION local=${change.baseVersion} remote=$remoteVersion id=${change.entityId}"
+                                    )
+                                    handleConflict(change, remoteVersion)
+                                    continue
+                                }
                             }
 
                             "DELETE" -> {
-                                val item = itemDao.getById(change.entityId)
-                                if (item != null) {
-                                    firestore.deleteItem(change.listId, change.entityId)
-                                }
+                                // kein conflict check
                             }
                         }
 
-                        changeQueueDao.updateState(change.id, "DONE")
+                        // --------------------------------------------------------
+                        // EXECUTION
+                        // --------------------------------------------------------
+
+                        val success = when (change.operation) {
+
+                            "CREATE" -> {
+                                Log.d("SYNC_CREATE", "START id=${item.id}")
+                                firestore.addItem(item.listId, item)
+                            }
+
+                            "UPDATE" -> {
+                                Log.d("SYNC_UPDATE", "START id=${item.id}")
+                                firestore.updateItem(item.listId, item)
+                            }
+
+                            "DELETE" -> {
+                                Log.d("SYNC_DELETE", "START id=${item.id}")
+                                firestore.deleteItem(item.listId, item.id)
+                            }
+
+                            else -> false
+                        }
+
+                        // --------------------------------------------------------
+                        // COMMIT
+                        // --------------------------------------------------------
+
+                        if (success) {
+                            Log.d("SYNC_DONE", "SUCCESS id=${change.entityId}")
+                            changeQueueDao.markDoneByEntityId(change.entityId)
+                        } else {
+                            throw Exception("Sync failed: ${change.operation}")
+                        }
+                    }
+
+                    // ============================================================
+                    // LISTS
+                    // ============================================================
+
+                    "list" -> {
+
+                        val success = when (change.operation) {
+
+                            "CREATE" -> {
+
+                                val uid = firebaseAuth.currentUser?.uid
+                                    ?: throw Exception("User not authenticated")
+
+                                val payload = change.payload
+                                    ?: throw Exception("Missing payload")
+
+                                val list = Gson().fromJson(payload, ShoppingListEntity::class.java)
+
+                                val created = firestore.createList(list, uid)
+                                if (!created) false
+
+                                firestore.addMembership(uid, list.id)
+                                true
+                            }
+
+                            "DELETE" -> {
+                                firestore.softDeleteList(change.listId)
+                                true
+                            }
+
+                            else -> false
+                        }
+
+                        if (success) {
+                            changeQueueDao.updateState(change.id, "DONE")
+                        } else {
+                            throw Exception("List sync failed")
+                        }
                     }
 
                     // ============================================================
@@ -262,50 +337,69 @@ class SyncCoordinator(
 
                     "membership" -> {
 
-                        when (change.operation) {
+                        val userId = change.payload ?: continue
 
-                            "ADD" -> {
+                        val success = runCatching {
+                            firestore.addUserToList(
+                                listId = change.listId,
+                                userId = userId
+                            )
+                        }.isSuccess
 
-                                val uid = firebaseAuth.currentUser?.uid
+                        if (success) {
+                            changeQueueDao.updateState(change.id, "DONE")
+                        } else {
+                            throw Exception("Membership failed")
+                        }
+                    }
 
-                                if (uid == null) {
-                                    Log.e("SYNC_MEMBERSHIP", "User not authenticated")
-                                    continue
-                                }
+                    // ============================================================
+                    // INVITE
+                    // ============================================================
 
-                                firestore.addUserToList(
-                                    listId = change.listId,
-                                    userId = uid
-                                )
+                    "invite" -> {
 
-                                changeQueueDao.updateState(change.id, "DONE")
-                            }
+                        val inviteId = change.payload ?: continue
+
+                        val success = runCatching {
+                            firestore.markInviteConsumed(inviteId)
+                        }.isSuccess
+
+                        if (success) {
+                            changeQueueDao.updateState(change.id, "DONE")
+                        } else {
+                            throw Exception("Invite failed")
                         }
                     }
                 }
 
             } catch (e: Exception) {
 
-                Log.e("SYNC_ERROR", "Sync failed for ${change.entityType} ${change.entityId}", e)
+                Log.e("SYNC_ERROR", "FAILED ${change.entityType} ${change.entityId}", e)
 
-                val now = System.currentTimeMillis()
                 val newRetry = change.retryCount + 1
 
                 if (newRetry >= 5) {
                     changeQueueDao.updateState(change.id, "FAILED")
-                    continue
+                } else {
+                    changeQueueDao.updateRetry(
+                        id = change.id,
+                        state = "PENDING",
+                        retryCount = newRetry,
+                        timestamp = System.currentTimeMillis()
+                    )
                 }
-
-                changeQueueDao.updateRetry(
-                    id = change.id,
-                    state = "PENDING",
-                    retryCount = newRetry,
-                    timestamp = now
-                )
             }
         }
 
-        changeQueueDao.deleteCompleted()
+        // ------------------------------------------------------------
+        // CLEANUP (delayed)
+        // ------------------------------------------------------------
+
+        appScope.scope.launch {
+            delay(1500)
+            changeQueueDao.deleteCompleted()
+        }
     }
 
     private suspend fun handleConflict(
@@ -322,7 +416,7 @@ class SyncCoordinator(
 
             changeQueueDao.updateState(
                 change.id,
-                "PENDING"
+                "DONE"
             )
 
         } catch (e: Exception) {
@@ -350,49 +444,39 @@ class SyncCoordinator(
 
     private suspend fun processQueueWithResult(): Boolean {
 
-        val changes = changeQueueDao.getPending(limit = 20)
-
-        Log.d("SYNC_DEBUG", "Queue fetched size=${changes.size}")
-
-        changes.forEach {
-            Log.d("SYNC_DEBUG", "Queue item: ${it.operation} ${it.entityType} ${it.entityId} state=${it.state}")
+        if (!isProcessing.compareAndSet(false, true)) {
+            Log.d("QUEUE_SKIP", "Already processing → skip")
+            return false
         }
 
-        if (changes.isEmpty()) return false
+        try {
 
-        processQueue()
+            val changes = changeQueueDao.getPending(limit = 20)
 
-        return true
-    }
+            Log.d("QUEUE_DEBUG", "FETCH dao=${changeQueueDao.hashCode()} size=${changes.size}")
 
-    fun startMembershipSync(userId: String) {
+            changes.forEach {
+                Log.d("SYNC_DEBUG", "Queue item: ${it.operation} ${it.entityType} ${it.entityId} state=${it.state}")
+            }
 
-        appScope.scope.launch {
+            if (changes.isEmpty()) {
+                Log.d("QUEUE_IDLE", "No pending work")
+                return false
+            }
 
-            firestore.observeMemberships(userId)
-                .collect { listIds ->
+            processQueue(changes) // ✅ NUR HIER
 
-                    Log.d("SYNC_MEMBERSHIP", "Membership update: $listIds")
+            return true
 
-                    val currentSyncs = activeListSyncs.keys.toSet()
-                    val newIds = listIds.toSet()
-
-                    // 🔥 1. Nur NEUE starten
-                    val toStart = newIds - currentSyncs
-
-                    toStart.forEach { listId ->
-                        Log.d("SYNC_MEMBERSHIP", "Start sync for NEW list=$listId")
-                        startSingleListSync(listId)
-                    }
-
-                    // 🔥 2. OPTIONAL: Stop nur wenn wirklich entfernt
-                    val toStop = currentSyncs - newIds
-
-                    toStop.forEach { listId ->
-                        Log.d("SYNC_MEMBERSHIP", "Stop sync for REMOVED list=$listId")
-                        stopSingleListSync(listId)
-                    }
-                }
+        } finally {
+            isProcessing.set(false)
         }
     }
+
+//    suspend fun retryItem(itemId: String) {
+//        changeQueueDao.markPendingByEntityId(itemId)
+//        processQueue()
+//    }
+
+
 }

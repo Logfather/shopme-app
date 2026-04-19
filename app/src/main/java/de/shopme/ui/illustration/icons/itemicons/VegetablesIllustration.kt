@@ -21,7 +21,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun VegetablesGroupIllustration(
@@ -110,7 +111,7 @@ private fun DrawScope.drawSparkle(center: Offset, size: Float) {
         close()
     }
     drawPath(path, Color(0xFFFFD54F))
-    drawPath(path, Color.Black, style = Stroke(width = 2f))
+    drawPath(path, BrandBlack, style = Stroke(width = 2f))
 }
 
 @Composable
@@ -133,7 +134,7 @@ private fun DrawScope.drawLeafCloud(center: Offset, radius: Float, color: Color)
             y = center.y + radius * 0.4f * kotlin.math.sin(Math.toRadians(angle.toDouble())).toFloat()
         )
         drawCircle(color, radius = radius * 0.7f, center = offset)
-        drawCircle(Color.Black, radius = radius * 0.7f, center = offset, style = Stroke(width = 3f))
+        drawCircle(BrandBlack, radius = radius * 0.7f, center = offset, style = Stroke(width = 3f))
     }
 }
 
@@ -146,8 +147,8 @@ private fun DrawScope.drawSimpleLeaf(center: Offset, size: Float, rotation: Floa
             close()
         }
         drawPath(path, color)
-        drawPath(path, Color.Black, style = Stroke(width = 3f))
-        drawLine(Color.Black, Offset(center.x, center.y - size * 0.8f), Offset(center.x, center.y + size * 0.8f), strokeWidth = 2f)
+        drawPath(path, BrandBlack, style = Stroke(width = 3f))
+        drawLine(BrandBlack, Offset(center.x, center.y - size * 0.8f), Offset(center.x, center.y + size * 0.8f), strokeWidth = 2f)
     }
 }
 
@@ -165,7 +166,7 @@ private fun TomatoCharacter(modifier: Modifier = Modifier) {
                 radius = w * 0.45f,
                 center = center
             )
-            drawCircle(Color.Black, radius = w * 0.45f, center = center, style = Stroke(width = 6f))
+            drawCircle(BrandBlack, radius = w * 0.45f, center = center, style = Stroke(width = 6f))
 
             drawCircle(Color(0xFFFF8A80).copy(alpha = 0.6f), radius = w * 0.1f, center = Offset(w * 0.25f, h * 0.65f))
             drawCircle(Color(0xFFFF8A80).copy(alpha = 0.6f), radius = w * 0.1f, center = Offset(w * 0.75f, h * 0.65f))
@@ -179,7 +180,7 @@ private fun TomatoCharacter(modifier: Modifier = Modifier) {
                         quadraticTo(w * 0.55f, h * 0.05f, w * 0.5f, h * 0.15f)
                     }
                     drawPath(leaf, stemColor)
-                    drawPath(leaf, Color.Black, style = Stroke(width = 3f))
+                    drawPath(leaf, BrandBlack, style = Stroke(width = 3f))
                 }
             }
         }
@@ -208,11 +209,11 @@ private fun CarrotCharacter(modifier: Modifier = Modifier) {
                     quadraticTo(w * 0.15f, h * 0.5f, w * 0.3f, h * 0.1f)
                 }
                 drawPath(carrotPath, Color(0xFFFF9800))
-                drawPath(carrotPath, Color.Black, style = Stroke(width = 5f))
+                drawPath(carrotPath, BrandBlack, style = Stroke(width = 5f))
 
-                drawLine(Color.Black.copy(0.3f), Offset(w * 0.35f, h * 0.3f), Offset(w * 0.5f, h * 0.32f), strokeWidth = 3f)
-                drawLine(Color.Black.copy(0.3f), Offset(w * 0.6f, h * 0.45f), Offset(w * 0.75f, h * 0.43f), strokeWidth = 3f)
-                drawLine(Color.Black.copy(0.3f), Offset(w * 0.4f, h * 0.65f), Offset(w * 0.55f, h * 0.67f), strokeWidth = 3f)
+                drawLine(BrandBlack.copy(0.3f), Offset(w * 0.35f, h * 0.3f), Offset(w * 0.5f, h * 0.32f), strokeWidth = 3f)
+                drawLine(BrandBlack.copy(0.3f), Offset(w * 0.6f, h * 0.45f), Offset(w * 0.75f, h * 0.43f), strokeWidth = 3f)
+                drawLine(BrandBlack.copy(0.3f), Offset(w * 0.4f, h * 0.65f), Offset(w * 0.55f, h * 0.67f), strokeWidth = 3f)
             }
 
             val green = Color(0xFF4CAF50)
@@ -220,7 +221,7 @@ private fun CarrotCharacter(modifier: Modifier = Modifier) {
                 rotate(i * 20f, Offset(w * 0.5f, h * 0.1f)) {
                     drawRect(green, Offset(w * 0.48f, 0f), Size(w * 0.04f, h * 0.15f))
                     drawCircle(green, radius = w * 0.06f, center = Offset(w * 0.5f, 0f))
-                    drawCircle(Color.Black, radius = w * 0.06f, center = Offset(w * 0.5f, 0f), style = Stroke(width = 2f))
+                    drawCircle(BrandBlack, radius = w * 0.06f, center = Offset(w * 0.5f, 0f), style = Stroke(width = 2f))
                 }
             }
         }
@@ -248,11 +249,11 @@ private fun CornCharacter(modifier: Modifier = Modifier) {
                 quadraticTo(w * 0.2f, h * 0.1f, w * 0.5f, h * 0.05f)
             }
             drawPath(cornBody, Color(0xFFFFD54F))
-            drawPath(cornBody, Color.Black, style = Stroke(width = 5f))
+            drawPath(cornBody, BrandBlack, style = Stroke(width = 5f))
 
             for (i in 1..5) {
-                drawLine(Color.Black.copy(0.2f), Offset(w * 0.2f, h * (0.15f + i * 0.12f)), Offset(w * 0.8f, h * (0.15f + i * 0.12f)), strokeWidth = 2f)
-                drawLine(Color.Black.copy(0.2f), Offset(w * (0.2f + i * 0.12f), h * 0.1f), Offset(w * (0.2f + i * 0.12f), h * 0.9f), strokeWidth = 2f)
+                drawLine(BrandBlack.copy(0.2f), Offset(w * 0.2f, h * (0.15f + i * 0.12f)), Offset(w * 0.8f, h * (0.15f + i * 0.12f)), strokeWidth = 2f)
+                drawLine(BrandBlack.copy(0.2f), Offset(w * (0.2f + i * 0.12f), h * 0.1f), Offset(w * (0.2f + i * 0.12f), h * 0.9f), strokeWidth = 2f)
             }
 
             val huskColor = Color(0xFF8BC34A)
@@ -262,7 +263,7 @@ private fun CornCharacter(modifier: Modifier = Modifier) {
                 quadraticTo(w * 0.3f, h * 0.4f, w * 0.35f, h * 0.8f)
             }
             drawPath(leftHusk, huskColor)
-            drawPath(leftHusk, Color.Black, style = Stroke(width = 3f))
+            drawPath(leftHusk, BrandBlack, style = Stroke(width = 3f))
 
             val rightHusk = Path().apply {
                 moveTo(w * 0.65f, h * 0.95f)
@@ -270,7 +271,7 @@ private fun CornCharacter(modifier: Modifier = Modifier) {
                 quadraticTo(w * 0.7f, h * 0.4f, w * 0.65f, h * 0.8f)
             }
             drawPath(rightHusk, huskColor)
-            drawPath(rightHusk, Color.Black, style = Stroke(width = 3f))
+            drawPath(rightHusk, BrandBlack, style = Stroke(width = 3f))
         }
         CharacterFace(
             modifier = Modifier.fillMaxSize(0.5f).offset(y = 10.dp),
@@ -294,11 +295,11 @@ private fun GarlicCharacter(modifier: Modifier = Modifier) {
                 quadraticTo(w * 0.05f, h * 0.3f, w * 0.5f, h * 0.05f)
             }
             drawPath(garlicPath, Color(0xFFF5F5F5))
-            drawPath(garlicPath, Color.Black, style = Stroke(width = 4f))
+            drawPath(garlicPath, BrandBlack, style = Stroke(width = 4f))
 
-            drawLine(Color.Black.copy(0.2f), Offset(w * 0.5f, h * 0.05f), Offset(w * 0.5f, h * 0.95f), strokeWidth = 2f)
-            drawLine(Color.Black.copy(0.2f), Offset(w * 0.5f, h * 0.05f), Offset(w * 0.25f, h * 0.85f), strokeWidth = 2f)
-            drawLine(Color.Black.copy(0.2f), Offset(w * 0.5f, h * 0.05f), Offset(w * 0.75f, h * 0.85f), strokeWidth = 2f)
+            drawLine(BrandBlack.copy(0.2f), Offset(w * 0.5f, h * 0.05f), Offset(w * 0.5f, h * 0.95f), strokeWidth = 2f)
+            drawLine(BrandBlack.copy(0.2f), Offset(w * 0.5f, h * 0.05f), Offset(w * 0.25f, h * 0.85f), strokeWidth = 2f)
+            drawLine(BrandBlack.copy(0.2f), Offset(w * 0.5f, h * 0.05f), Offset(w * 0.75f, h * 0.85f), strokeWidth = 2f)
         }
         CharacterFace(
             modifier = Modifier.fillMaxSize(0.6f).offset(y = 15.dp),
@@ -325,7 +326,7 @@ private fun CucumberCharacter(modifier: Modifier = Modifier) {
                     quadraticTo(w * 0.05f, h * 0.5f, w * 0.3f, h * 0.15f)
                 }
                 drawPath(cucumberPath, Color(0xFF4CAF50))
-                drawPath(cucumberPath, Color.Black, style = Stroke(width = 5f))
+                drawPath(cucumberPath, BrandBlack, style = Stroke(width = 5f))
 
                 for (i in 0 until 12) {
                     val rx = (0.2f + Math.random().toFloat() * 0.6f) * w
@@ -357,7 +358,7 @@ private fun EggplantCharacter(modifier: Modifier = Modifier) {
                 cubicTo(w * 0.0f, h * 0.6f, w * 0.2f, h * 0.15f, w * 0.5f, h * 0.15f)
             }
             drawPath(eggplantPath, Color(0xFF4A148C))
-            drawPath(eggplantPath, Color.Black, style = Stroke(width = 5f))
+            drawPath(eggplantPath, BrandBlack, style = Stroke(width = 5f))
 
             val capPath = Path().apply {
                 moveTo(w * 0.3f, h * 0.2f)
@@ -366,7 +367,7 @@ private fun EggplantCharacter(modifier: Modifier = Modifier) {
                 quadraticTo(w * 0.5f, h * 0.3f, w * 0.3f, h * 0.2f)
             }
             drawPath(capPath, Color(0xFF388E3C))
-            drawPath(capPath, Color.Black, style = Stroke(width = 3f))
+            drawPath(capPath, BrandBlack, style = Stroke(width = 3f))
         }
         CharacterFace(
             modifier = Modifier.fillMaxSize(0.55f).offset(y = 20.dp),
@@ -392,16 +393,16 @@ private fun BroccoliCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(stemPath, Color(0xFF81C784))
-            drawPath(stemPath, Color.Black, style = Stroke(width = 3f))
+            drawPath(stemPath, BrandBlack, style = Stroke(width = 3f))
 
             val floretColor = Color(0xFF2E7D32)
             drawCircle(floretColor, radius = w * 0.3f, center = Offset(w * 0.5f, h * 0.4f))
             drawCircle(floretColor, radius = w * 0.25f, center = Offset(w * 0.25f, h * 0.5f))
             drawCircle(floretColor, radius = w * 0.25f, center = Offset(w * 0.75f, h * 0.5f))
             
-            drawCircle(Color.Black, radius = w * 0.3f, center = Offset(w * 0.5f, h * 0.4f), style = Stroke(width = 4f))
-            drawCircle(Color.Black, radius = w * 0.25f, center = Offset(w * 0.25f, h * 0.5f), style = Stroke(width = 4f))
-            drawCircle(Color.Black, radius = w * 0.25f, center = Offset(w * 0.75f, h * 0.5f), style = Stroke(width = 4f))
+            drawCircle(BrandBlack, radius = w * 0.3f, center = Offset(w * 0.5f, h * 0.4f), style = Stroke(width = 4f))
+            drawCircle(BrandBlack, radius = w * 0.25f, center = Offset(w * 0.25f, h * 0.5f), style = Stroke(width = 4f))
+            drawCircle(BrandBlack, radius = w * 0.25f, center = Offset(w * 0.75f, h * 0.5f), style = Stroke(width = 4f))
         }
         CharacterFace(
             modifier = Modifier.fillMaxSize(0.6f).offset(y = 20.dp),
@@ -443,19 +444,19 @@ private fun CharacterEye(eyeSize: Dp) {
     Box(
         modifier = Modifier
             .size(eyeSize)
-            .background(Color.White, CircleShape)
+            .background(BrandWhite, CircleShape)
             .padding(2.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = size.minDimension * 0.35f,
                 center = center
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = size.minDimension * 0.15f,
                 center = Offset(center.x + size.width * 0.15f, center.y - size.height * 0.15f)
             )
@@ -470,7 +471,7 @@ private fun Mouth(modifier: Modifier = Modifier) {
             moveTo(0f, size.height * 0.2f)
             quadraticTo(size.width / 2, size.height * 1.2f, size.width, size.height * 0.2f)
         }
-        drawPath(path, Color.Black, style = Stroke(width = 4f, cap = StrokeCap.Round))
+        drawPath(path, BrandBlack, style = Stroke(width = 4f, cap = StrokeCap.Round))
     }
 }
 
@@ -484,7 +485,7 @@ private fun OpenMouth(modifier: Modifier = Modifier) {
             close()
         }
         drawPath(path, Color(0xFF8B0000))
-        drawPath(path, Color.Black, style = Stroke(width = 3f))
+        drawPath(path, BrandBlack, style = Stroke(width = 3f))
         
         val tonguePath = Path().apply {
             moveTo(size.width * 0.25f, size.height * 0.8f)
@@ -497,15 +498,13 @@ private fun OpenMouth(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun VegetablesGroupIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            VegetablesGroupIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        VegetablesGroupIllustration()
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import de.shopme.domain.model.ShoppingList
 import de.shopme.ui.illustration.icons.bags.HappyBagIllustration
+import de.shopme.ui.theme.BrandBlack
 import de.shopme.ui.theme.BrandGreen
 import de.shopme.ui.theme.BrandOlive
 
@@ -71,7 +72,7 @@ fun ChooseListsScreen(
                 Text(
                     text = "Listen teilen",
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.Black
+                    color = BrandBlack
                 )
 
                 Spacer(Modifier.height(4.dp))
@@ -79,7 +80,7 @@ fun ChooseListsScreen(
                 Text(
                     text = "Wähle eine oder mehrere Listen",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Black,
+                    color = BrandBlack,
                     textAlign = TextAlign.Center
                 )
             }
@@ -131,11 +132,11 @@ fun ChooseListsScreen(
                         Text(
                             text = list.name,
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Color.Black
+                            color = BrandBlack
                         )
                     }
 
-                    Divider(color = Color.Black.copy(alpha = 0.08f))
+                    Divider(color = BrandBlack.copy(alpha = 0.08f))
                 }
             }
 
@@ -149,7 +150,7 @@ fun ChooseListsScreen(
                 Text(
                     text = "Bitte mindestens 1 Liste wählen",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black.copy(alpha = 0.6f),
+                    color = BrandBlack.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -169,7 +170,7 @@ fun ChooseListsScreen(
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = BrandGreen,
-                        contentColor = Color.Black
+                        contentColor = BrandBlack
                     )
                 ) {
                     Text("Teilen")
@@ -185,7 +186,7 @@ fun ChooseListsScreen(
                     .height(50.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Text("Abbrechen", color = Color.Black)
+                Text("Abbrechen", color = BrandBlack)
             }
 
             Spacer(Modifier.height(12.dp))

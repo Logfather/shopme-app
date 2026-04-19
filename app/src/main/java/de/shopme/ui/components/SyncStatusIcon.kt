@@ -23,10 +23,11 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import de.shopme.ui.theme.BrandGreen
+import de.shopme.ui.theme.BrandGrey
 
 @Composable
 fun SyncStatusIcon(
@@ -56,11 +57,7 @@ fun SyncingIcon(
 
     if (progress != null) {
 
-        CircularProgressIndicator(
-            progress = { progress.coerceIn(0f, 1f) },
-            strokeWidth = 2.dp,
-            modifier = Modifier.size(20.dp)
-        )
+        CartoonLoader(progress = progress)
 
     } else {
 
@@ -90,7 +87,7 @@ fun PendingIcon() {
     Icon(
         imageVector = Icons.Rounded.Schedule,
         contentDescription = "Pending",
-        tint = Color.Gray,
+        tint = BrandGrey,
         modifier = Modifier.size(20.dp)
     )
 }

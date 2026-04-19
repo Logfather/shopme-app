@@ -18,7 +18,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun MuellerLogo(modifier: Modifier = Modifier) {
@@ -92,7 +92,7 @@ private fun DrawScope.drawMuellerText(w: Float, h: Float, color: Color) {
         addOval(Rect(eX, textY + h * 0.04f, eX + w * 0.09f, textY + h * 0.12f))
     }
     drawPath(ePath, color)
-    drawRect(Color.White, Offset(eX + w * 0.02f, textY + h * 0.07f), Size(w * 0.05f, h * 0.015f))
+    drawRect(BrandWhite, Offset(eX + w * 0.02f, textY + h * 0.07f), Size(w * 0.05f, h * 0.015f))
 
     // r
     val rX = startX + w * 0.73f
@@ -160,11 +160,9 @@ private fun DrawScope.drawCenterM(w: Float, h: Float, color: Color) {
 @Preview(showBackground = true)
 @Composable
 private fun MuellerLogoPreview() {
-    ShopMeTheme {
-        MuellerLogo(
-            modifier = Modifier
-                .padding(16.dp)
-                .size(300.dp)
-        )
-    }
+    MuellerLogo(
+        modifier = Modifier
+            .padding(16.dp)
+            .size(300.dp)
+    )
 }

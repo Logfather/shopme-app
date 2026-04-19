@@ -22,7 +22,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun FruitGroupIllustration(
@@ -269,7 +270,7 @@ private fun WatermelonCharacter(modifier: Modifier = Modifier) {
 
             val seeds = listOf(Offset(0.3f, 0.65f), Offset(0.45f, 0.75f), Offset(0.6f, 0.75f), Offset(0.75f, 0.65f))
             seeds.forEach { pos ->
-                drawOval(Color.Black, topLeft = Offset(pos.x * size.width, pos.y * size.height), size = Size(8f, 12f))
+                drawOval(BrandBlack, topLeft = Offset(pos.x * size.width, pos.y * size.height), size = Size(8f, 12f))
             }
         }
         CharacterFace(
@@ -450,19 +451,19 @@ private fun CharacterEye(eyeSize: Dp) {
     Box(
         modifier = Modifier
             .size(eyeSize)
-            .background(Color.White, CircleShape)
+            .background(BrandWhite, CircleShape)
             .padding(1.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = size.minDimension * 0.35f,
                 center = center
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = size.minDimension * 0.12f,
                 center = Offset(center.x + size.width * 0.15f, center.y - size.height * 0.15f)
             )
@@ -477,7 +478,7 @@ private fun Mouth(modifier: Modifier = Modifier) {
             moveTo(0f, size.height * 0.2f)
             quadraticTo(size.width / 2, size.height, size.width, size.height * 0.2f)
         }
-        drawPath(path, Color.Black, style = Stroke(width = 3f))
+        drawPath(path, BrandBlack, style = Stroke(width = 3f))
     }
 }
 
@@ -491,7 +492,7 @@ private fun OpenMouth(modifier: Modifier = Modifier) {
             close()
         }
         drawPath(path, Color(0xFF8B0000))
-        drawPath(path, Color.Black, style = Stroke(width = 2f))
+        drawPath(path, BrandBlack, style = Stroke(width = 2f))
         
         val tonguePath = Path().apply {
             moveTo(size.width * 0.2f, size.height * 0.8f)
@@ -504,14 +505,12 @@ private fun OpenMouth(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun FruitGroupIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            FruitGroupIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        FruitGroupIllustration()
     }
 }

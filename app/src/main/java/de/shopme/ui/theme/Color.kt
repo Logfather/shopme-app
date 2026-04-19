@@ -1,60 +1,17 @@
 package de.shopme.ui.theme
 
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 // Brand
 val BrandGreen = Color(0xFF809C13)
 val BrandOlive = Color(0xFF939176)
 
-// Dark Base
-private val DarkBackground = Color(0xFF121212)
-private val DarkSurface = Color(0xFF1E1E1E)
+val BrandBlack = Color.Black
 
-// Light Base
-private val LightBackground = Color(0xFFFDFDFD)
-private val LightSurface = Color(0xFFFFFFFF)
+val BrandWhite = Color.White
+val BrandRed = Color(0xFF0000)
 
-val DarkColorScheme = darkColorScheme(
-    primary = BrandGreen,
-    secondary = BrandOlive,
-    tertiary = BrandGreen,
-
-    background = DarkBackground,
-    surface = DarkSurface,
-    surfaceVariant = Color(0xFF2A2A2A),
-
-    onPrimary = Color.Black,
-    onSecondary = Color.Black,
-    onTertiary = Color.Black,
-
-    onBackground = Color.White,
-    onSurface = Color.White,
-    onSurfaceVariant = Color(0xFFB0B0B0),
-
-    outline = Color(0xFF3A3A3A)
-)
-
-val LightColorScheme = lightColorScheme(
-    primary = BrandGreen,
-    secondary = BrandOlive,
-    tertiary = BrandGreen,
-
-    background = LightBackground,
-    surface = LightSurface,
-    surfaceVariant = Color(0xFFEDEDED),
-
-    onPrimary = Color.Black,
-    onSecondary = Color.Black,
-    onTertiary = Color.Black,
-
-    onBackground = Color.Black,
-    onSurface = Color.Black,
-    onSurfaceVariant = Color(0xFF5A5A5A),
-
-    outline = Color(0xFFD0D0D0)
-)
+val BrandGrey = Color(0xFF575D5E)
 
 // Domain colors (NICHT Teil des ColorScheme)
 val CategoryColors: Map<String, Color> = mapOf(

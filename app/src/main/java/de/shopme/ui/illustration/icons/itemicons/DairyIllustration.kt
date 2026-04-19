@@ -1,5 +1,4 @@
 package de.shopme.ui.illustration.icons.itemicons
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -36,8 +35,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
-
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 @Composable
 fun DairyIllustration(
     modifier: Modifier = Modifier
@@ -50,49 +49,42 @@ fun DairyIllustration(
         contentAlignment = Alignment.Center
     ) {
         BackgroundSplashes(modifier = Modifier.fillMaxSize())
-
         MilkBottleCharacter(
             modifier = Modifier
                 .fillMaxSize(0.42f)
                 .align(Alignment.TopStart)
                 .offset(x = 20.dp, y = 35.dp)
         )
-
         MilkCartonCharacter(
             modifier = Modifier
                 .fillMaxSize(0.48f)
                 .align(Alignment.TopCenter)
                 .offset(x = 45.dp, y = 15.dp)
         )
-
         CheeseWedgeCharacter(
             modifier = Modifier
                 .fillMaxSize(0.45f)
                 .align(Alignment.CenterEnd)
                 .offset(x = (-10).dp, y = 30.dp)
         )
-
         YogurtCupCharacter(
             modifier = Modifier
                 .fillMaxSize(0.38f)
                 .align(Alignment.CenterStart)
                 .offset(x = 10.dp, y = 60.dp)
         )
-
         CheeseWheelCharacter(
             modifier = Modifier
                 .fillMaxSize(0.42f)
                 .align(Alignment.BottomCenter)
                 .offset(x = 20.dp, y = (-10).dp)
         )
-
         EggsCharacter(
             modifier = Modifier
                 .fillMaxSize(0.32f)
                 .align(Alignment.BottomStart)
                 .offset(x = 40.dp, y = (-15).dp)
         )
-
         ButterCharacter(
             modifier = Modifier
                 .fillMaxSize(0.32f)
@@ -101,21 +93,18 @@ fun DairyIllustration(
         )
     }
 }
-
 @Composable
 private fun BackgroundSplashes(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         drawSplashDroplet(Offset(size.width * 0.12f, size.height * 0.22f), 12f, -35f)
         drawSplashDroplet(Offset(size.width * 0.08f, size.height * 0.28f), 10f, -50f)
         drawSplashDroplet(Offset(size.width * 0.16f, size.height * 0.3f), 8f, -20f)
-
         drawSplashDroplet(Offset(size.width * 0.78f, size.height * 0.18f), 15f, 25f)
         drawSplashDroplet(Offset(size.width * 0.88f, size.height * 0.22f), 12f, 45f)
         drawSplashDroplet(Offset(size.width * 0.75f, size.height * 0.28f), 10f, 15f)
         drawSplashDroplet(Offset(size.width * 0.85f, size.height * 0.32f), 8f, 40f)
     }
 }
-
 private fun DrawScope.drawSplashDroplet(center: Offset, radius: Float, rotation: Float) {
     val path = Path().apply {
         moveTo(center.x, center.y - radius * 1.5f)
@@ -124,18 +113,16 @@ private fun DrawScope.drawSplashDroplet(center: Offset, radius: Float, rotation:
         close()
     }
     rotate(rotation, center) {
-        drawPath(path, Color.White)
+        drawPath(path, BrandWhite)
         drawPath(path, Color(0xFFE0E0E0), style = Stroke(width = 1.5f))
     }
 }
-
 @Composable
 private fun MilkBottleCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-
             val bottlePath = Path().apply {
                 moveTo(w * 0.35f, h * 0.2f)
                 quadraticTo(w * 0.35f, h * 0.15f, w * 0.5f, h * 0.15f)
@@ -149,9 +136,8 @@ private fun MilkBottleCharacter(modifier: Modifier = Modifier) {
                 quadraticTo(w * 0.35f, h * 0.45f, w * 0.35f, h * 0.3f)
                 close()
             }
-            drawPath(bottlePath, Color.White)
-            drawPath(bottlePath, Color.Black, style = Stroke(width = 4f))
-
+            drawPath(bottlePath, BrandWhite)
+            drawPath(bottlePath, BrandBlack, style = Stroke(width = 4f))
             val capPath = Path().apply {
                 moveTo(w * 0.32f, h * 0.12f)
                 lineTo(w * 0.68f, h * 0.12f)
@@ -160,7 +146,7 @@ private fun MilkBottleCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(capPath, Color(0xFF1E88E5))
-            drawPath(capPath, Color.Black, style = Stroke(width = 3f))
+            drawPath(capPath, BrandBlack, style = Stroke(width = 3f))
         }
         CharacterFace(
             modifier = Modifier.offset(y = 15.dp),
@@ -169,14 +155,12 @@ private fun MilkBottleCharacter(modifier: Modifier = Modifier) {
         )
     }
 }
-
 @Composable
 private fun MilkCartonCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-
             val cartonPath = Path().apply {
                 moveTo(w * 0.2f, h * 0.25f)
                 lineTo(w * 0.8f, h * 0.2f)
@@ -184,9 +168,8 @@ private fun MilkCartonCharacter(modifier: Modifier = Modifier) {
                 lineTo(w * 0.15f, h * 0.98f)
                 close()
             }
-            drawPath(cartonPath, Color.White)
-            drawPath(cartonPath, Color.Black, style = Stroke(width = 4f))
-
+            drawPath(cartonPath, BrandWhite)
+            drawPath(cartonPath, BrandBlack, style = Stroke(width = 4f))
             val topPath = Path().apply {
                 moveTo(w * 0.2f, h * 0.25f)
                 lineTo(w * 0.5f, h * 0.1f)
@@ -196,7 +179,7 @@ private fun MilkCartonCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(topPath, Color(0xFF1976D2))
-            drawPath(topPath, Color.Black, style = Stroke(width = 4f))
+            drawPath(topPath, BrandBlack, style = Stroke(width = 4f))
         }
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -205,7 +188,7 @@ private fun MilkCartonCharacter(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(30.dp))
             Text(
                 text = stringResource(R.string.milch_label),
-                color = Color.White,
+                color = BrandWhite,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.ExtraBold
             )
@@ -218,14 +201,12 @@ private fun MilkCartonCharacter(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun CheeseWedgeCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-
             val wedgePath = Path().apply {
                 moveTo(w * 0.1f, h * 0.4f)
                 lineTo(w * 0.95f, h * 0.3f)
@@ -234,8 +215,7 @@ private fun CheeseWedgeCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(wedgePath, Color(0xFFFFD54F))
-            drawPath(wedgePath, Color.Black, style = Stroke(width = 4f))
-
+            drawPath(wedgePath, BrandBlack, style = Stroke(width = 4f))
             drawCircle(Color(0xFFFBC02D), radius = 14f, center = Offset(w * 0.25f, h * 0.55f))
             drawCircle(Color(0xFFFBC02D), radius = 20f, center = Offset(w * 0.78f, h * 0.45f))
             drawCircle(Color(0xFFFBC02D), radius = 12f, center = Offset(w * 0.52f, h * 0.78f))
@@ -249,14 +229,12 @@ private fun CheeseWedgeCharacter(modifier: Modifier = Modifier) {
         )
     }
 }
-
 @Composable
 private fun YogurtCupCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-
             val cupPath = Path().apply {
                 moveTo(w * 0.15f, h * 0.5f)
                 lineTo(w * 0.85f, h * 0.5f)
@@ -265,29 +243,28 @@ private fun YogurtCupCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(cupPath, Color(0xFF2196F3))
-            drawPath(cupPath, Color.Black, style = Stroke(width = 4f))
-
+            drawPath(cupPath, BrandBlack, style = Stroke(width = 4f))
             drawRoundRect(
-                color = Color.White,
+                color = BrandWhite,
                 topLeft = Offset(w * 0.1f, h * 0.45f),
                 size = Size(w * 0.8f, h * 0.1f),
                 cornerRadius = CornerRadius(10f, 10f)
             )
             drawRoundRect(
-                color = Color.Black,
+                color = BrandBlack,
                 topLeft = Offset(w * 0.1f, h * 0.45f),
                 size = Size(w * 0.8f, h * 0.1f),
                 cornerRadius = CornerRadius(10f, 10f),
                 style = Stroke(width = 3f)
             )
-            
+
             val dollopPath = Path().apply {
                 moveTo(w * 0.3f, h * 0.45f)
                 quadraticTo(w * 0.3f, h * 0.1f, w * 0.55f, h * 0.1f)
                 quadraticTo(w * 0.8f, h * 0.1f, w * 0.8f, h * 0.45f)
             }
-            drawPath(dollopPath, Color.White)
-            drawPath(dollopPath, Color.Black, style = Stroke(width = 3f))
+            drawPath(dollopPath, BrandWhite)
+            drawPath(dollopPath, BrandBlack, style = Stroke(width = 3f))
         }
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -304,14 +281,12 @@ private fun YogurtCupCharacter(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun CheeseWheelCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-
             val wheelPath = Path().apply {
                 moveTo(w * 0.1f, h * 0.5f)
                 quadraticTo(w * 0.5f, h * 0.4f, w * 0.9f, h * 0.5f)
@@ -320,8 +295,8 @@ private fun CheeseWheelCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(wheelPath, Color(0xFFE64A19))
-            drawPath(wheelPath, Color.Black, style = Stroke(width = 4f))
-            
+            drawPath(wheelPath, BrandBlack, style = Stroke(width = 4f))
+
             drawCircle(Color(0xFFFBC02D).copy(alpha = 0.5f), radius = 10f, center = Offset(w * 0.75f, h * 0.8f))
         }
         CharacterFace(
@@ -331,7 +306,6 @@ private fun CheeseWheelCharacter(modifier: Modifier = Modifier) {
         )
     }
 }
-
 @Composable
 private fun EggsCharacter(modifier: Modifier = Modifier) {
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy((-14).dp)) {
@@ -340,34 +314,30 @@ private fun EggsCharacter(modifier: Modifier = Modifier) {
         Egg(modifier = Modifier.size(40.dp).offset(y = 22.dp))
     }
 }
-
 @Composable
 private fun Egg(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         drawOval(Color(0xFFFFFDE7), size = size)
-        drawOval(Color.Black, size = size, style = Stroke(width = 3f))
+        drawOval(BrandBlack, size = size, style = Stroke(width = 3f))
     }
 }
-
 @Composable
 private fun ButterCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-
             drawOval(
                 color = Color(0xFF795548),
                 topLeft = Offset(w * 0.1f, h * 0.75f),
                 size = Size(w * 0.9f, h * 0.25f)
             )
             drawOval(
-                color = Color.Black,
+                color = BrandBlack,
                 topLeft = Offset(w * 0.1f, h * 0.75f),
                 size = Size(w * 0.9f, h * 0.25f),
                 style = Stroke(width = 2f)
             )
-
             drawRoundRect(
                 color = Color(0xFFFFF176),
                 topLeft = Offset(w * 0.25f, h * 0.55f),
@@ -375,23 +345,21 @@ private fun ButterCharacter(modifier: Modifier = Modifier) {
                 cornerRadius = CornerRadius(5f, 5f)
             )
             drawRoundRect(
-                color = Color.Black,
+                color = BrandBlack,
                 topLeft = Offset(w * 0.25f, h * 0.55f),
                 size = Size(w * 0.7f, h * 0.4f),
                 cornerRadius = CornerRadius(5f, 5f),
                 style = Stroke(width = 3f)
             )
-
             val curlPath = Path().apply {
                 moveTo(w * 0.4f, h * 0.55f)
                 quadraticTo(w * 0.65f, h * 0.15f, w * 0.9f, h * 0.55f)
             }
             drawPath(curlPath, Color(0xFFFFEE58))
-            drawPath(curlPath, Color.Black, style = Stroke(width = 3f))
+            drawPath(curlPath, BrandBlack, style = Stroke(width = 3f))
         }
     }
 }
-
 @Composable
 private fun CharacterFace(
     modifier: Modifier = Modifier,
@@ -416,24 +384,22 @@ private fun CharacterFace(
         Mouth(modifier = Modifier.size(mouthSize))
     }
 }
-
 @Composable
 private fun CharacterEye(eyeSize: Dp) {
     Box(
         modifier = Modifier
             .size(eyeSize)
-            .background(Color.White, CircleShape)
+            .background(BrandWhite, CircleShape)
             .padding(1.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            drawCircle(Color.Black, radius = size.minDimension * 0.38f, center = center)
-            drawCircle(Color.White, radius = size.minDimension * 0.15f, center = Offset(center.x + size.width * 0.18f, center.y - size.height * 0.18f))
+            drawCircle(BrandBlack, radius = size.minDimension * 0.38f, center = center)
+            drawCircle(BrandWhite, radius = size.minDimension * 0.15f, center = Offset(center.x + size.width * 0.18f, center.y - size.height * 0.18f))
         }
     }
 }
-
 @Composable
 private fun WinkEye(eyeSize: Dp) {
     Canvas(modifier = Modifier.size(eyeSize)) {
@@ -441,10 +407,9 @@ private fun WinkEye(eyeSize: Dp) {
             moveTo(size.width * 0.15f, size.height * 0.55f)
             quadraticTo(size.width * 0.5f, size.height * 0.15f, size.width * 0.85f, size.height * 0.55f)
         }
-        drawPath(path, Color.Black, style = Stroke(width = 5f))
+        drawPath(path, BrandBlack, style = Stroke(width = 5f))
     }
 }
-
 @Composable
 private fun Mouth(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -454,22 +419,19 @@ private fun Mouth(modifier: Modifier = Modifier) {
             close()
         }
         drawPath(path, Color(0xFF8B0000))
-        drawPath(path, Color.Black, style = Stroke(width = 3f))
+        drawPath(path, BrandBlack, style = Stroke(width = 3f))
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 private fun DairyIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            DairyIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        DairyIllustration()
     }
 }

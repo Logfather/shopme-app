@@ -2,12 +2,6 @@ package de.shopme.presentation.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
@@ -30,7 +24,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import de.shopme.ui.illustration.icons.bags.SadBagIllustration
 import de.shopme.ui.illustration.icons.bags.ShoppingBagIllustration
+import de.shopme.ui.theme.BrandBlack
 import de.shopme.ui.theme.BrandGreen
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun WelcomeScreen(
@@ -38,6 +34,9 @@ fun WelcomeScreen(
 ) {
 
     var startAnimation by remember { mutableStateOf(false) }
+
+    // 🔥 NEU: Click Guard (verhindert Double Trigger / Lost Click)
+    var hasClicked by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         startAnimation = true
@@ -70,27 +69,27 @@ fun WelcomeScreen(
         label = "glow"
     )
 
-    // 🔥 FIX: Dialog bleibt hell (unabhängig vom Theme)
     val dialogGradient = Brush.verticalGradient(
         colors = listOf(
-            Color.White.copy(alpha = 0.9f),
+            BrandWhite.copy(alpha = 0.9f),
             Color(0xFFF5F5F5).copy(alpha = 0.85f)
         )
     )
 
-    // 🔥 FULLSCREEN OVERLAY (gleich wie InviteScreen)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f)), // 👈 WICHTIG
+            .background(BrandBlack.copy(alpha = 0.35f)),
         contentAlignment = Alignment.Center
     ) {
 
         Box(
             modifier = Modifier
                 .padding(24.dp)
+                .widthIn(max = 480.dp)
+                .fillMaxWidth()
                 .scale(scale)
-        ) {
+        ){
 
             Surface(
                 shape = RoundedCornerShape(28.dp),
@@ -110,7 +109,6 @@ fun WelcomeScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
 
-                        // HEADER
                         SadBagIllustration(
                             modifier = Modifier.size(22.dp)
                         )
@@ -125,12 +123,11 @@ fun WelcomeScreen(
                         Text(
                             text = "Deine Einkaufsliste für jeden Markt",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = BrandBlack
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // CONTENT
                         Text(
                             text = "Erstelle deine erste Einkaufsliste\nfür deinen Lieblingsmarkt.",
                             textAlign = TextAlign.Center
@@ -198,9 +195,14 @@ fun WelcomeScreen(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // BUTTON
                         Button(
-                            onClick = onCreateFirstList,
+                            onClick = {
+                                if (!hasClicked) {
+                                    hasClicked = true
+                                    onCreateFirstList()
+                                }
+                            },
+                            enabled = !hasClicked, // 🔥 verhindert doppelte Calls
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(54.dp)
@@ -214,7 +216,7 @@ fun WelcomeScreen(
                             shape = RoundedCornerShape(18.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = BrandGreen,
-                                contentColor = Color.White
+                                contentColor = BrandWhite
                             )
                         ) {
 

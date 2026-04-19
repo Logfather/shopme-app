@@ -29,7 +29,8 @@ sealed class UIEffect {
     ) : UIEffect()
 
     data class ToggleItem(
-        val item: de.shopme.domain.model.ShoppingItem
+        val itemId: String,
+        val newChecked: Boolean
     ) : UIEffect()
 
     data class DeleteItem(
@@ -39,7 +40,6 @@ sealed class UIEffect {
     data class RetrySync(val itemId: String) : UIEffect()
 
     data class ShowUndo(
-        val action: UndoAction,
         val message: String
     ) : UIEffect()
 
@@ -52,8 +52,24 @@ sealed class UIEffect {
         val listId: String
     ) : UIEffect()
 
+    data class LoadUserProfile(
+        val uid: String
+    ) : UIEffect()
+
+    data class UpdateUserProfile(
+        val uid: String,
+        val nickName: String,
+        val firstName: String?,
+        val lastName: String?,
+        val email: String?
+    ) : UIEffect()
+
     object DeleteAllLists : UIEffect()
 
     object StartGoogleSignIn : UIEffect()
+
+    object UnlinkGoogle : UIEffect()
+
+    object DeleteAccount : UIEffect()
 
 }

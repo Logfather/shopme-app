@@ -33,7 +33,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun SaucesIllustration(
@@ -178,7 +179,7 @@ private fun SauceBottle(
                 close()
             }
             drawPath(bodyPath, bottleColor)
-            drawPath(bodyPath, Color.Black.copy(alpha = 0.3f), style = Stroke(width = 4f))
+            drawPath(bodyPath, BrandBlack.copy(alpha = 0.3f), style = Stroke(width = 4f))
 
             // Cap
             val capPath = Path().apply {
@@ -190,11 +191,11 @@ private fun SauceBottle(
                 close()
             }
             drawPath(capPath, capColor)
-            drawPath(capPath, Color.Black.copy(alpha = 0.3f), style = Stroke(width = 4f))
+            drawPath(capPath, BrandBlack.copy(alpha = 0.3f), style = Stroke(width = 4f))
 
             // Highlight
             drawRoundRect(
-                color = Color.White.copy(alpha = 0.2f),
+                color = BrandWhite.copy(alpha = 0.2f),
                 topLeft = Offset(w * 0.22f, h * 0.4f),
                 size = Size(w * 0.08f, h * 0.3f),
                 cornerRadius = CornerRadius(20f, 20f)
@@ -243,7 +244,7 @@ private fun IllustrationFace(modifier: Modifier = Modifier) {
                 moveTo(0f, 0f)
                 quadraticTo(size.width / 2f, size.height * 1.5f, size.width, 0f)
             }
-            drawPath(path, Color.Black, style = Stroke(width = 3f))
+            drawPath(path, BrandBlack, style = Stroke(width = 3f))
         }
     }
 }
@@ -252,14 +253,14 @@ private fun IllustrationFace(modifier: Modifier = Modifier) {
 private fun IllustrationEye(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .background(Color.White, CircleShape)
+            .background(BrandWhite, CircleShape)
             .padding(1.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            drawCircle(Color.Black, radius = size.minDimension / 3f)
-            drawCircle(Color.White, radius = size.minDimension / 10f, center = Offset(center.x + 2f, center.y - 2f))
+            drawCircle(BrandBlack, radius = size.minDimension / 3f)
+            drawCircle(BrandWhite, radius = size.minDimension / 10f, center = Offset(center.x + 2f, center.y - 2f))
         }
     }
 }
@@ -338,15 +339,13 @@ private fun GarlicIcon(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun SaucesIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            SaucesIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        SaucesIllustration()
     }
 }

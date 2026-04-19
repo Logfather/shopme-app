@@ -17,7 +17,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
 
 @Composable
 fun RossmannLogo(modifier: Modifier = Modifier) {
@@ -106,11 +105,9 @@ fun RossmannLogo(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun RossmannLogoPreview() {
-    ShopMeTheme {
-        RossmannLogo(
-            modifier = Modifier
-                .padding(16.dp)
-                .size(200.dp)
-        )
-    }
+    RossmannLogo(
+        modifier = Modifier
+            .padding(16.dp)
+            .size(200.dp)
+    )
 }

@@ -28,7 +28,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun CheeseIllustration(
@@ -218,19 +219,19 @@ fun CheeseIllustration(
 private fun CheeseEye(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .background(Color.White, CircleShape)
+            .background(BrandWhite, CircleShape)
             .padding(2.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = size.minDimension / 3.5f,
                 center = center
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = size.minDimension / 10f,
                 center = Offset(center.x + 3f, center.y - 3f)
             )
@@ -249,14 +250,12 @@ private fun DrawScope.drawCheeseHole(center: Offset, radius: Float) {
 @Preview(showBackground = true)
 @Composable
 private fun CheeseIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            CheeseIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(300.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CheeseIllustration()
     }
 }

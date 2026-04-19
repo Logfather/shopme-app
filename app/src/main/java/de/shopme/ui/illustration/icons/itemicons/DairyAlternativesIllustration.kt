@@ -1,5 +1,4 @@
 package de.shopme.ui.illustration.icons.itemicons
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,8 +26,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
-
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 @Composable
 fun DairyAlternativesIllustration(
     modifier: Modifier = Modifier
@@ -42,7 +41,6 @@ fun DairyAlternativesIllustration(
     ) {
         // Background Decorations: Splashes and Leaves
         BackgroundDecorations(modifier = Modifier.fillMaxSize())
-
         // Almond Milk Carton (Back Left)
         AlmondMilkCarton(
             modifier = Modifier
@@ -50,7 +48,6 @@ fun DairyAlternativesIllustration(
                 .align(Alignment.TopStart)
                 .offset(x = 40.dp, y = 30.dp)
         )
-
         // Oat Milk Bottle (Back Right)
         OatMilkBottle(
             modifier = Modifier
@@ -58,7 +55,6 @@ fun DairyAlternativesIllustration(
                 .align(Alignment.TopEnd)
                 .offset(x = (-30).dp, y = 40.dp)
         )
-
         // Grain Bag Character (Bottom Right)
         GrainBagCharacter(
             modifier = Modifier
@@ -66,7 +62,6 @@ fun DairyAlternativesIllustration(
                 .align(Alignment.BottomEnd)
                 .offset(x = (-20).dp, y = (-50).dp)
         )
-
         // Coconut Character (Bottom Center)
         CoconutCharacter(
             modifier = Modifier
@@ -74,7 +69,6 @@ fun DairyAlternativesIllustration(
                 .align(Alignment.BottomCenter)
                 .offset(y = (-20).dp)
         )
-
         // Almond Characters (Bottom Left)
         AlmondCharacters(
             modifier = Modifier
@@ -82,19 +76,17 @@ fun DairyAlternativesIllustration(
                 .align(Alignment.BottomStart)
                 .offset(x = 20.dp, y = (-40).dp)
         )
-
         // Foreground elements: scattered nuts and olives
         ForegroundDecorations(modifier = Modifier.fillMaxSize())
     }
 }
-
 @Composable
 private fun AlmondMilkCarton(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            
+
             // Carton Body
             val cartonPath = Path().apply {
                 moveTo(w * 0.15f, h * 0.3f)
@@ -109,8 +101,7 @@ private fun AlmondMilkCarton(modifier: Modifier = Modifier) {
                     colors = listOf(Color(0xFF81D4FA), Color(0xFF29B6F6))
                 )
             )
-            drawPath(cartonPath, Color.Black, style = Stroke(width = 3f))
-
+            drawPath(cartonPath, BrandBlack, style = Stroke(width = 3f))
             // Carton Top (Folded part)
             val topPath = Path().apply {
                 moveTo(w * 0.15f, h * 0.3f)
@@ -118,13 +109,12 @@ private fun AlmondMilkCarton(modifier: Modifier = Modifier) {
                 lineTo(w * 0.85f, h * 0.25f)
             }
             drawPath(topPath, Color(0xFFB3E5FC))
-            drawPath(topPath, Color.Black, style = Stroke(width = 3f))
-
+            drawPath(topPath, BrandBlack, style = Stroke(width = 3f))
             // Cap
-            drawCircle(Color.White, radius = 15f, center = Offset(w * 0.65f, h * 0.15f))
-            drawCircle(Color.Black, radius = 15f, center = Offset(w * 0.65f, h * 0.15f), style = Stroke(width = 2f))
+            drawCircle(BrandWhite, radius = 15f, center = Offset(w * 0.65f, h * 0.15f))
+            drawCircle(BrandBlack, radius = 15f, center = Offset(w * 0.65f, h * 0.15f), style = Stroke(width = 2f))
         }
-        
+
         Column(
             modifier = Modifier.fillMaxSize().padding(top = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -150,14 +140,13 @@ private fun AlmondMilkCarton(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun OatMilkBottle(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            
+
             // Bottle Shape
             val bottlePath = Path().apply {
                 moveTo(w * 0.35f, h * 0.2f)
@@ -176,8 +165,7 @@ private fun OatMilkBottle(modifier: Modifier = Modifier) {
                     colors = listOf(Color(0xFFFFF9C4), Color(0xFFFFF176))
                 )
             )
-            drawPath(bottlePath, Color.Black, style = Stroke(width = 3f))
-
+            drawPath(bottlePath, BrandBlack, style = Stroke(width = 3f))
             // Cork/Cap
             val capPath = Path().apply {
                 moveTo(w * 0.33f, h * 0.05f)
@@ -187,9 +175,9 @@ private fun OatMilkBottle(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(capPath, Color(0xFF8D6E63))
-            drawPath(capPath, Color.Black, style = Stroke(width = 3f))
+            drawPath(capPath, BrandBlack, style = Stroke(width = 3f))
         }
-        
+
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -211,14 +199,13 @@ private fun OatMilkBottle(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun CoconutCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            
+
             // Outer Brown Shell
             drawCircle(
                 brush = Brush.radialGradient(
@@ -229,12 +216,12 @@ private fun CoconutCharacter(modifier: Modifier = Modifier) {
                 radius = w * 0.45f,
                 center = center
             )
-            drawCircle(Color.Black, radius = w * 0.45f, center = center, style = Stroke(width = 3f))
-            
+            drawCircle(BrandBlack, radius = w * 0.45f, center = center, style = Stroke(width = 3f))
+
             // White Inner
-            drawCircle(Color.White, radius = w * 0.35f, center = center)
-            drawCircle(Color.Black, radius = w * 0.35f, center = center, style = Stroke(width = 2f))
-            
+            drawCircle(BrandWhite, radius = w * 0.35f, center = center)
+            drawCircle(BrandBlack, radius = w * 0.35f, center = center, style = Stroke(width = 2f))
+
             // Texture lines on shell
             for (i in 0..5) {
                 rotate(i * 60f) {
@@ -244,14 +231,13 @@ private fun CoconutCharacter(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun GrainBagCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            
+
             // Bag Shape
             val bagPath = Path().apply {
                 moveTo(w * 0.1f, h * 0.4f)
@@ -263,8 +249,8 @@ private fun GrainBagCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(path = bagPath, color = Color(0xFFFBC02D))
-            drawPath(bagPath, Color.Black, style = Stroke(width = 3f))
-            
+            drawPath(bagPath, BrandBlack, style = Stroke(width = 3f))
+
             // Bag top rim
             val rimPath = Path().apply {
                 moveTo(w * 0.1f, h * 0.4f)
@@ -274,8 +260,7 @@ private fun GrainBagCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(path = rimPath, color = Color(0xFFF9A825))
-            drawPath(rimPath, Color.Black, style = Stroke(width = 2f))
-
+            drawPath(rimPath, BrandBlack, style = Stroke(width = 2f))
             // Grains inside
             for (i in 0..15) {
                 drawCircle(Color(0xFFFFF59D), radius = 6f, center = Offset(w * (0.2f + (i % 5) * 0.15f), h * (0.35f + (i / 5) * 0.05f)))
@@ -288,7 +273,6 @@ private fun GrainBagCharacter(modifier: Modifier = Modifier) {
         )
     }
 }
-
 @Composable
 private fun AlmondCharacters(modifier: Modifier = Modifier) {
     Box(modifier = modifier) {
@@ -305,13 +289,12 @@ private fun AlmondCharacters(modifier: Modifier = Modifier) {
         )
     }
 }
-
 @Composable
 private fun AlmondCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawAlmondShape(size.width, size.height, Color(0xFF795548))
-            drawAlmondShape(size.width, size.height, Color.Black, style = Stroke(width = 3f))
+            drawAlmondShape(size.width, size.height, BrandBlack, style = Stroke(width = 3f))
         }
         CharacterFace(
             modifier = Modifier.fillMaxSize(0.6f),
@@ -320,7 +303,6 @@ private fun AlmondCharacter(modifier: Modifier = Modifier) {
         )
     }
 }
-
 private fun DrawScope.drawAlmondShape(w: Float, h: Float, color: Color, style: androidx.compose.ui.graphics.drawscope.DrawStyle = androidx.compose.ui.graphics.drawscope.Fill) {
     val path = Path().apply {
         moveTo(w * 0.5f, h * 0.1f)
@@ -331,7 +313,6 @@ private fun DrawScope.drawAlmondShape(w: Float, h: Float, color: Color, style: a
     }
     drawPath(path, color, style = style)
 }
-
 @Composable
 private fun BackgroundDecorations(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -339,18 +320,17 @@ private fun BackgroundDecorations(modifier: Modifier = Modifier) {
         drawSplash(Offset(size.width * 0.2f, size.height * 0.5f), 100f)
         drawSplash(Offset(size.width * 0.5f, size.height * 0.8f), 120f)
         drawSplash(Offset(size.width * 0.8f, size.height * 0.3f), 80f)
-        
+
         // Leaves
         drawLeaf(Offset(size.width * 0.1f, size.height * 0.3f), 40f, 45f)
         drawLeaf(Offset(size.width * 0.9f, size.height * 0.4f), 50f, -30f)
         drawLeaf(Offset(size.width * 0.15f, size.height * 0.85f), 45f, 160f)
-        
+
         // Droplets
         drawCircle(Color(0xFFFFD54F), radius = 8f, center = Offset(size.width * 0.45f, size.height * 0.1f))
         drawCircle(Color(0xFF81D4FA), radius = 6f, center = Offset(size.width * 0.05f, size.height * 0.4f))
     }
 }
-
 @Composable
 private fun ForegroundDecorations(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -358,13 +338,12 @@ private fun ForegroundDecorations(modifier: Modifier = Modifier) {
         drawOlive(Offset(size.width * 0.7f, size.height * 0.85f), 20f)
         drawOlive(Offset(size.width * 0.8f, size.height * 0.8f), 18f)
         drawOlive(Offset(size.width * 0.65f, size.height * 0.92f), 22f)
-        
+
         // Small nuts
         drawCircle(Color(0xFFD2B48C), radius = 5f, center = Offset(size.width * 0.4f, size.height * 0.95f))
         drawCircle(Color(0xFFD2B48C), radius = 6f, center = Offset(size.width * 0.55f, size.height * 0.93f))
     }
 }
-
 private fun DrawScope.drawSplash(center: Offset, radius: Float) {
     val path = Path().apply {
         for (i in 0..7) {
@@ -377,9 +356,8 @@ private fun DrawScope.drawSplash(center: Offset, radius: Float) {
         close()
     }
     // Smooth out the splash
-    drawPath(path, Color.White.copy(alpha = 0.8f))
+    drawPath(path, BrandWhite.copy(alpha = 0.8f))
 }
-
 private fun DrawScope.drawLeaf(center: Offset, size: Float, rotationDegrees: Float) {
     rotate(rotationDegrees, center) {
         val path = Path().apply {
@@ -389,16 +367,14 @@ private fun DrawScope.drawLeaf(center: Offset, size: Float, rotationDegrees: Flo
             close()
         }
         drawPath(path, Color(0xFF4CAF50))
-        drawPath(path, Color.Black, style = Stroke(width = 2f))
-        drawLine(Color.Black, Offset(center.x, center.y - size), Offset(center.x, center.y + size), strokeWidth = 1f)
+        drawPath(path, BrandBlack, style = Stroke(width = 2f))
+        drawLine(BrandBlack, Offset(center.x, center.y - size), Offset(center.x, center.y + size), strokeWidth = 1f)
     }
 }
-
 private fun DrawScope.drawOlive(center: Offset, radius: Float) {
     drawOval(Color(0xFF8BC34A), topLeft = Offset(center.x - radius, center.y - radius * 0.7f), size = Size(radius * 2, radius * 1.4f))
-    drawOval(Color.Black, topLeft = Offset(center.x - radius, center.y - radius * 0.7f), size = Size(radius * 2, radius * 1.4f), style = Stroke(width = 2f))
+    drawOval(BrandBlack, topLeft = Offset(center.x - radius, center.y - radius * 0.7f), size = Size(radius * 2, radius * 1.4f), style = Stroke(width = 2f))
 }
-
 @Composable
 private fun CharacterFace(
     modifier: Modifier = Modifier,
@@ -418,31 +394,29 @@ private fun CharacterFace(
         OpenMouth(modifier = Modifier.size(mouthSize))
     }
 }
-
 @Composable
 private fun CharacterEye(eyeSize: Dp) {
     Box(
         modifier = Modifier
             .size(eyeSize)
-            .background(Color.White, CircleShape)
-            .border(1.5.dp, Color.Black, CircleShape),
+            .background(BrandWhite, CircleShape)
+            .border(1.5.dp, BrandBlack, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = size.minDimension * 0.35f,
                 center = center.copy(y = center.y + size.height * 0.05f)
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = size.minDimension * 0.15f,
                 center = center.copy(x = center.x + size.width * 0.2f, y = center.y - size.height * 0.15f)
             )
         }
     }
 }
-
 @Composable
 private fun OpenMouth(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -453,22 +427,19 @@ private fun OpenMouth(modifier: Modifier = Modifier) {
             close()
         }
         drawPath(path, Color(0xFFB71C1C))
-        drawPath(path, Color.Black, style = Stroke(width = 2f))
+        drawPath(path, BrandBlack, style = Stroke(width = 2f))
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 private fun DairyAlternativesIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            DairyAlternativesIllustration(modifier = Modifier.size(400.dp))
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        DairyAlternativesIllustration(modifier = Modifier.size(400.dp))
     }
 }

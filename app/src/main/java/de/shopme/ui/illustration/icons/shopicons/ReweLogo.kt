@@ -19,7 +19,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
@@ -46,7 +46,7 @@ fun ReweLogo(modifier: Modifier = Modifier) {
         // Draw "REWE" text
         // Using a very bold weight to match the logo's heavy typeface
         val textStyle = TextStyle(
-            color = Color.White,
+            color = BrandWhite,
             fontSize = (radius * 0.65f).toSp(),
             fontWeight = FontWeight.Black,
             letterSpacing = (radius * -0.02f).toSp()
@@ -70,11 +70,9 @@ fun ReweLogo(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun ReweLogoPreview() {
-    ShopMeTheme {
-        ReweLogo(
-            modifier = Modifier
-                .padding(16.dp)
-                .size(200.dp)
-        )
-    }
+    ReweLogo(
+        modifier = Modifier
+            .padding(16.dp)
+            .size(200.dp)
+    )
 }

@@ -27,7 +27,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -47,7 +48,7 @@ fun SyncCompleteIllustration(
 
         // Shadow under phones
         drawOval(
-            color = Color.Black.copy(alpha = 0.05f),
+            color = BrandBlack.copy(alpha = 0.05f),
             topLeft = Offset(w * 0.2f, h * 0.85f),
             size = Size(w * 0.6f, h * 0.1f)
         )
@@ -191,7 +192,7 @@ private fun DrawScope.drawPhone(
         quadraticTo(0f, mouthY + height * 0.05f, -width * 0.15f, mouthY)
         close()
     }
-    drawPath(mouthPath, Color.White)
+    drawPath(mouthPath, BrandWhite)
     drawPath(mouthPath, outlineColor, style = Stroke(width = 3f, join = StrokeJoin.Round))
     
     // Tongue
@@ -224,7 +225,7 @@ private fun DrawScope.drawPhone(
             lineTo(boxTopLeft.x + boxSize * 0.45f, boxTopLeft.y + boxSize * 0.7f)
             lineTo(boxTopLeft.x + boxSize * 0.75f, boxTopLeft.y + boxSize * 0.3f)
         }
-        drawPath(checkPath, Color.White, style = Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(checkPath, BrandWhite, style = Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round))
     } else {
         // Chat bubble
         val bubbleW = width * 0.45f
@@ -237,7 +238,7 @@ private fun DrawScope.drawPhone(
             lineTo(10f, height * 0.2f + bubbleH)
             close()
         }
-        drawPath(bubblePath, Color.White)
+        drawPath(bubblePath, BrandWhite)
         drawPath(bubblePath, outlineColor, style = Stroke(width = 3f, join = StrokeJoin.Round))
         
         // Dots
@@ -271,7 +272,7 @@ private fun DrawScope.drawCentralCheckmark(
     }
     drawPath(
         path = checkPath,
-        color = Color.White,
+        color = BrandWhite,
         style = Stroke(width = 12f, cap = StrokeCap.Round, join = StrokeJoin.Round)
     )
 }
@@ -396,7 +397,7 @@ private fun DrawScope.drawGear(offset: Offset, radius: Float, color: Color, outl
         path.close()
         drawPath(path, color)
         drawPath(path, outlineColor, style = Stroke(width = 3f, join = StrokeJoin.Round))
-        drawCircle(color = Color.White, radius = radius * 0.3f, center = Offset.Zero)
+        drawCircle(color = BrandWhite, radius = radius * 0.3f, center = Offset.Zero)
         drawCircle(color = outlineColor, radius = radius * 0.3f, center = Offset.Zero, style = Stroke(width = 3f))
     }
 }
@@ -439,15 +440,13 @@ private fun DrawScope.drawStar(offset: Offset, color: Color, size: Float, outlin
 @Preview(showBackground = true)
 @Composable
 fun SyncCompleteIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .padding(16.dp)
-        ) {
-            SyncCompleteIllustration(
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .padding(16.dp)
+    ) {
+        SyncCompleteIllustration(
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

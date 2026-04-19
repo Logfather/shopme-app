@@ -26,7 +26,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -181,14 +182,14 @@ private fun DrawScope.drawCloudCharacter(
             cubicTo(-size * 0.2f, size * 0.5f, -size * 0.5f, size * 0.3f, -size * 0.4f, 0f)
             close()
         }
-        drawPath(cloudPath, Color.White)
+        drawPath(cloudPath, BrandWhite)
         drawPath(cloudPath, outlineColor.copy(alpha = 0.1f), style = Stroke(width = 2f))
 
         val eyeRadius = size * 0.12f
-        drawCircle(Color.Black, radius = eyeRadius, center = Offset(-size * 0.15f, -size * 0.05f))
-        drawCircle(Color.Black, radius = eyeRadius, center = Offset(size * 0.15f, -size * 0.05f))
-        drawCircle(Color.White, radius = eyeRadius * 0.4f, center = Offset(-size * 0.18f, -size * 0.08f))
-        drawCircle(Color.White, radius = eyeRadius * 0.4f, center = Offset(size * 0.12f, -size * 0.08f))
+        drawCircle(BrandBlack, radius = eyeRadius, center = Offset(-size * 0.15f, -size * 0.05f))
+        drawCircle(BrandBlack, radius = eyeRadius, center = Offset(size * 0.15f, -size * 0.05f))
+        drawCircle(BrandWhite, radius = eyeRadius * 0.4f, center = Offset(-size * 0.18f, -size * 0.08f))
+        drawCircle(BrandWhite, radius = eyeRadius * 0.4f, center = Offset(size * 0.12f, -size * 0.08f))
 
         val mouthPath = Path().apply {
             moveTo(-size * 0.15f, size * 0.1f)
@@ -302,15 +303,13 @@ private fun DrawScope.drawDiamond(offset: Offset, color: Color, size: Float, out
 @Preview(showBackground = true)
 @Composable
 fun DataTransferIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .padding(16.dp)
-        ) {
-            SyncingIllustration(
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .padding(16.dp)
+    ) {
+        SyncingIllustration(
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

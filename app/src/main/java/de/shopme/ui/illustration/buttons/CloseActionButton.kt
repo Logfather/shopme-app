@@ -23,7 +23,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun CloseActionButton(
@@ -53,7 +53,7 @@ fun CloseActionButton(
                 center = center
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = radius * 0.95f,
                 center = center
             )
@@ -73,7 +73,7 @@ fun CloseActionButton(
                 center = center
             )
 
-            drawXPlatform(center, radius * 1.05f, radius * 0.55f, Color.White)
+            drawXPlatform(center, radius * 1.05f, radius * 0.55f, BrandWhite)
             drawXPlatform(center, radius * 1.0f, radius * 0.5f, Color(0xFFECECEC))
 
             val xThickness = radius * 0.38f
@@ -85,7 +85,7 @@ fun CloseActionButton(
             withTransform({
                 translate(left = -radius * 0.05f, top = -radius * 0.05f)
             }) {
-                drawXHighlight(center, xLength * 0.7f, xThickness * 0.35f, Color.White.copy(alpha = 0.8f))
+                drawXHighlight(center, xLength * 0.7f, xThickness * 0.35f, BrandWhite.copy(alpha = 0.8f))
             }
 
             drawSparkle(Offset(center.x - radius * 0.45f, center.y - radius * 0.55f), radius * 0.15f, sparkleColor)
@@ -191,9 +191,7 @@ private fun DrawScope.drawSparkle(
 @Preview(showBackground = true, backgroundColor = 0xFF000000)
 @Composable
 private fun CloseActionButtonPreview() {
-    ShopMeTheme {
-        Box(modifier = Modifier.padding(16.dp)) {
-            CloseActionButton(onClick = {})
-        }
+    Box(modifier = Modifier.padding(16.dp)) {
+        CloseActionButton(onClick = {})
     }
 }

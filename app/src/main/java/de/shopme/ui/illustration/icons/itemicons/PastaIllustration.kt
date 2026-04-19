@@ -33,7 +33,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
+import de.shopme.ui.theme.BrandBlack
 
 @Composable
 fun PastaIllustration(
@@ -232,7 +233,7 @@ private fun PastaBagCharacter(modifier: Modifier = Modifier) {
                 lineTo(size.width * 0.18f, size.height * 0.78f)
                 close()
             }
-            drawPath(path = windowPath, color = Color.White.copy(alpha = 0.4f))
+            drawPath(path = windowPath, color = BrandWhite.copy(alpha = 0.4f))
             drawPath(path = windowPath, color = Color(0xFF5D4037), style = Stroke(width = 4f))
 
             // Penne inside window (simplified)
@@ -262,7 +263,7 @@ private fun PastaBagCharacter(modifier: Modifier = Modifier) {
         ) {
             Text(
                 text = stringResource(R.string.nudeln_label),
-                color = Color.White,
+                color = BrandWhite,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -354,19 +355,19 @@ private fun MacaroniCharacter(modifier: Modifier = Modifier) {
 private fun Eye(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .background(Color.White, CircleShape)
+            .background(BrandWhite, CircleShape)
             .padding(2.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = size.minDimension / 4f,
                 center = center
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = size.minDimension / 10f,
                 center = Offset(center.x + size.width / 10f, center.y - size.height / 10f)
             )
@@ -377,15 +378,13 @@ private fun Eye(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun PastaIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            PastaIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        PastaIllustration()
     }
 }

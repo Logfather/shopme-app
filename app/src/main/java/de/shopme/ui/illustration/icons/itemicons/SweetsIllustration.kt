@@ -26,7 +26,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandRed
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun SweetsIllustration(
@@ -153,7 +155,7 @@ private fun Cupcake(modifier: Modifier = Modifier) {
         drawPath(stemPath, Color(0xFF388E3C), style = Stroke(width = 4f))
 
         // Sprinkles
-        val sprinkleColors = listOf(Color.Yellow, Color.Cyan, Color.Green, Color.Red, Color.White)
+        val sprinkleColors = listOf(Color.Yellow, Color.Cyan, Color.Green, BrandRed, BrandWhite)
         for (i in 0..15) {
             val angle = i * 23.5f
             val radius = w * (0.2f + (i % 3) * 0.05f)
@@ -176,8 +178,8 @@ private fun Cookie(modifier: Modifier = Modifier) {
         drawCircle(Color(0xFFEBC18D), radius = w / 2, center = center)
         
         // Bite mask (white circle to simulate bite)
-        drawCircle(Color.White, radius = w * 0.18f, center = Offset(w * 0.85f, h * 0.15f))
-        drawCircle(Color.White, radius = w * 0.15f, center = Offset(w * 0.75f, h * 0.05f))
+        drawCircle(BrandWhite, radius = w * 0.18f, center = Offset(w * 0.85f, h * 0.15f))
+        drawCircle(BrandWhite, radius = w * 0.15f, center = Offset(w * 0.75f, h * 0.05f))
 
         // Chips
         val chipPositions = listOf(
@@ -210,7 +212,7 @@ private fun ChocolateBar(modifier: Modifier = Modifier) {
         )
         
         // Bite
-        drawCircle(Color.White, radius = w * 0.15f, center = Offset(w * 0.8f, h * 0.1f))
+        drawCircle(BrandWhite, radius = w * 0.15f, center = Offset(w * 0.8f, h * 0.1f))
 
         // Chocolate grid
         for (i in 1..2) {
@@ -254,7 +256,7 @@ private fun Lollipop(modifier: Modifier = Modifier) {
 
         // Stick
         drawLine(
-            color = Color.White,
+            color = BrandWhite,
             start = Offset(w * 0.5f, h * 0.5f),
             end = Offset(w * 0.8f, h * 1.2f),
             strokeWidth = 15f
@@ -267,7 +269,7 @@ private fun Lollipop(modifier: Modifier = Modifier) {
         )
 
         // Swirl colors
-        val colors = listOf(Color.Red, Color.Yellow, Color.Green, Color.Blue, Color.Magenta, Color(0xFFFFA500))
+        val colors = listOf(BrandRed, Color.Yellow, Color.Green, Color.Blue, Color.Magenta, Color(0xFFFFA500))
         for (i in 0..11) {
             withTransform({
                 rotate(i * 30f, pivot = Offset(w * 0.45f, h * 0.45f))
@@ -282,7 +284,7 @@ private fun Lollipop(modifier: Modifier = Modifier) {
         }
         
         drawCircle(
-            color = Color.Black.copy(alpha = 0.1f),
+            color = BrandBlack.copy(alpha = 0.1f),
             radius = w * 0.4f,
             center = Offset(w * 0.45f, h * 0.45f),
             style = Stroke(width = 2f)
@@ -352,7 +354,7 @@ private fun drawParticles(drawScope: DrawScope) {
     with(drawScope) {
         val w = size.width
         val h = size.height
-        val colors = listOf(Color.Yellow, Color.Cyan, Color.Magenta, Color.Green, Color.Red)
+        val colors = listOf(Color.Yellow, Color.Cyan, Color.Magenta, Color.Green, BrandRed)
         for (i in 0..40) {
             val px = w * (i * 0.17f % 1f)
             val py = h * (i * 0.23f % 1f)
@@ -393,13 +395,13 @@ private fun drawCuteFace(drawScope: DrawScope, center: Offset, width: Float) {
         val eyeOffset = width * 0.25f
         
         // Eyes
-        drawCircle(Color.White, radius = eyeSize / 2, center = Offset(center.x - eyeOffset, center.y - 10f))
-        drawCircle(Color.Black, radius = eyeSize / 5, center = Offset(center.x - eyeOffset + 2f, center.y - 8f))
-        drawCircle(Color.Black, radius = eyeSize / 2, center = Offset(center.x - eyeOffset, center.y - 10f), style = Stroke(width = 1.5f))
+        drawCircle(BrandWhite, radius = eyeSize / 2, center = Offset(center.x - eyeOffset, center.y - 10f))
+        drawCircle(BrandBlack, radius = eyeSize / 5, center = Offset(center.x - eyeOffset + 2f, center.y - 8f))
+        drawCircle(BrandBlack, radius = eyeSize / 2, center = Offset(center.x - eyeOffset, center.y - 10f), style = Stroke(width = 1.5f))
         
-        drawCircle(Color.White, radius = eyeSize / 2, center = Offset(center.x + eyeOffset, center.y - 10f))
-        drawCircle(Color.Black, radius = eyeSize / 5, center = Offset(center.x + eyeOffset - 2f, center.y - 8f))
-        drawCircle(Color.Black, radius = eyeSize / 2, center = Offset(center.x + eyeOffset, center.y - 10f), style = Stroke(width = 1.5f))
+        drawCircle(BrandWhite, radius = eyeSize / 2, center = Offset(center.x + eyeOffset, center.y - 10f))
+        drawCircle(BrandBlack, radius = eyeSize / 5, center = Offset(center.x + eyeOffset - 2f, center.y - 8f))
+        drawCircle(BrandBlack, radius = eyeSize / 2, center = Offset(center.x + eyeOffset, center.y - 10f), style = Stroke(width = 1.5f))
 
         // Mouth
         val mouthWidth = width * 0.4f
@@ -425,15 +427,13 @@ private fun drawCuteFace(drawScope: DrawScope, center: Offset, width: Float) {
 @Preview(showBackground = true)
 @Composable
 private fun SweetsIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            SweetsIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        SweetsIllustration()
     }
 }

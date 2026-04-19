@@ -1,5 +1,4 @@
 package de.shopme.ui.illustration.icons.itemicons
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -29,8 +28,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
-
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 @Composable
 fun VeganIllustration(
     modifier: Modifier = Modifier
@@ -44,7 +43,6 @@ fun VeganIllustration(
     ) {
         // Background Leaves
         BackgroundLeaves(modifier = Modifier.fillMaxSize())
-
         // Plant Milk Bottle (Back)
         PlantMilkBottle(
             modifier = Modifier
@@ -52,7 +50,6 @@ fun VeganIllustration(
                 .align(Alignment.TopCenter)
                 .offset(x = 20.dp, y = 30.dp)
         )
-
         // Tofu Character (Left)
         TofuCharacter(
             modifier = Modifier
@@ -60,7 +57,6 @@ fun VeganIllustration(
                 .align(Alignment.CenterStart)
                 .offset(x = 30.dp, y = (-10).dp)
         )
-
         // Tomato Character (Bottom Left)
         TomatoCharacter(
             modifier = Modifier
@@ -68,7 +64,6 @@ fun VeganIllustration(
                 .align(Alignment.BottomStart)
                 .offset(x = 15.dp, y = (-60).dp)
         )
-
         // Avocado Character (Right)
         AvocadoCharacter(
             modifier = Modifier
@@ -76,10 +71,8 @@ fun VeganIllustration(
                 .align(Alignment.BottomEnd)
                 .offset(x = (-10).dp, y = (-40).dp)
         )
-
         // Foreground Decorations (Nuts, seeds, cherry tomatoes)
         ForegroundVegetables(modifier = Modifier.fillMaxSize())
-
         // Vegan Ribbon (Front)
         VeganRibbon(
             modifier = Modifier
@@ -90,24 +83,20 @@ fun VeganIllustration(
         )
     }
 }
-
 @Composable
 private fun BackgroundLeaves(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-
         // Dark green kale/broccoli shapes in the back
         drawLeafCloud(Offset(w * 0.3f, h * 0.3f), 100f, Color(0xFF2E7D32))
         drawLeafCloud(Offset(w * 0.7f, h * 0.35f), 120f, Color(0xFF1B5E20))
         drawLeafCloud(Offset(w * 0.5f, h * 0.25f), 110f, Color(0xFF388E3C))
-
         // Lighter green leaves
         drawSimpleLeaf(Offset(w * 0.15f, h * 0.45f), 60f, 45f, Color(0xFF4CAF50))
         drawSimpleLeaf(Offset(w * 0.85f, h * 0.55f), 70f, -30f, Color(0xFF81C784))
     }
 }
-
 private fun DrawScope.drawLeafCloud(center: Offset, radius: Float, color: Color) {
     for (i in 0 until 6) {
         val angle = i * 60f
@@ -116,10 +105,9 @@ private fun DrawScope.drawLeafCloud(center: Offset, radius: Float, color: Color)
             y = center.y + radius * 0.5f * kotlin.math.sin(Math.toRadians(angle.toDouble())).toFloat()
         )
         drawCircle(color, radius = radius * 0.6f, center = offset)
-        drawCircle(Color.Black, radius = radius * 0.6f, center = offset, style = Stroke(width = 3f))
+        drawCircle(BrandBlack, radius = radius * 0.6f, center = offset, style = Stroke(width = 3f))
     }
 }
-
 private fun DrawScope.drawSimpleLeaf(center: Offset, size: Float, rotation: Float, color: Color) {
     rotate(rotation, center) {
         val path = Path().apply {
@@ -129,18 +117,16 @@ private fun DrawScope.drawSimpleLeaf(center: Offset, size: Float, rotation: Floa
             close()
         }
         drawPath(path, color)
-        drawPath(path, Color.Black, style = Stroke(width = 3f))
-        drawLine(Color.Black, Offset(center.x, center.y - size), Offset(center.x, center.y + size), strokeWidth = 2f)
+        drawPath(path, BrandBlack, style = Stroke(width = 3f))
+        drawLine(BrandBlack, Offset(center.x, center.y - size), Offset(center.x, center.y + size), strokeWidth = 2f)
     }
 }
-
 @Composable
 private fun PlantMilkBottle(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-
             // Bottle Body
             val bottlePath = Path().apply {
                 moveTo(w * 0.35f, h * 0.2f)
@@ -159,8 +145,7 @@ private fun PlantMilkBottle(modifier: Modifier = Modifier) {
                     colors = listOf(Color(0xFFFFFDE7), Color(0xFFFFF9C4))
                 )
             )
-            drawPath(bottlePath, Color.Black, style = Stroke(width = 4f))
-
+            drawPath(bottlePath, BrandBlack, style = Stroke(width = 4f))
             // Cap
             val capPath = Path().apply {
                 moveTo(w * 0.33f, h * 0.05f)
@@ -170,8 +155,7 @@ private fun PlantMilkBottle(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(capPath, Color(0xFF0288D1))
-            drawPath(capPath, Color.Black, style = Stroke(width = 4f))
-
+            drawPath(capPath, BrandBlack, style = Stroke(width = 4f))
             // Label
             val labelPath = Path().apply {
                 moveTo(w * 0.18f, h * 0.55f)
@@ -181,12 +165,11 @@ private fun PlantMilkBottle(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(labelPath, Color(0xFF4FC3F7))
-            drawPath(labelPath, Color.Black, style = Stroke(width = 3f))
+            drawPath(labelPath, BrandBlack, style = Stroke(width = 3f))
         }
-
         Text(
             text = stringResource(R.string.plant_milk_label),
-            color = Color.White,
+            color = BrandWhite,
             fontSize = 18.sp,
             fontWeight = FontWeight.Black,
             textAlign = TextAlign.Center,
@@ -197,14 +180,12 @@ private fun PlantMilkBottle(modifier: Modifier = Modifier) {
         )
     }
 }
-
 @Composable
 private fun TofuCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-
             // Tofu Cube (perspective)
             val frontPath = Path().apply {
                 addRoundRect(
@@ -218,8 +199,7 @@ private fun TofuCharacter(modifier: Modifier = Modifier) {
                 )
             }
             drawPath(frontPath, Color(0xFFFFF9C4))
-            drawPath(frontPath, Color.Black, style = Stroke(width = 4f))
-
+            drawPath(frontPath, BrandBlack, style = Stroke(width = 4f))
             // Side/Top for perspective
             val topPath = Path().apply {
                 moveTo(w * 0.1f, h * 0.3f)
@@ -229,8 +209,7 @@ private fun TofuCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(topPath, Color(0xFFFFF176))
-            drawPath(topPath, Color.Black, style = Stroke(width = 4f))
-
+            drawPath(topPath, BrandBlack, style = Stroke(width = 4f))
             val sidePath = Path().apply {
                 moveTo(w * 0.8f, h * 0.35f)
                 lineTo(w * 0.9f, h * 0.25f)
@@ -239,9 +218,8 @@ private fun TofuCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(sidePath, Color(0xFFFDD835))
-            drawPath(sidePath, Color.Black, style = Stroke(width = 4f))
+            drawPath(sidePath, BrandBlack, style = Stroke(width = 4f))
         }
-
         Column(
             modifier = Modifier.padding(top = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -255,14 +233,12 @@ private fun TofuCharacter(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun AvocadoCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-
             // Outer Dark Green Skin
             val skinPath = Path().apply {
                 moveTo(w * 0.5f, h * 0.1f)
@@ -273,8 +249,7 @@ private fun AvocadoCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(skinPath, Color(0xFF1B5E20))
-            drawPath(skinPath, Color.Black, style = Stroke(width = 4f))
-
+            drawPath(skinPath, BrandBlack, style = Stroke(width = 4f))
             // Light Green Flesh
             val fleshPath = Path().apply {
                 moveTo(w * 0.5f, h * 0.18f)
@@ -290,8 +265,7 @@ private fun AvocadoCharacter(modifier: Modifier = Modifier) {
                     colors = listOf(Color(0xFFC5E1A5), Color(0xFFDCEDC8))
                 )
             )
-            drawPath(fleshPath, Color.Black, style = Stroke(width = 3f))
-
+            drawPath(fleshPath, BrandBlack, style = Stroke(width = 3f))
             // The Seed (Pit) is also the Mouth in this design
             drawCircle(
                 color = Color(0xFF5D4037),
@@ -299,20 +273,19 @@ private fun AvocadoCharacter(modifier: Modifier = Modifier) {
                 center = Offset(w * 0.52f, h * 0.68f)
             )
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = w * 0.15f,
                 center = Offset(w * 0.52f, h * 0.68f),
                 style = Stroke(width = 4f)
             )
-            
+
             // Highlight on pit
             drawCircle(
-                color = Color.White.copy(alpha = 0.3f),
+                color = BrandWhite.copy(alpha = 0.3f),
                 radius = w * 0.04f,
                 center = Offset(w * 0.58f, h * 0.62f)
             )
         }
-
         Column(
             modifier = Modifier.offset(y = (-30).dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -324,14 +297,12 @@ private fun AvocadoCharacter(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun TomatoCharacter(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-
             // Tomato Body
             drawCircle(
                 brush = Brush.radialGradient(
@@ -340,8 +311,7 @@ private fun TomatoCharacter(modifier: Modifier = Modifier) {
                 radius = w * 0.45f,
                 center = center
             )
-            drawCircle(Color.Black, radius = w * 0.45f, center = center, style = Stroke(width = 4f))
-
+            drawCircle(BrandBlack, radius = w * 0.45f, center = center, style = Stroke(width = 4f))
             // Stem
             val stemPath = Path().apply {
                 moveTo(w * 0.5f, h * 0.15f)
@@ -350,9 +320,8 @@ private fun TomatoCharacter(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(stemPath, Color(0xFF388E3C))
-            drawPath(stemPath, Color.Black, style = Stroke(width = 3f))
+            drawPath(stemPath, BrandBlack, style = Stroke(width = 3f))
         }
-
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -365,29 +334,24 @@ private fun TomatoCharacter(modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 private fun ForegroundVegetables(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-
         // Small tomatoes
         drawCherryTomato(Offset(w * 0.38f, h * 0.72f), 15f)
         drawCherryTomato(Offset(w * 0.45f, h * 0.75f), 18f)
-
         // Nuts/Seeds
         drawSeed(Offset(w * 0.25f, h * 0.78f), 12f, 20f)
         drawSeed(Offset(w * 0.32f, h * 0.82f), 14f, -10f)
         drawSeed(Offset(w * 0.4f, h * 0.85f), 15f, 45f)
     }
 }
-
 private fun DrawScope.drawCherryTomato(center: Offset, radius: Float) {
     drawCircle(Color(0xFFD32F2F), radius = radius, center = center)
-    drawCircle(Color.Black, radius = radius, center = center, style = Stroke(width = 2f))
+    drawCircle(BrandBlack, radius = radius, center = center, style = Stroke(width = 2f))
 }
-
 private fun DrawScope.drawSeed(center: Offset, size: Float, rotation: Float) {
     rotate(rotation, center) {
         drawOval(
@@ -396,21 +360,19 @@ private fun DrawScope.drawSeed(center: Offset, size: Float, rotation: Float) {
             size = Size(size * 2, size * 1.2f)
         )
         drawOval(
-            color = Color.Black,
+            color = BrandBlack,
             topLeft = Offset(center.x - size, center.y - size * 0.6f),
             size = Size(size * 2, size * 1.2f),
             style = Stroke(width = 2f)
         )
     }
 }
-
 @Composable
 private fun VeganRibbon(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-
             // Ribbon main part
             val ribbonPath = Path().apply {
                 moveTo(w * 0.1f, h * 0.3f)
@@ -420,8 +382,7 @@ private fun VeganRibbon(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(path = ribbonPath, color = Color(0xFF8BC34A))
-            drawPath(path = ribbonPath, color = Color.Black, style = Stroke(width = 5f))
-
+            drawPath(path = ribbonPath, color = BrandBlack, style = Stroke(width = 5f))
             // Ribbon folds (back)
             val leftFold = Path().apply {
                 moveTo(w * 0.1f, h * 0.35f)
@@ -432,8 +393,7 @@ private fun VeganRibbon(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(path = leftFold, color = Color(0xFF689F38))
-            drawPath(path = leftFold, color = Color.Black, style = Stroke(width = 4f))
-
+            drawPath(path = leftFold, color = BrandBlack, style = Stroke(width = 4f))
             val rightFold = Path().apply {
                 moveTo(w * 0.9f, h * 0.35f)
                 lineTo(w, h * 0.2f)
@@ -443,12 +403,11 @@ private fun VeganRibbon(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(path = rightFold, color = Color(0xFF689F38))
-            drawPath(path = rightFold, color = Color.Black, style = Stroke(width = 4f))
+            drawPath(path = rightFold, color = BrandBlack, style = Stroke(width = 4f))
         }
-
         Text(
             text = stringResource(R.string.vegan_label),
-            color = Color.White,
+            color = BrandWhite,
             fontSize = 56.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = 2.sp,
@@ -456,32 +415,30 @@ private fun VeganRibbon(modifier: Modifier = Modifier) {
         )
     }
 }
-
 @Composable
 private fun CharacterEye(eyeSize: Dp) {
     Box(
         modifier = Modifier
             .size(eyeSize)
-            .background(Color.White, CircleShape)
+            .background(BrandWhite, CircleShape)
             .padding(2.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = size.minDimension * 0.35f,
                 center = center
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = size.minDimension * 0.15f,
                 center = Offset(center.x + size.width * 0.15f, center.y - size.height * 0.15f)
             )
         }
     }
 }
-
 @Composable
 private fun OpenMouth(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -492,22 +449,19 @@ private fun OpenMouth(modifier: Modifier = Modifier) {
             close()
         }
         drawPath(path, Color(0xFFB71C1C))
-        drawPath(path, Color.Black, style = Stroke(width = 2f))
+        drawPath(path, BrandBlack, style = Stroke(width = 2f))
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 private fun VeganIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            VeganIllustration(modifier = Modifier.size(400.dp))
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        VeganIllustration(modifier = Modifier.size(400.dp))
     }
 }

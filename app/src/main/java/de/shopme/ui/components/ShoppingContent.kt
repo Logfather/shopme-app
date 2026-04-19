@@ -22,8 +22,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.shopme.data.input.speech.SpeechController
 import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.service.CatalogService
-import de.shopme.presentation.action.ShoppingAction
-import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.ui.theme.AppButtonDefaults
@@ -48,10 +46,14 @@ fun ShoppingContent(
     val groupedItems =
         state.items
             .filter { it.deletedAt == null }
+            .sortedBy { it.createdAt } // 🔥 STABIL
             .groupBy { it.category }
 
     val categoryEntries = remember(groupedItems) {
-        groupedItems.entries.toList()
+        groupedItems
+            .toSortedMap() // 🔥 stabile Kategorien
+            .entries
+            .toList()
     }
 
     var lastDeletedItem by remember { mutableStateOf<ShoppingItem?>(null) }
@@ -63,29 +65,9 @@ fun ShoppingContent(
     val keyboardController = LocalSoftwareKeyboardController.current
     val listState = rememberLazyListState()
 
-    // ✅ ZENTRALE EFFECT HANDLING (NEU + WICHTIG)
-//    LaunchedEffect(Unit) {
-//        vm.effects.collect { effect ->
-//            when (effect) {
-//
-//                is UIEffect.ShowUndo -> {
-//                    val result = snackbarHostState.showSnackbar(
-//                        message = effect.message,
-//                        actionLabel = "Rückgängig",
-//                        duration = SnackbarDuration.Short
-//                    )
-//
-//                    if (result == SnackbarResult.ActionPerformed) {
-//                        vm.onEvent(ShopEvent.List.UndoLastAction)
-//                    }
-//                }
-//
-//                else -> Unit
-//            }
-//        }
-//    }
-
-    // ✅ ITEM DELETE (bestehendes Verhalten behalten)
+    // ============================================================
+    // ✅ UNDO DELETE
+    // ============================================================
     LaunchedEffect(lastDeletedItem) {
 
         val item = lastDeletedItem ?: return@LaunchedEffect
@@ -103,7 +85,9 @@ fun ShoppingContent(
         lastDeletedItem = null
     }
 
-    // ✅ ITEM UPDATE (bestehendes Verhalten behalten)
+    // ============================================================
+    // ✅ UNDO UPDATE
+    // ============================================================
     LaunchedEffect(lastUndoMessage) {
 
         val message = lastUndoMessage ?: return@LaunchedEffect
@@ -158,6 +142,10 @@ fun ShoppingContent(
 
             Spacer(Modifier.height(16.dp))
 
+            // ============================================================
+            // ✅ INPUT (FIXED)
+            // ============================================================
+
             Row(verticalAlignment = Alignment.CenterVertically) {
 
                 TextField(
@@ -171,7 +159,7 @@ fun ShoppingContent(
                     keyboardActions = KeyboardActions(
                         onDone = {
                             if (text.isNotBlank()) {
-                                vm.onEvent(ShopEvent.Item.Add(text))
+                                vm.onEvent(ShopEvent.Item.Add(text)) // ✅ WICHTIG
                                 text = ""
                                 keyboardController?.hide()
                             }
@@ -184,7 +172,7 @@ fun ShoppingContent(
                 Button(
                     onClick = {
                         if (text.isNotBlank()) {
-                            vm.onEvent(ShopEvent.Item.Add(text))
+                            vm.onEvent(ShopEvent.Item.Add(text)) // ✅ WICHTIG
                             text = ""
                         }
                     },
@@ -233,9 +221,9 @@ fun ShoppingContent(
                             if (!dismissState.value) {
 
                                 val swipeState = rememberSwipeToDismissBoxState(
-                                    confirmValueChange = { value: SwipeToDismissBoxValue ->
+                                    confirmValueChange = { value ->
                                         if (value == SwipeToDismissBoxValue.EndToStart) {
-                                            vm.onEvent(ShopEvent.Item.Delete(item))
+                                            vm.onEvent(ShopEvent.Item.Delete(item)) // ✅
                                             lastDeletedItem = item
                                             dismissState.value = true
                                             true
@@ -252,22 +240,24 @@ fun ShoppingContent(
                                         item = item,
                                         categoryColor = CategoryColors[item.category]
                                             ?: MaterialTheme.colorScheme.onSurfaceVariant,
+
                                         onToggle = {
-                                            vm.onEvent(ShopEvent.Item.Toggle(item))
+                                            vm.onEvent(ShopEvent.Item.Toggle(item)) // ✅
                                         },
+
                                         onDelete = {
-                                            vm.onEvent(ShopEvent.Item.Delete(item))
+                                            vm.onEvent(ShopEvent.Item.Delete(item)) // ✅
                                             lastDeletedItem = item
                                         },
+
                                         onRetry = { id ->
                                             vm.onEvent(ShopEvent.Item.RetrySync(id))
                                         },
-                                        onUpdate = { newText ->
 
+                                        onUpdate = { newText ->
                                             vm.onEvent(
                                                 ShopEvent.Item.Update(item, newText)
                                             )
-
                                             lastUndoMessage = "Item geändert"
                                         }
                                     )
@@ -282,7 +272,7 @@ fun ShoppingContent(
 
             Button(
                 onClick = {
-                    vm.dispatch(ShoppingAction.CancelMultiCreation)
+                    vm.dispatch(de.shopme.presentation.action.ShoppingAction.CancelMultiCreation)
                 },
                 modifier = Modifier
                     .fillMaxWidth()

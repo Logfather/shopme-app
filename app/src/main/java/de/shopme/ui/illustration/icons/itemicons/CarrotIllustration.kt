@@ -27,7 +27,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun CarrotIllustration(
@@ -248,19 +249,19 @@ private fun DrawScope.drawCarrotLines(size: Size) {
 private fun CarrotEye(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .background(Color.White, CircleShape)
+            .background(BrandWhite, CircleShape)
             .padding(2.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = size.minDimension / 3f,
                 center = Offset(size.width * 0.6f, size.height * 0.6f)
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = size.minDimension / 8f,
                 center = Offset(size.width * 0.7f, size.height * 0.5f)
             )
@@ -271,14 +272,12 @@ private fun CarrotEye(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun CarrotIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            CarrotIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(300.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CarrotIllustration()
     }
 }

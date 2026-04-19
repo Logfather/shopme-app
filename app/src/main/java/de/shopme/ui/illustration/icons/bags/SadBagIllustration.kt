@@ -20,7 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun SadBagIllustration(
@@ -34,7 +34,7 @@ fun SadBagIllustration(
                 shape = CircleShape,
                 clip = false
             )
-            .background(Color.White, CircleShape)
+            .background(BrandWhite, CircleShape)
             .padding(2.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
@@ -51,16 +51,14 @@ fun SadBagIllustration(
 @Preview(showBackground = true, backgroundColor = 0xFF000000)
 @Composable
 private fun SadBagIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(48.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            SadBagIllustration(
-                modifier = Modifier.size(320.dp)
-            )
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(48.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        SadBagIllustration(
+            modifier = Modifier.size(320.dp)
+        )
     }
 }

@@ -27,7 +27,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun WholeGrainBakeryIllustration(
@@ -125,7 +126,7 @@ private fun FlourBag(modifier: Modifier = Modifier) {
                     size.width * 0.75f, size.height * 0.35f
                 )
             }
-            drawPath(flourPath, Color.White)
+            drawPath(flourPath, BrandWhite)
             drawPath(flourPath, Color(0xFF5D4037), style = Stroke(width = 3f))
 
             // Blue label
@@ -153,7 +154,7 @@ private fun FlourBag(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(14.dp))
             Text(
                 text = "FLOUR",
-                color = Color.White,
+                color = BrandWhite,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -448,18 +449,18 @@ private fun CharacterEye(eyeSize: Dp) {
     Box(
         modifier = Modifier
             .size(eyeSize)
-            .background(Color.White, CircleShape)
-            .border(1.dp, Color.Black, CircleShape),
+            .background(BrandWhite, CircleShape)
+            .border(1.dp, BrandBlack, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = Color.Black,
+                color = BrandBlack,
                 radius = size.minDimension * 0.35f,
                 center = center.copy(y = center.y + size.height * 0.05f)
             )
             drawCircle(
-                color = Color.White,
+                color = BrandWhite,
                 radius = size.minDimension * 0.12f,
                 center = center.copy(x = center.x + size.width * 0.15f, y = center.y - size.height * 0.15f)
             )
@@ -474,7 +475,7 @@ private fun Mouth(modifier: Modifier = Modifier) {
             moveTo(0f, size.height * 0.2f)
             quadraticTo(size.width / 2, size.height, size.width, size.height * 0.2f)
         }
-        drawPath(path, Color.Black, style = Stroke(width = 3f))
+        drawPath(path, BrandBlack, style = Stroke(width = 3f))
     }
 }
 
@@ -488,7 +489,7 @@ private fun OpenMouth(modifier: Modifier = Modifier) {
             close()
         }
         drawPath(path, Color(0xFF8B0000))
-        drawPath(path, Color.Black, style = Stroke(width = 2f))
+        drawPath(path, BrandBlack, style = Stroke(width = 2f))
         
         // Tongue
         val tonguePath = Path().apply {
@@ -502,14 +503,12 @@ private fun OpenMouth(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun WholeGrainBakeryIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            WholeGrainBakeryIllustration(modifier = Modifier.size(400.dp))
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        WholeGrainBakeryIllustration(modifier = Modifier.size(400.dp))
     }
 }

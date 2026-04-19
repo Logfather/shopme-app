@@ -25,7 +25,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun MeatIllustration(
@@ -114,9 +115,9 @@ private fun SteakCharacter(modifier: Modifier = Modifier) {
             moveTo(size.width * 0.2f, size.height * 0.5f)
             quadraticTo(size.width * 0.3f, size.height * 0.7f, size.width * 0.15f, size.height * 0.8f)
         }
-        drawPath(marblingPath, Color.White.copy(alpha = 0.4f), style = Stroke(width = 8f))
+        drawPath(marblingPath, BrandWhite.copy(alpha = 0.4f), style = Stroke(width = 8f))
 
-        drawPath(path, Color.Black, style = Stroke(width = 4f))
+        drawPath(path, BrandBlack, style = Stroke(width = 4f))
 
         val eyeRadius = size.width * 0.12f
         drawEye(Offset(size.width * 0.4f, size.height * 0.5f), eyeRadius)
@@ -128,7 +129,7 @@ private fun SteakCharacter(modifier: Modifier = Modifier) {
             quadraticTo(size.width * 0.55f, size.height * 0.6f, size.width * 0.35f, size.height * 0.65f)
         }
         drawPath(mouthPath, Color(0xFF4A0000))
-        drawPath(mouthPath, Color.Black, style = Stroke(width = 4f))
+        drawPath(mouthPath, BrandBlack, style = Stroke(width = 4f))
         
         val tonguePath = Path().apply {
             moveTo(size.width * 0.45f, size.height * 0.78f)
@@ -172,7 +173,7 @@ private fun BaconCharacter(modifier: Modifier = Modifier) {
         }
         drawPath(meatStripes, Color(0xFFC62828))
 
-        drawPath(path, Color.Black, style = Stroke(width = 4f))
+        drawPath(path, BrandBlack, style = Stroke(width = 4f))
 
         drawEye(Offset(size.width * 0.45f, size.height * 0.35f), size.width * 0.08f)
         drawEye(Offset(size.width * 0.65f, size.height * 0.4f), size.width * 0.08f)
@@ -181,7 +182,7 @@ private fun BaconCharacter(modifier: Modifier = Modifier) {
             moveTo(size.width * 0.45f, size.height * 0.5f)
             quadraticTo(size.width * 0.6f, size.height * 0.65f, size.width * 0.8f, size.height * 0.55f)
         }
-        drawPath(mouthPath, Color.Black, style = Stroke(width = 4f))
+        drawPath(mouthPath, BrandBlack, style = Stroke(width = 4f))
     }
 }
 
@@ -221,20 +222,20 @@ private fun SausageCharacter(modifier: Modifier = Modifier) {
         drawTiedEnd(Offset(size.width * 0.1f, size.height * 0.55f), rotation = 150f)
         drawTiedEnd(Offset(size.width * 0.9f, size.height * 0.45f), rotation = -30f)
 
-        drawPath(path, Color.Black, style = Stroke(width = 4f))
+        drawPath(path, BrandBlack, style = Stroke(width = 4f))
 
         drawEye(Offset(size.width * 0.45f, size.height * 0.45f), size.width * 0.1f)
         drawEye(Offset(size.width * 0.68f, size.height * 0.45f), size.width * 0.1f)
         
-        drawLine(Color.Black, Offset(size.width * 0.38f, size.height * 0.35f), Offset(size.width * 0.48f, size.height * 0.32f), strokeWidth = 4f)
-        drawLine(Color.Black, Offset(size.width * 0.65f, size.height * 0.32f), Offset(size.width * 0.75f, size.height * 0.35f), strokeWidth = 4f)
+        drawLine(BrandBlack, Offset(size.width * 0.38f, size.height * 0.35f), Offset(size.width * 0.48f, size.height * 0.32f), strokeWidth = 4f)
+        drawLine(BrandBlack, Offset(size.width * 0.65f, size.height * 0.32f), Offset(size.width * 0.75f, size.height * 0.35f), strokeWidth = 4f)
 
         val mouthPath = Path().apply {
             moveTo(size.width * 0.45f, size.height * 0.65f)
             quadraticTo(size.width * 0.5f, size.height * 0.6f, size.width * 0.55f, size.height * 0.65f)
             quadraticTo(size.width * 0.6f, size.height * 0.7f, size.width * 0.65f, size.height * 0.65f)
         }
-        drawPath(mouthPath, Color.Black, style = Stroke(width = 4f))
+        drawPath(mouthPath, BrandBlack, style = Stroke(width = 4f))
     }
 }
 
@@ -249,24 +250,24 @@ private fun Garnish(modifier: Modifier = Modifier) {
             close()
         }
         drawPath(parsleyPath, Color(0xFF4CAF50))
-        drawPath(parsleyPath, Color.Black, style = Stroke(width = 3f))
+        drawPath(parsleyPath, BrandBlack, style = Stroke(width = 3f))
         
-        drawCircle(Color.Black, radius = 8f, center = Offset(size.width * 0.6f, size.height * 0.75f))
+        drawCircle(BrandBlack, radius = 8f, center = Offset(size.width * 0.6f, size.height * 0.75f))
         drawCircle(Color(0xFF43A047), radius = 7f, center = Offset(size.width * 0.5f, size.height * 0.85f))
         drawCircle(Color(0xFF5D4037), radius = 9f, center = Offset(size.width * 0.7f, size.height * 0.8f))
         
         for (i in 0..10) {
             drawCircle(Color(0xFFEEEEEE), radius = 2f, center = Offset(size.width * 0.7f + (i * 8f), size.height * 0.9f))
-            drawCircle(Color.White, radius = 2.5f, center = Offset(size.width * 0.65f + (i * 6f), size.height * 0.95f))
+            drawCircle(BrandWhite, radius = 2.5f, center = Offset(size.width * 0.65f + (i * 6f), size.height * 0.95f))
         }
     }
 }
 
 private fun DrawScope.drawEye(center: Offset, radius: Float) {
-    drawCircle(Color.White, radius = radius, center = center)
-    drawCircle(Color.Black, radius = radius, center = center, style = Stroke(width = 3f))
-    drawCircle(Color.Black, radius = radius * 0.5f, center = center.plus(Offset(radius * 0.2f, 0f)))
-    drawCircle(Color.White, radius = radius * 0.15f, center = center.plus(Offset(radius * 0.3f, -radius * 0.2f)))
+    drawCircle(BrandWhite, radius = radius, center = center)
+    drawCircle(BrandBlack, radius = radius, center = center, style = Stroke(width = 3f))
+    drawCircle(BrandBlack, radius = radius * 0.5f, center = center.plus(Offset(radius * 0.2f, 0f)))
+    drawCircle(BrandWhite, radius = radius * 0.15f, center = center.plus(Offset(radius * 0.3f, -radius * 0.2f)))
 }
 
 private fun DrawScope.drawTiedEnd(center: Offset, rotation: Float) {
@@ -278,25 +279,23 @@ private fun DrawScope.drawTiedEnd(center: Offset, rotation: Float) {
             close()
         }
         drawPath(path, Color(0xFFBF360C))
-        drawPath(path, Color.Black, style = Stroke(width = 3f))
+        drawPath(path, BrandBlack, style = Stroke(width = 3f))
         
         drawCircle(Color(0xFFBF360C), radius = 5f, center = center)
-        drawCircle(Color.Black, radius = 5f, center = center, style = Stroke(width = 3f))
+        drawCircle(BrandBlack, radius = 5f, center = center, style = Stroke(width = 3f))
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun MeatIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            MeatIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(300.dp)
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        MeatIllustration()
     }
 }

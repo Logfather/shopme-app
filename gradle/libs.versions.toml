@@ -33,6 +33,10 @@ firebase-auth-ktx = "24.0.1"
 foundation = "1.10.3"
 engage-core = "1.5.11"
 material3 = "1.4.0"
+runtime = "1.10.6"
+ui = "1.10.6"
+ui-graphics = "1.10.6"
+ui-text = "1.10.6"
 
 
 [libraries]
@@ -81,6 +85,10 @@ firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx",
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 engage-core = { group = "com.google.android.engage", name = "engage-core", version.ref = "engage-core" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "ui-graphics" }
+androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "ui-text" }
 
 
 [plugins]

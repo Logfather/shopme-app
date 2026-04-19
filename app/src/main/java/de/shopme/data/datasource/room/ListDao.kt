@@ -43,4 +43,16 @@ interface ListDao {
 
     @Query("DELETE FROM lists WHERE id = :listId")
     suspend fun deleteById(listId: String)
+
+    @Query("DELETE FROM lists WHERE id NOT IN (:ids)")
+    suspend fun deleteAllExcept(ids: List<String>)
+
+    @Query("SELECT * FROM lists WHERE deletedAt IS NULL")
+    suspend fun observeListsOnce(): List<ShoppingListEntity>
+
+    // ============================================================
+    // ✅ ADDITION: Required for AccountDeletionManager
+    // ============================================================
+    @Query("SELECT * FROM lists WHERE deletedAt IS NULL")
+    suspend fun getAllListsOnce(): List<ShoppingListEntity>
 }

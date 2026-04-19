@@ -1,7 +1,8 @@
 package de.shopme.presentation.event
 
-import android.content.Context
 import de.shopme.domain.model.ShoppingItem
+import de.shopme.presentation.state.SortingPhase
+import de.shopme.ui.theme.BrandWhite
 
 sealed interface ShopEvent {
 
@@ -51,6 +52,22 @@ sealed interface ShopEvent {
         data class Delete(val listId: String) : List
 
         object UndoLastAction : List
+
+        object StartSorting : List
+
+        data class SetSortingPhase(
+            val phase: SortingPhase
+        ) : List
+
+        object FinishSorting : List
+
+        object StartDeleteAll : List
+
+        object FinishDeleteAll : List
+
+        object StartSharing : List
+
+        object FinishSharing : List
     }
 
     // -----------------------------
@@ -70,5 +87,25 @@ sealed interface ShopEvent {
 
     sealed interface System : ShopEvent {
         object CreateInvite : System
+        object OpenProfileScreen : System
+
+        object ShowSaveChoice : System
+        object HideSaveChoice : System
+
+        data class ConfirmManualSave(
+            val nickName: String,
+            val firstName: String?,
+            val lastName: String?,
+            val email: String?
+        ) : System
+
+        data class ConfirmGoogleSave(
+            val nickName: String,
+            val firstName: String?,
+            val lastName: String?,
+            val email: String?
+        ) : System
     }
+
+
 }

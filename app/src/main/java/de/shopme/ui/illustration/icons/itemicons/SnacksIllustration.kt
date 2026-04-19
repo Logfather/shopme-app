@@ -30,7 +30,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.shopme.R
-import de.shopme.ui.theme.ShopMeTheme
+import de.shopme.ui.theme.BrandBlack
+import de.shopme.ui.theme.BrandWhite
 
 @Composable
 fun SnacksIllustration(
@@ -105,7 +106,7 @@ private fun SodaCup(modifier: Modifier = Modifier) {
             moveTo(w * 0.5f, h * 0.15f)
             lineTo(w * 0.7f, h * (-0.15f))
         }
-        drawPath(strawPath, Color.White, style = Stroke(width = 18f))
+        drawPath(strawPath, BrandWhite, style = Stroke(width = 18f))
         // Straw stripes
         val stripeColor = Color(0xFFE53935)
         for (i in 0..4) {
@@ -128,7 +129,7 @@ private fun SodaCup(modifier: Modifier = Modifier) {
 
         // Lid
         drawRoundRect(
-            color = Color.White,
+            color = BrandWhite,
             topLeft = Offset(w * 0.2f, h * 0.2f),
             size = Size(w * 0.6f, h * 0.08f),
             cornerRadius = CornerRadius(12f, 12f)
@@ -169,7 +170,7 @@ private fun ChipsBag(modifier: Modifier = Modifier) {
             for (j in 0..1) {
                 if ((i + j) % 2 == 0) {
                     drawRect(
-                        color = Color.White.copy(alpha = 0.3f),
+                        color = BrandWhite.copy(alpha = 0.3f),
                         topLeft = Offset(w * (0.18f + i * 0.08f), h * (0.24f + j * 0.04f)),
                         size = Size(w * 0.08f, h * 0.04f)
                     )
@@ -224,7 +225,7 @@ private fun PopcornBox(modifier: Modifier = Modifier) {
             lineTo(w * 0.3f, h * 0.95f)
             close()
         }
-        drawPath(boxPath, Color.White)
+        drawPath(boxPath, BrandWhite)
         
         // Stripes
         for (i in 0..4) {
@@ -312,7 +313,7 @@ private fun Candies(modifier: Modifier = Modifier) {
                 center = Offset(x, y)
             )
             drawCircle(
-                color = Color.Black.copy(alpha = 0.2f),
+                color = BrandBlack.copy(alpha = 0.2f),
                 radius = 12f,
                 center = Offset(x, y),
                 style = Stroke(width = 2f)
@@ -327,13 +328,13 @@ private fun drawCuteFace(drawScope: DrawScope, center: Offset, width: Float) {
         val eyeOffset = width * 0.28f
         
         // Eyes
-        drawCircle(Color.White, radius = eyeSize / 2, center = Offset(center.x - eyeOffset, center.y - 12f))
-        drawCircle(Color.Black, radius = eyeSize / 5, center = Offset(center.x - eyeOffset + 4f, center.y - 10f))
-        drawCircle(Color.Black, radius = eyeSize / 2, center = Offset(center.x - eyeOffset, center.y - 12f), style = Stroke(width = 2f))
+        drawCircle(BrandWhite, radius = eyeSize / 2, center = Offset(center.x - eyeOffset, center.y - 12f))
+        drawCircle(BrandBlack, radius = eyeSize / 5, center = Offset(center.x - eyeOffset + 4f, center.y - 10f))
+        drawCircle(BrandBlack, radius = eyeSize / 2, center = Offset(center.x - eyeOffset, center.y - 12f), style = Stroke(width = 2f))
         
-        drawCircle(Color.White, radius = eyeSize / 2, center = Offset(center.x + eyeOffset, center.y - 12f))
-        drawCircle(Color.Black, radius = eyeSize / 5, center = Offset(center.x + eyeOffset - 4f, center.y - 10f))
-        drawCircle(Color.Black, radius = eyeSize / 2, center = Offset(center.x + eyeOffset, center.y - 12f), style = Stroke(width = 2f))
+        drawCircle(BrandWhite, radius = eyeSize / 2, center = Offset(center.x + eyeOffset, center.y - 12f))
+        drawCircle(BrandBlack, radius = eyeSize / 5, center = Offset(center.x + eyeOffset - 4f, center.y - 10f))
+        drawCircle(BrandBlack, radius = eyeSize / 2, center = Offset(center.x + eyeOffset, center.y - 12f), style = Stroke(width = 2f))
 
         // Mouth (Happy wide smile)
         val mouthRect = Rect(center.x - width * 0.25f, center.y + 5f, center.x + width * 0.25f, center.y + width * 0.3f)
@@ -359,15 +360,13 @@ private fun drawCuteFace(drawScope: DrawScope, center: Offset, width: Float) {
 @Preview(showBackground = true)
 @Composable
 private fun SnacksIllustrationPreview() {
-    ShopMeTheme {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            SnacksIllustration()
-        }
+    Box(
+        modifier = Modifier
+            .size(400.dp)
+            .background(BrandWhite)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        SnacksIllustration()
     }
 }
