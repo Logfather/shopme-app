@@ -97,9 +97,12 @@ class ItemActionHandler(
 
             val entity = updated.toEntity()
 
-            Log.d("DB_CHECK", "UPDATE item=${entity.id} checked=${entity.isChecked}")
+            Log.d(
+                "DB_CHECK",
+                "UPDATE item=${entity.id} checked=${entity.isChecked}"
+            )
 
-            // ✅ FIX: KEIN delete!
+            // ✅ KORREKT
             roomRepository.updateItem(entity)
 
             changeQueueDao.deletePendingUpdatesForEntity(entity.id)
@@ -170,6 +173,15 @@ class ItemActionHandler(
         val lock = getLock(item.id)
 
         lock.withLock {
+
+            val current = roomRepository.getItemById(item.id)
+
+            // 🔥 FIX: Wenn bereits gelöscht → sofort raus
+            if (current?.deletedAt != null) {
+                Log.d("ITEM_HANDLER", "deleteItem SKIP already deleted id=${item.id}")
+                return
+            }
+
             val now = System.currentTimeMillis()
 
             val updated = item.copy(
@@ -198,31 +210,53 @@ class ItemActionHandler(
         createdAt: Long,
         baseVersion: Long
     ) {
-        // 🔍 Prüfe bestehende Queue Einträge (Deduplication Vorbereitung)
-        val existing = changeQueueDao
-            .getPending(limit = 1000)
-            .firstOrNull {
-                it.entityId == entityId &&
-                        it.state != "DONE"
-            }
+
+        val existing = changeQueueDao.getLatestPendingByEntityId(entityId)
 
         if (existing != null) {
+
             Log.d(
                 "QUEUE_DEDUP",
-                "Replace existing op=${existing.operation} with op=$operation id=$entityId"
+                "Existing op=${existing.operation} → new op=$operation id=$entityId"
             )
 
-            // 🔥 Alte Operation entfernen (z. B. UPDATE → DELETE)
-            changeQueueDao.deleteById(existing.id)
+            when {
+
+                // DELETE überschreibt alles → einfach ersetzen
+                operation == "DELETE" -> {
+                    // nichts löschen → wir ersetzen einfach unten
+                }
+
+                // CREATE + UPDATE → UPDATE ignorieren
+                existing.operation == "CREATE" && operation == "UPDATE" -> {
+                    Log.d("QUEUE_DEDUP", "Skip UPDATE because CREATE exists id=$entityId")
+                    return
+                }
+
+                // UPDATE ersetzt UPDATE → ok (wird durch REPLACE gemacht)
+                existing.operation == "UPDATE" && operation == "UPDATE" -> {
+                    // nichts tun → REPLACE übernimmt
+                }
+
+                // CREATE + DELETE → no-op → komplett skippen
+                existing.operation == "CREATE" && operation == "DELETE" -> {
+                    Log.d("QUEUE_DEDUP", "CREATE+DELETE → skip id=$entityId")
+                    return
+                }
+
+                else -> {
+                    // default → REPLACE
+                }
+            }
         }
 
         val entity = ChangeQueueEntity(
-            id = java.util.UUID.randomUUID().toString(),
+            id = entityId, // 🔥 WICHTIG: stabile ID!
             entityId = entityId,
             listId = listId,
             entityType = "item",
             operation = operation,
-            payload = null, // 👈 WICHTIG (oder "" je nach Typ!)
+            payload = null,
             state = "PENDING",
             createdAt = createdAt,
             baseVersion = baseVersion
@@ -230,9 +264,9 @@ class ItemActionHandler(
 
         Log.d(
             "QUEUE_ENQUEUE",
-            "ADD op=$operation id=$entityId base=$baseVersion"
+            "UPSERT op=$operation id=$entityId base=$baseVersion"
         )
 
-        changeQueueDao.insert(entity)
+        changeQueueDao.insert(entity) // REPLACE passiert hier automatisch
     }
 }

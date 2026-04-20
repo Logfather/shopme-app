@@ -277,13 +277,6 @@ class MainActivity : ComponentActivity() {
 
             shoppingViewModel = vm
 
-            DisposableEffect(Unit) {
-                vm.startAuthListener()
-
-                onDispose {
-                    vm.stopAuthListener()
-                }
-            }
 
             Log.d("VM_CHECK", "Activity VM = $shoppingViewModel")
 

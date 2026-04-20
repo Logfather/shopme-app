@@ -143,12 +143,6 @@ class RoomShoppingRepository(
 
         itemDao.upsert(item)
 
-        enqueueChange(
-            entityId = item.id,
-            listId = item.listId,
-            operation = "CREATE",
-            baseVersion = 0L   // ✅ korrekt: existiert remote noch nicht
-        )
     }
 
     suspend fun updateItem(item: ShoppingItemEntity) {
@@ -161,13 +155,6 @@ class RoomShoppingRepository(
             checked = item.isChecked,
             deletedAt = item.deletedAt,
             updatedAt = item.updatedAt
-        )
-
-        enqueueChange(
-            entityId = item.id,
-            listId = item.listId,
-            operation = "UPDATE",
-            baseVersion = current?.updatedAt ?: 0L
         )
     }
 
@@ -186,73 +173,66 @@ class RoomShoppingRepository(
         )
 
         itemDao.upsert(deleted)
-
-        enqueueChange(
-            entityId = item.id,
-            listId = item.listId,
-            operation = "DELETE",
-            baseVersion = current?.updatedAt ?: 0L
-        )
     }
 
     // ============================================================
     // CHANGE QUEUE
     // ============================================================
-
-    private suspend fun enqueueChange(
-        entityId: String,
-        listId: String,
-        operation: String,
-        baseVersion: Long
-    ) {
-
-        val existing = changeQueueDao.getActiveByEntityId(entityId)
-
-        Log.d("QUEUE_MERGE", "existing=${existing.map { it.operation }} id=$entityId")
-
-        val mergedOperation = when {
-            existing.any { it.operation == "CREATE" } && operation == "UPDATE" -> {
-                "CREATE" // CREATE bleibt dominant
-            }
-
-            existing.any { it.operation == "CREATE" } && operation == "DELETE" -> {
-                // CREATE + DELETE → komplett entfernen
-                changeQueueDao.deletePendingUpdatesForEntity(entityId)
-                Log.d("QUEUE_MERGE", "DROP CREATE+DELETE id=$entityId")
-                return
-            }
-
-            existing.any { it.operation == "UPDATE" } && operation == "UPDATE" -> {
-                "UPDATE" // nur ein UPDATE behalten
-            }
-
-            existing.any { it.operation == "UPDATE" } && operation == "DELETE" -> {
-                "DELETE" // DELETE gewinnt
-            }
-
-            else -> operation
-        }
-
-        // 🔥 alte Einträge entfernen (dedupe)
-        changeQueueDao.deletePendingUpdatesForEntity(entityId)
-
-        val newChange = ChangeQueueEntity(
-            id = UUID.randomUUID().toString(),
-            entityType = "item",
-            entityId = entityId,
-            listId = listId,
-            operation = mergedOperation,
-            payload = null,
-            createdAt = System.currentTimeMillis(),
-            state = "PENDING",
-            progress = 0f,
-            baseVersion = baseVersion
-        )
-
-        Log.d("QUEUE_MERGE", "ENQUEUE $mergedOperation id=$entityId")
-
-        changeQueueDao.insert(newChange)
-    }
+// TODO --> Entfernen
+//    private suspend fun enqueueChange(
+//        entityId: String,
+//        listId: String,
+//        operation: String,
+//        baseVersion: Long
+//    ) {
+//
+//        val existing = changeQueueDao.getActiveByEntityId(entityId)
+//
+//        Log.d("QUEUE_MERGE", "existing=${existing.map { it.operation }} id=$entityId")
+//
+//        val mergedOperation = when {
+//            existing.any { it.operation == "CREATE" } && operation == "UPDATE" -> {
+//                "CREATE" // CREATE bleibt dominant
+//            }
+//
+//            existing.any { it.operation == "CREATE" } && operation == "DELETE" -> {
+//                // CREATE + DELETE → komplett entfernen
+//                changeQueueDao.deletePendingUpdatesForEntity(entityId)
+//                Log.d("QUEUE_MERGE", "DROP CREATE+DELETE id=$entityId")
+//                return
+//            }
+//
+//            existing.any { it.operation == "UPDATE" } && operation == "UPDATE" -> {
+//                "UPDATE" // nur ein UPDATE behalten
+//            }
+//
+//            existing.any { it.operation == "UPDATE" } && operation == "DELETE" -> {
+//                "DELETE" // DELETE gewinnt
+//            }
+//
+//            else -> operation
+//        }
+//
+//        // 🔥 alte Einträge entfernen (dedupe)
+//        changeQueueDao.deletePendingUpdatesForEntity(entityId)
+//
+//        val newChange = ChangeQueueEntity(
+//            id = UUID.randomUUID().toString(),
+//            entityType = "item",
+//            entityId = entityId,
+//            listId = listId,
+//            operation = mergedOperation,
+//            payload = null,
+//            createdAt = System.currentTimeMillis(),
+//            state = "PENDING",
+//            progress = 0f,
+//            baseVersion = baseVersion
+//        )
+//
+//        Log.d("QUEUE_MERGE", "ENQUEUE $mergedOperation id=$entityId")
+//
+//        changeQueueDao.insert(newChange)
+//    }
 
     fun observeItemsWithSyncStatus(
         listId: String

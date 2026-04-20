@@ -16,6 +16,11 @@ class ShoppingEffectHandler(
 
     fun handle(effect: UIEffect) {
 
+        Log.d(
+            "EFFECT_HANDLER",
+            "HANDLER instance=${this.hashCode()} effect=$effect"
+        )
+
         when (effect) {
 
             is UIEffect.AddItem -> {

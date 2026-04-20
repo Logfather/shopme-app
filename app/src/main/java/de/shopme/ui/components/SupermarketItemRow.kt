@@ -35,7 +35,7 @@ fun SupermarketItemRow(
     onUpdate: (String) -> Unit
 ){
 
-    var isEditing by remember(item.id) {
+    var isEditing by remember(item.id, item.isChecked) {
         mutableStateOf(!item.isChecked)
     }
 

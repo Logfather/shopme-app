@@ -33,10 +33,17 @@ else
   git add $FILES
 fi
 
-# 4. Diff anzeigen zur Kontrolle
+# 4. Änderungen kompakt anzeigen
 echo ""
-echo "🔍 Änderungen (Diff):"
-git diff --cached
+echo "📊 Zusammenfassung der Änderungen:"
+git diff --cached --stat
+
+echo ""
+read -p "👉 Vollständigen Diff anzeigen? (y/n): " SHOW_DIFF
+
+if [ "$SHOW_DIFF" = "y" ]; then
+  git diff --cached | less
+fi
 
 echo ""
 read -p "👉 Sind diese Änderungen korrekt? (y/n): " CONFIRM_DIFF

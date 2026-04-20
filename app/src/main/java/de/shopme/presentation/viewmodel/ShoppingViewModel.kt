@@ -38,6 +38,7 @@ import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.reducer.reduce
 import de.shopme.presentation.state.*
 import de.shopme.presentation.undo.UndoAction
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -89,6 +90,8 @@ class ShoppingViewModel(
         scope = viewModelScope,
         itemActionHandler = itemActionHandler
     )
+
+    private var effectsJob: Job? = null
 
     // ============================================================
     // 🔥 UI FLAGS & DIALOG STATE
@@ -358,15 +361,8 @@ class ShoppingViewModel(
                 }
             }
 
-            val userId = authProvider.getCurrentUserUidOrNull()
-
-            if (userId != null) {
-                dispatch(
-                    ShoppingAction.LoadUserProfile(userId)
-                )
-            } else {
-                Log.w("BOOT", "User not ready yet → skip profile load")
-            }
+            // 🔥 Entfernt: Profile Load läuft ausschließlich über Auth Flow
+            Log.d("BOOT", "Skip LoadUserProfile → handled by Auth observer")
         }
     }
 
@@ -399,17 +395,38 @@ class ShoppingViewModel(
     }
 
     private fun observeEffects() {
-        Log.d("EFFECT_OBSERVER", "STARTED")
+        Log.d("EFFECT_OBSERVER", "START COLLECTOR vm=${this.hashCode()}")
 
         viewModelScope.launch {
             effects.collect { effect ->
-                Log.d("EFFECT_DEBUG", "COLLECT $effect")
+                Log.d(
+                    "EFFECT_DEBUG",
+                    "COLLECT vm=${this@ShoppingViewModel.hashCode()} effect=$effect"
+                )
                 handleEffect(effect)
             }
         }
     }
+
+
 //  Code zum späteren ändern
 // TODO REMOVE AFTER REFACTOR
+//    private fun observeEffects() {
+//
+//        if (effectsJob != null) {
+//            Log.d("EFFECT_OBSERVER", "ALREADY RUNNING")
+//            return
+//        }
+//
+//        Log.d("EFFECT_OBSERVER", "STARTED")
+//
+//        effectsJob = viewModelScope.launch {
+//            effects.collect { effect ->
+//                Log.d("EFFECT_DEBUG", "COLLECT $effect")
+//                handleEffect(effect)
+//            }
+//        }
+//    }
 // Original logic moved to ShoppingEffectHandler
 //    private fun handleEffect(effect: UIEffect) {
 //
@@ -484,8 +501,19 @@ class ShoppingViewModel(
 //    }
 
     private fun handleEffect(effect: UIEffect) {
+        Log.d(
+            "EFFECT_HANDLER",
+            "HANDLE vm=${this.hashCode()} effect=$effect"
+        )
         effectHandler.handle(effect)
     }
+
+
+//  Code zum späteren ändern
+// TODO REMOVE AFTER REFACTOR
+//    private fun handleEffect(effect: UIEffect) {
+//        effectHandler.handle(effect)
+//    }
 
 // ============================================================
 // 🔥 SYNC CONTROL (Teil von Lifecycle)
@@ -1304,36 +1332,36 @@ class ShoppingViewModel(
 // ------------------------------------------------------------
 // 🔥 Firebase Auth Listener
 // ------------------------------------------------------------
-
-    fun startAuthListener() {
-
-        if (authListener != null) return
-
-        authListener = FirebaseAuth.AuthStateListener { auth ->
-
-            val user = auth.currentUser
-
-            val isGoogle = user
-                ?.providerData
-                ?.any { it.providerId == "google.com" } == true
-
-
-            val uid = user?.uid ?: return@AuthStateListener
-
-            startUserProfileListener(uid)
-
-            dispatch(
-                ShoppingAction.LoadUserProfile(uid)
-            )
-        }
-    }
-
-    fun stopAuthListener() {
-        authListener?.let {
-            FirebaseAuth.getInstance().removeAuthStateListener(it)
-        }
-        authListener = null
-    }
+// TODO REMOVE (Auth handled via AuthProvider.observeAuthState)
+//    fun startAuthListener() {
+//
+//        if (authListener != null) return
+//
+//        authListener = FirebaseAuth.AuthStateListener { auth ->
+//
+//            val user = auth.currentUser
+//
+//            val isGoogle = user
+//                ?.providerData
+//                ?.any { it.providerId == "google.com" } == true
+//
+//
+//            val uid = user?.uid ?: return@AuthStateListener
+//
+//            startUserProfileListener(uid)
+//
+//            dispatch(
+//                ShoppingAction.LoadUserProfile(uid)
+//            )
+//        }
+//    }
+//
+//    fun stopAuthListener() {
+//        authListener?.let {
+//            FirebaseAuth.getInstance().removeAuthStateListener(it)
+//        }
+//        authListener = null
+//    }
 
 // ============================================================
 // 🔥 USER PROFILE LISTENER (Realtime Firestore)

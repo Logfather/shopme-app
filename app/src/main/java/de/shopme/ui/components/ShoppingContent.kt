@@ -221,13 +221,15 @@ fun ShoppingContent(
                             if (!dismissState.value) {
 
                                 val swipeState = rememberSwipeToDismissBoxState(
-                                    confirmValueChange = { value ->
-                                        if (value == SwipeToDismissBoxValue.EndToStart) {
-                                            vm.onEvent(ShopEvent.Item.Delete(item)) // ✅
+                                    confirmValueChange = { dismissValue ->
+
+                                        if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                            vm.onEvent(ShopEvent.Item.Delete(item))
                                             lastDeletedItem = item
-                                            dismissState.value = true
                                             true
-                                        } else false
+                                        } else {
+                                            false
+                                        }
                                     }
                                 )
 
@@ -246,8 +248,10 @@ fun ShoppingContent(
                                         },
 
                                         onDelete = {
-                                            vm.onEvent(ShopEvent.Item.Delete(item)) // ✅
-                                            lastDeletedItem = item
+                                            if (swipeState.currentValue == SwipeToDismissBoxValue.Settled) {
+                                                vm.onEvent(ShopEvent.Item.Delete(item))
+                                                lastDeletedItem = item
+                                            }
                                         },
 
                                         onRetry = { id ->

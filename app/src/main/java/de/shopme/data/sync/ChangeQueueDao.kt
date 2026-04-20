@@ -150,6 +150,15 @@ interface ChangeQueueDao {
     @Query("DELETE FROM change_queue WHERE id = :id")
     suspend fun deleteById(id: String)
 
+    @Query("""
+    SELECT * FROM change_queue 
+    WHERE entityId = :entityId 
+    AND state != 'DONE'
+    ORDER BY createdAt DESC
+    LIMIT 1
+""")
+    suspend fun getLatestPendingByEntityId(entityId: String): ChangeQueueEntity?
+
 }
 
 
