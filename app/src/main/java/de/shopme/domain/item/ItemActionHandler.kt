@@ -66,14 +66,6 @@ class ItemActionHandler(
         Log.d("ITEM_HANDLER", "addItem")
 
         roomRepository.addItem(entity)
-
-        enqueue(
-            entityId = entity.id,
-            listId = listId,
-            operation = "CREATE",
-            createdAt = now,
-            baseVersion = now
-        )
     }
 
     // ============================================================
@@ -95,7 +87,6 @@ class ItemActionHandler(
             val now = System.currentTimeMillis()
 
             if (current.isChecked == newChecked) {
-                //Log.d("ITEM_HANDLER", "Skip redundant update $itemId")
                 return
             }
 
@@ -112,14 +103,6 @@ class ItemActionHandler(
 
             changeQueueDao.deletePendingUpdatesForEntity(entity.id)
 
-            enqueue(
-                entityId = entity.id,
-                listId = entity.listId,
-                operation = "UPDATE",
-                createdAt = now,
-                baseVersion = current.updatedAt
-            )
-
         }
     }
 
@@ -134,21 +117,23 @@ class ItemActionHandler(
         val lock = getLock(item.id)
 
         lock.withLock {
+
             val now = System.currentTimeMillis()
+
             Log.d("ITEM_HANDLER", "updateItem")
 
+            // 🔥 WICHTIG: NICHT current verwenden!
             val updated = item.copy(
                 name = newName,
                 updatedAt = now
             )
-            if (item.updatedAt >= updated.updatedAt) {
-                //Log.d("ITEM_HANDLER", "Skip redundant update ${item.id}")
-                return
-            }
 
             val entity = updated.toEntity()
 
-            Log.d("DB_CHECK", "UPDATE item=${entity.id} checked=${entity.isChecked}") // 👈 HIER
+            Log.d(
+                "DB_CHECK",
+                "UPDATE item=${entity.id} checked=${entity.isChecked}"
+            )
 
             roomRepository.updateItem(entity)
 
@@ -182,26 +167,18 @@ class ItemActionHandler(
 
             val entity = updated.toEntity()
 
-            Log.d("DB_CHECK", "UPDATE item=${entity.id} checked=${entity.isChecked}") // 👈 HIER
-
-            //Log.d("ITEM_HANDLER", "deleteItem id=${entity.id}")
-            Log.d("ITEM_HANDLER", "deleteItem")
-
-            roomRepository.updateItem(entity)
-
-            changeQueueDao.deletePendingUpdatesForEntity(entity.id)
-
-            enqueue(
-                entityId = entity.id,
-                listId = entity.listId,
-                operation = "DELETE",
-                createdAt = now,
-                baseVersion = item.updatedAt
+            Log.d(
+                "DB_CHECK",
+                "DELETE item=${entity.id} checked=${entity.isChecked} deletedAt=${entity.deletedAt}"
             )
 
+            Log.d("ITEM_HANDLER", "deleteItem")
+
+            roomRepository.deleteItem(entity)
+
+            changeQueueDao.deletePendingUpdatesForEntity(entity.id)
         }
     }
-
     private suspend fun enqueue(
         entityId: String,
         listId: String,
@@ -209,18 +186,41 @@ class ItemActionHandler(
         createdAt: Long,
         baseVersion: Long
     ) {
-        changeQueueDao.insert(
-            ChangeQueueEntity(
-                id = entityId, // 🔥 KEY CHANGE
-                entityType = "item",
-                entityId = entityId,
-                listId = listId,
-                operation = operation,
-                payload = null,
-                createdAt = createdAt,
-                state = "PENDING",
-                baseVersion = baseVersion
+        // 🔍 Prüfe bestehende Queue Einträge (Deduplication Vorbereitung)
+        val existing = changeQueueDao
+            .getPending(limit = 1000)
+            .firstOrNull {
+                it.entityId == entityId &&
+                        it.state != "DONE"
+            }
+
+        if (existing != null) {
+            Log.d(
+                "QUEUE_DEDUP",
+                "Replace existing op=${existing.operation} with op=$operation id=$entityId"
             )
+
+            // 🔥 Alte Operation entfernen (z. B. UPDATE → DELETE)
+            changeQueueDao.deleteById(existing.id)
+        }
+
+        val entity = ChangeQueueEntity(
+            id = java.util.UUID.randomUUID().toString(),
+            entityId = entityId,
+            listId = listId,
+            entityType = "item",
+            operation = operation,
+            payload = null, // 👈 WICHTIG (oder "" je nach Typ!)
+            state = "PENDING",
+            createdAt = createdAt,
+            baseVersion = baseVersion
         )
+
+        Log.d(
+            "QUEUE_ENQUEUE",
+            "ADD op=$operation id=$entityId base=$baseVersion"
+        )
+
+        changeQueueDao.insert(entity)
     }
 }

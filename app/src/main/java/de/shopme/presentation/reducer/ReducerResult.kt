@@ -69,7 +69,6 @@ fun reduce(
 
                 val updatedItem = it.item.copy(
                     name = it.newName,
-                    isChecked = true,
                     updatedAt = System.currentTimeMillis()
                 )
 
@@ -81,8 +80,27 @@ fun reduce(
                     UIEffect.ShowUndo("Item geändert (Update)")
                 )
 
-                state // ✅ das ist der Return für den when-Block
+                state
             }
+
+//            is ShopEvent.Item.Update -> {
+//
+//                val updatedItem = it.item.copy(
+//                    name = it.newName,
+//                    isChecked = true,
+//                    updatedAt = System.currentTimeMillis()
+//                )
+//
+//                effects = listOf(
+//                    UIEffect.UpdateItem(
+//                        item = updatedItem,
+//                        newName = it.newName
+//                    ),
+//                    UIEffect.ShowUndo("Item geändert (Update)")
+//                )
+//
+//                state // ✅ das ist der Return für den when-Block
+//            }
 
             is ShopEvent.List.DeleteAllLists -> {
                 effects = listOf(UIEffect.DeleteAllLists)

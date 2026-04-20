@@ -78,5 +78,20 @@ interface ItemDao {
         updatedAt: Long
     )
 
-
+    @Query("""
+    UPDATE items 
+    SET 
+        name = :name,
+        isChecked = :checked,
+        deletedAt = :deletedAt,
+        updatedAt = :updatedAt
+    WHERE id = :id
+""")
+    suspend fun updateFullItem(
+        id: String,
+        name: String,
+        checked: Boolean,
+        deletedAt: Long?,
+        updatedAt: Long
+    )
 }

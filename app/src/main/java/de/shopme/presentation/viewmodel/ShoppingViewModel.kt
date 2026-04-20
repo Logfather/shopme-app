@@ -32,6 +32,7 @@ import de.shopme.domain.service.SpeechItemParser
 import de.shopme.domain.usecase.CreateListUseCase
 import de.shopme.domain.usecase.DeleteListUseCase
 import de.shopme.presentation.action.ShoppingAction
+import de.shopme.presentation.effect.ShoppingEffectHandler
 import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.reducer.reduce
@@ -80,6 +81,13 @@ class ShoppingViewModel(
     private val inviteFlowHandler = InviteFlowHandler(
         firestoreDataSource,
         roomRepository
+    )
+
+    private val effectHandler = ShoppingEffectHandler(
+        authProvider = authProvider,
+        viewModel = this,
+        scope = viewModelScope,
+        itemActionHandler = itemActionHandler
     )
 
     // ============================================================
@@ -400,77 +408,83 @@ class ShoppingViewModel(
             }
         }
     }
+//  Code zum späteren ändern
+// TODO REMOVE AFTER REFACTOR
+// Original logic moved to ShoppingEffectHandler
+//    private fun handleEffect(effect: UIEffect) {
+//
+//        when (effect) {
+//
+//            is UIEffect.AddItem -> {
+//                Log.d("EFFECT_DEBUG", "AddItem effect: ${effect.name}")
+//
+//                viewModelScope.launch {
+//                    val listId = currentListId.value ?: return@launch
+//                    itemActionHandler.addItem(effect.name, listId)
+//                }
+//            }
+//
+//            is UIEffect.UpdateItem -> {
+//                viewModelScope.launch {
+//                    itemActionHandler.updateItem(effect.item, effect.newName)
+//                }
+//            }
+//
+//            is UIEffect.DeleteItem -> {
+//                viewModelScope.launch {
+//                    itemActionHandler.deleteItem(effect.item)
+//                }
+//            }
+//
+//            is UIEffect.ToggleItem -> {
+//                viewModelScope.launch {
+//                    itemActionHandler.updateItemChecked(
+//                        itemId = effect.itemId,
+//                        newChecked = effect.newChecked
+//                    )
+//                }
+//            }
+//
+//            is UIEffect.LoadUserProfile -> {
+//                viewModelScope.launch {
+//                    performLoadUserProfile(effect)
+//                }
+//            }
+//
+//            is UIEffect.UpdateUserProfile -> {
+//                viewModelScope.launch {
+//                    performUpdateUserProfile(effect)
+//                }
+//            }
+//
+//            is UIEffect.DeleteAccount -> {
+//                viewModelScope.launch {
+//
+//                    val userId = authViewModel.authUser.value?.uid ?: return@launch
+//
+//                    performDeleteAccountFlow(
+//                        userId = userId,
+//                        getIdToken = {
+//                            null
+//                        }
+//                    )
+//                }
+//            }
+//
+//            is UIEffect.UnlinkGoogle -> {
+//                viewModelScope.launch {
+//                    performUnlinkGoogle()
+//                }
+//            }
+//
+//            else -> {
+//                Log.w("UI_EFFECT", "Unhandled effect: $effect")
+//            }
+//        }
+//    }
 
     private fun handleEffect(effect: UIEffect) {
-
-        when (effect) {
-
-            is UIEffect.AddItem -> {
-                Log.d("EFFECT_DEBUG", "AddItem effect: ${effect.name}")
-
-                viewModelScope.launch {
-                    val listId = currentListId.value ?: return@launch
-                    itemActionHandler.addItem(effect.name, listId)
-                }
-            }
-
-            is UIEffect.UpdateItem -> {
-                viewModelScope.launch {
-                    itemActionHandler.updateItem(effect.item, effect.newName)
-                }
-            }
-
-            is UIEffect.DeleteItem -> {
-                viewModelScope.launch {
-                    itemActionHandler.deleteItem(effect.item)
-                }
-            }
-
-            is UIEffect.ToggleItem -> {
-                viewModelScope.launch {
-                    itemActionHandler.updateItemChecked(
-                        itemId = effect.itemId,
-                        newChecked = effect.newChecked
-                    )
-                }
-            }
-
-            is UIEffect.LoadUserProfile -> {
-                viewModelScope.launch {
-                    performLoadUserProfile(effect)
-                }
-            }
-
-            is UIEffect.UpdateUserProfile -> {
-                viewModelScope.launch {
-                    performUpdateUserProfile(effect)
-                }
-            }
-
-            is UIEffect.DeleteAccount -> {
-                viewModelScope.launch {
-
-                    val userId = authViewModel.authUser.value?.uid ?: return@launch
-
-                    performDeleteAccountFlow(
-                        userId = userId,
-                        getIdToken = {
-                            null
-                        }
-                    )
-                }
-            }
-
-            is UIEffect.UnlinkGoogle -> {
-                viewModelScope.launch {
-                    performUnlinkGoogle()
-                }
-            }
-
-            else -> {
-                Log.w("UI_EFFECT", "Unhandled effect: $effect")
-            }
-        }
+        effectHandler.handle(effect)
     }
 
 // ============================================================

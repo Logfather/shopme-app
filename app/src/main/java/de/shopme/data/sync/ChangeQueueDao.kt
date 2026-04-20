@@ -147,6 +147,9 @@ interface ChangeQueueDao {
     @Query("UPDATE items SET isChecked = :checked, updatedAt = :timestamp WHERE id = :itemId")
     suspend fun updateChecked(itemId: String, checked: Boolean, timestamp: Long)
 
+    @Query("DELETE FROM change_queue WHERE id = :id")
+    suspend fun deleteById(id: String)
+
 }
 
 
