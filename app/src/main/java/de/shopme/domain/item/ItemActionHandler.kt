@@ -122,6 +122,7 @@ class ItemActionHandler(
 
             val updated = item.copy(
                 name = newName,
+                isChecked = true, // 🔥 FIX: Zustand aus Reducer erzwingen
                 updatedAt = now
             )
 
@@ -132,8 +133,17 @@ class ItemActionHandler(
                 "UPDATE item=${entity.id} checked=${entity.isChecked}"
             )
 
-            // 🔥 NUR Repository aufrufen
             roomRepository.updateItem(entity)
+
+            changeQueueDao.deletePendingUpdatesForEntity(entity.id)
+
+            enqueue(
+                entityId = entity.id,
+                listId = entity.listId,
+                operation = "UPDATE",
+                createdAt = now,
+                baseVersion = item.updatedAt
+            )
         }
     }
 
