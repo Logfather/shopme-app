@@ -105,7 +105,7 @@ class ItemActionHandler(
             // ✅ KORREKT
             roomRepository.updateItem(entity)
 
-            changeQueueDao.deletePendingUpdatesForEntity(entity.id)
+            //changeQueueDao.deletePendingUpdatesForEntity(entity.id)
 
             enqueue(
                 entityId = entity.id,
@@ -152,7 +152,7 @@ class ItemActionHandler(
 
             roomRepository.updateItem(entity)
 
-            changeQueueDao.deletePendingUpdatesForEntity(entity.id)
+            //changeQueueDao.deletePendingUpdatesForEntity(entity.id)
 
             enqueue(
                 entityId = entity.id,
@@ -200,7 +200,7 @@ class ItemActionHandler(
 
             roomRepository.deleteItem(entity)
 
-            changeQueueDao.deletePendingUpdatesForEntity(entity.id)
+            //changeQueueDao.deletePendingUpdatesForEntity(entity.id)
         }
     }
     private suspend fun enqueue(
@@ -217,44 +217,63 @@ class ItemActionHandler(
 
             Log.d(
                 "QUEUE_DEDUP",
-                "Existing op=${existing.operation} → new op=$operation id=$entityId"
+                "existing=${existing.operation} new=$operation id=$entityId"
             )
 
             when {
 
-                // DELETE überschreibt alles → einfach ersetzen
-                operation == "DELETE" -> {
-                    // nichts löschen → wir ersetzen einfach unten
-                }
-
-                // CREATE + UPDATE → UPDATE ignorieren
+                // --------------------------------------------------
+                // CREATE + UPDATE → KEEP CREATE
+                // --------------------------------------------------
                 existing.operation == "CREATE" && operation == "UPDATE" -> {
-                    Log.d("QUEUE_DEDUP", "Skip UPDATE because CREATE exists id=$entityId")
+                    Log.d("QUEUE_DEDUP", "KEEP CREATE, skip UPDATE id=$entityId")
                     return
                 }
 
-                // UPDATE ersetzt UPDATE → ok (wird durch REPLACE gemacht)
-                existing.operation == "UPDATE" && operation == "UPDATE" -> {
-                    // nichts tun → REPLACE übernimmt
-                }
-
-                // CREATE + DELETE → no-op → komplett skippen
+                // --------------------------------------------------
+                // CREATE + DELETE → REMOVE BOTH (no-op)
+                // --------------------------------------------------
                 existing.operation == "CREATE" && operation == "DELETE" -> {
-                    Log.d("QUEUE_DEDUP", "CREATE+DELETE → skip id=$entityId")
+                    Log.d("QUEUE_DEDUP", "DROP CREATE+DELETE id=$entityId")
+                    changeQueueDao.deleteById(existing.id)
                     return
                 }
 
+                // --------------------------------------------------
+                // UPDATE + UPDATE → REPLACE
+                // --------------------------------------------------
+                existing.operation == "UPDATE" && operation == "UPDATE" -> {
+                    changeQueueDao.deleteById(existing.id)
+                }
+
+                // --------------------------------------------------
+                // UPDATE + DELETE → DELETE gewinnt
+                // --------------------------------------------------
+                existing.operation == "UPDATE" && operation == "DELETE" -> {
+                    changeQueueDao.deleteById(existing.id)
+                }
+
+                // --------------------------------------------------
+                // DELETE + UPDATE → UPDATE (Undo Verhalten)
+                // --------------------------------------------------
+                existing.operation == "DELETE" && operation == "UPDATE" -> {
+                    changeQueueDao.deleteById(existing.id)
+                }
+
+                // --------------------------------------------------
+                // Default: ersetzen
+                // --------------------------------------------------
                 else -> {
-                    // default → REPLACE
+                    changeQueueDao.deleteById(existing.id)
                 }
             }
         }
 
         val entity = ChangeQueueEntity(
-            id = entityId, // 🔥 WICHTIG: stabile ID!
+            id = java.util.UUID.randomUUID().toString(),
+            entityType = "item",
             entityId = entityId,
             listId = listId,
-            entityType = "item",
             operation = operation,
             payload = null,
             state = "PENDING",
@@ -264,9 +283,9 @@ class ItemActionHandler(
 
         Log.d(
             "QUEUE_ENQUEUE",
-            "UPSERT op=$operation id=$entityId base=$baseVersion"
+            "ADD op=$operation id=$entityId base=$baseVersion"
         )
 
-        changeQueueDao.insert(entity) // REPLACE passiert hier automatisch
+        changeQueueDao.insert(entity)
     }
 }
