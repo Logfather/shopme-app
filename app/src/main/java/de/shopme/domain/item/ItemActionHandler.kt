@@ -97,23 +97,10 @@ class ItemActionHandler(
 
             val entity = updated.toEntity()
 
-            Log.d(
-                "DB_CHECK",
-                "UPDATE item=${entity.id} checked=${entity.isChecked}"
-            )
+            Log.d("DB_CHECK", "UPDATE item=${entity.id} checked=${entity.isChecked}")
 
-            // ✅ KORREKT
+            // 🔥 FIX: kein delete!
             roomRepository.updateItem(entity)
-
-            //changeQueueDao.deletePendingUpdatesForEntity(entity.id)
-
-            enqueue(
-                entityId = entity.id,
-                listId = entity.listId,
-                operation = "UPDATE",
-                createdAt = now,
-                baseVersion = current.updatedAt
-            )
         }
     }
 
@@ -133,13 +120,8 @@ class ItemActionHandler(
 
             Log.d("ITEM_HANDLER", "updateItem")
 
-            // 🔥 HOL DIR DEN AKTUELLEN STATE AUS DER DB
-            val current = roomRepository.getItemById(item.id)
-                ?: return
-
-            val updated = current.copy(
+            val updated = item.copy(
                 name = newName,
-                isChecked = true,   // 👈 IMMER setzen beim Edit
                 updatedAt = now
             )
 
@@ -150,17 +132,8 @@ class ItemActionHandler(
                 "UPDATE item=${entity.id} checked=${entity.isChecked}"
             )
 
+            // 🔥 NUR Repository aufrufen
             roomRepository.updateItem(entity)
-
-            //changeQueueDao.deletePendingUpdatesForEntity(entity.id)
-
-            enqueue(
-                entityId = entity.id,
-                listId = entity.listId,
-                operation = "UPDATE",
-                createdAt = now,
-                baseVersion = current.updatedAt   // 👈 wichtig: current!
-            )
         }
     }
 
@@ -173,15 +146,6 @@ class ItemActionHandler(
         val lock = getLock(item.id)
 
         lock.withLock {
-
-            val current = roomRepository.getItemById(item.id)
-
-            // 🔥 FIX: Wenn bereits gelöscht → sofort raus
-            if (current?.deletedAt != null) {
-                Log.d("ITEM_HANDLER", "deleteItem SKIP already deleted id=${item.id}")
-                return
-            }
-
             val now = System.currentTimeMillis()
 
             val updated = item.copy(
@@ -198,9 +162,8 @@ class ItemActionHandler(
 
             Log.d("ITEM_HANDLER", "deleteItem")
 
+            // 🔥 NUR Repository
             roomRepository.deleteItem(entity)
-
-            //changeQueueDao.deletePendingUpdatesForEntity(entity.id)
         }
     }
     private suspend fun enqueue(
