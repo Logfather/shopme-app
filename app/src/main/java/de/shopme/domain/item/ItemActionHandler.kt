@@ -99,10 +99,18 @@ class ItemActionHandler(
 
             Log.d("DB_CHECK", "UPDATE item=${entity.id} checked=${entity.isChecked}")
 
+            // ✅ FIX: KEIN delete!
             roomRepository.updateItem(entity)
 
             changeQueueDao.deletePendingUpdatesForEntity(entity.id)
 
+            enqueue(
+                entityId = entity.id,
+                listId = entity.listId,
+                operation = "UPDATE",
+                createdAt = now,
+                baseVersion = current.updatedAt
+            )
         }
     }
 
@@ -122,9 +130,13 @@ class ItemActionHandler(
 
             Log.d("ITEM_HANDLER", "updateItem")
 
-            // 🔥 WICHTIG: NICHT current verwenden!
-            val updated = item.copy(
+            // 🔥 HOL DIR DEN AKTUELLEN STATE AUS DER DB
+            val current = roomRepository.getItemById(item.id)
+                ?: return
+
+            val updated = current.copy(
                 name = newName,
+                isChecked = true,   // 👈 IMMER setzen beim Edit
                 updatedAt = now
             )
 
@@ -144,7 +156,7 @@ class ItemActionHandler(
                 listId = entity.listId,
                 operation = "UPDATE",
                 createdAt = now,
-                baseVersion = item.updatedAt
+                baseVersion = current.updatedAt   // 👈 wichtig: current!
             )
         }
     }
