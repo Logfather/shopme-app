@@ -20,11 +20,11 @@ exports.updateItemCount = onDocumentWritten(
       const count = snapshot.size;
 
       await admin.firestore()
-        .collection("lists")
-        .doc(listId)
-        .update({
-          itemCount: count,
-          updatedAt: Date.now(), // 👈 HINZUFÜGEN
-        });
+          .collection("lists")
+          .doc(listId)
+          .update({
+            itemCount: count,
+            updatedAt: Date.now(), // 👈 HINZUFÜGEN
+          });
     },
 );

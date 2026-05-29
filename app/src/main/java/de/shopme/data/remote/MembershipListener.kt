@@ -18,11 +18,11 @@ class MembershipListener(
     fun start(userId: String) {
 
         if (isStarted) {
-            Log.d("MEMBERSHIP", "Already started → skip")
+            //Log.d("MEMBERSHIP", "Already started → skip")
             return
         }
 
-        Log.d("MEMBERSHIP", "Start listening for user: $userId")
+        //Log.d("MEMBERSHIP", "Start listening for user: $userId")
 
         isStarted = true
 
@@ -45,18 +45,18 @@ class MembershipListener(
                     when (change.type) {
 
                         DocumentChange.Type.ADDED -> {
-                            Log.d("MEMBERSHIP", "ADDED → start sync: $listId")
+                            //Log.d("MEMBERSHIP", "ADDED → start sync: $listId")
                             syncCoordinator.startSingleListSync(listId)
                         }
 
                         DocumentChange.Type.REMOVED -> {
-                            Log.d("MEMBERSHIP", "REMOVED → stop sync: $listId")
+                            //Log.d("MEMBERSHIP", "REMOVED → stop sync: $listId")
                             syncCoordinator.stopSingleListSync(listId)
                             syncCoordinator.deleteLocalListAsync(listId)
                         }
 
                         DocumentChange.Type.MODIFIED -> {
-                            Log.d("MEMBERSHIP", "MODIFIED: $listId")
+                            //Log.d("MEMBERSHIP", "MODIFIED: $listId")
                         }
                     }
                 }
@@ -67,7 +67,7 @@ class MembershipListener(
 
         if (!isStarted) return
 
-        Log.d("MEMBERSHIP", "Stopping listener")
+        //Log.d("MEMBERSHIP", "Stopping listener")
 
         registration?.remove()
         registration = null

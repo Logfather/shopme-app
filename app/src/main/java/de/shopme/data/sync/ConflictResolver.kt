@@ -2,28 +2,58 @@ package de.shopme.data.sync
 
 import de.shopme.domain.model.ShoppingItemEntity
 
+enum class ConflictStrategy {
+    USE_LOCAL,
+    USE_REMOTE,
+    MERGE
+}
+
+data class ConflictResult(
+    val strategy: ConflictStrategy,
+    val resolvedItem: ShoppingItemEntity? = null
+)
+
 class ConflictResolver {
 
-    fun shouldApplyRemote(
-        local: ShoppingItemEntity?,
-        remote: ShoppingItemEntity
-    ): Boolean {
+    fun resolveItemConflict(
+        local: ShoppingItemEntity,
+        remote: ShoppingItemEntity,
+        baseVersion: Long
+    ): ConflictResult {
 
-        if (local == null) return true
+        // ============================================================
+        // 🔥 STRATEGIE 1: DELETE gewinnt IMMER
+        // ============================================================
 
-        return when {
+        if (remote.deletedAt != null) {
+            return ConflictResult(
+                strategy = ConflictStrategy.USE_REMOTE,
+                resolvedItem = remote
+            )
+        }
 
-            // 🔥 DELETE hat höchste Priorität
-            remote.deletedAt != null -> true
+        if (local.deletedAt != null) {
+            return ConflictResult(
+                strategy = ConflictStrategy.USE_LOCAL
+            )
+        }
 
-            local.deletedAt != null -> false
+        // ============================================================
+        // 🔥 STRATEGIE 2: NEWEST WINS (DEFAULT)
+        // ============================================================
 
-            // Version = updatedAt
-            remote.updatedAt > local.updatedAt -> true
+        return if (remote.updatedAt > local.updatedAt) {
 
-            remote.updatedAt == local.updatedAt -> false
+            ConflictResult(
+                strategy = ConflictStrategy.USE_REMOTE,
+                resolvedItem = remote
+            )
 
-            else -> false
+        } else {
+
+            ConflictResult(
+                strategy = ConflictStrategy.USE_LOCAL
+            )
         }
     }
 }

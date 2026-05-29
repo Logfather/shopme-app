@@ -2,48 +2,105 @@ package de.shopme.data.repository
 
 import android.util.Log
 import com.google.gson.Gson
-import de.shopme.data.datasource.firestore.FirestoreDataSource
+import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
 import de.shopme.data.mapper.EntityMapper.toDomain
 import de.shopme.data.sync.ChangeQueueDao
 import de.shopme.data.sync.ChangeQueueEntity
+import de.shopme.data.sync.SyncCoordinator
+import de.shopme.data.sync.SyncStateTuple
+import de.shopme.domain.life.LifeEvent
+import de.shopme.domain.life.NimelisEventBus
 import de.shopme.domain.model.ListDeleteSnapshot
 import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.model.ShoppingItemEntity
 import de.shopme.domain.model.ShoppingListEntity
+import de.shopme.domain.model.SyncOverview
 import de.shopme.domain.model.SyncStatus
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import java.util.UUID
 
 class RoomShoppingRepository(
     private val itemDao: ItemDao,
     private val listDao: ListDao,
     private val changeQueueDao: ChangeQueueDao,
-    private val firestoreDataSource: FirestoreDataSource
-){
+    private val firestoreDataSource: FirestoreGateway,
+    private var syncCoordinator: SyncCoordinator? = null,
+    private val nimelisEventBus: NimelisEventBus
+) {
 
     // ============================================================
     // LISTS
     // ============================================================
+
+    private val lastWriteAt = mutableMapOf<String, Long>()
+
+    private val lastUpdateMap = mutableMapOf<String, Long>()
+
+    fun attachSyncCoordinator(
+        syncCoordinator: SyncCoordinator
+    ) {
+        this.syncCoordinator = syncCoordinator
+
+        Log.d(
+            "NIMBLU_SYNC",
+            "SyncCoordinator attached to RoomShoppingRepository"
+        )
+    }
 
     fun observeLists(): Flow<List<ShoppingListEntity>> {
         return listDao.observeLists()
     }
 
     suspend fun upsertLists(lists: List<ShoppingListEntity>) {
-        listDao.insertLists(lists)
+        listDao.upsertLists(lists)
     }
 
     fun observeAndStoreList(listId: String): Flow<Unit> {
         return firestoreDataSource
-            .observeList(listId)
+            .observeListById(listId)
             .filterNotNull()
             .distinctUntilChanged()
             .map { entity ->
                 listDao.insert(entity)
                 Unit
             }
+    }
+
+    suspend fun softDeleteItem(
+        itemId: String
+    ) {
+
+        val current =
+            itemDao.getById(itemId)
+                ?: return
+
+        val now =
+            System.currentTimeMillis()
+
+        itemDao.updateFullItem(
+            id = current.id,
+            name = current.name,
+            quantity = current.quantity,
+            checked = current.isChecked,
+            deletedAt = now,
+            updatedAt = now
+        )
+
+        enqueue(
+            entityId = current.id,
+            listId = current.listId,
+            operation = "DELETE",
+            baseVersion = current.updatedAt
+        )
     }
 
     suspend fun getItemById(itemId: String): ShoppingItem? {
@@ -54,14 +111,11 @@ class RoomShoppingRepository(
 
         val now = System.currentTimeMillis()
 
-        // 🔥 1. LOCAL DELETE
         listDao.deleteById(listId)
         itemDao.deleteByListId(listId)
 
-        // 🔥 2. REMOTE DELETE (JETZT EINBAUEN)
         firestoreDataSource.softDeleteList(listId)
 
-        // 🔥 3. OPTIONAL: Queue behalten (später für Offline relevant)
         changeQueueDao.insert(
             ChangeQueueEntity(
                 id = UUID.randomUUID().toString(),
@@ -94,7 +148,7 @@ class RoomShoppingRepository(
                     createdAt = System.currentTimeMillis(),
                     state = "PENDING",
                     progress = 0f,
-                    baseVersion = list.updatedAt   // ✅ FIX: keine /1000
+                    baseVersion = list.updatedAt
                 )
             )
         }
@@ -117,13 +171,20 @@ class RoomShoppingRepository(
                 entityId = list.id,
                 listId = list.id,
                 operation = "CREATE",
-                payload = Gson().toJson(list),   // 🔥 WICHTIG
+                payload = Gson().toJson(list),
                 createdAt = now,
                 state = "PENDING",
                 progress = 0f,
                 baseVersion = 0L
             )
         )
+
+        Log.d(
+            "NIMBLU_SYNC",
+            "Trigger sync after CREATE LIST"
+        )
+
+        syncCoordinator?.triggerSync()
     }
 
     // ============================================================
@@ -132,29 +193,107 @@ class RoomShoppingRepository(
 
     fun observeItems(listId: String): Flow<List<ShoppingItemEntity>> {
         return itemDao.observeItemsForList(listId)
+            .map { items ->
+
+                items
+                    .groupBy { it.id }
+                    .map { (_, list) ->
+                        list
+                            .sortedWith(
+                                compareByDescending<ShoppingItemEntity> { it.updatedAt }
+                                    .thenByDescending { it.createdAt }
+                            )
+                            .first()
+                    }
+            }
             .onEach { items ->
                 items.forEach {
-                    Log.d("DB_FLOW", "EMIT item=${it.id} checked=${it.isChecked}")
+                    // optional debug
                 }
             }
     }
 
-    suspend fun addItem(item: ShoppingItemEntity) {
+    suspend fun createItem(item: ShoppingItemEntity) {
 
-        itemDao.upsert(item)
+        try {
 
+            Log.d(
+                "NIMBLU_QUEUE",
+                "createItem() entered item=${item.name}"
+            )
+
+            Log.d(
+                "NIMBLU_QUEUE",
+                "About to upsert item=${item.id}"
+            )
+
+            itemDao.upsert(item)
+
+            Log.d(
+                "NIMBLU_QUEUE",
+                "Upsert successful item=${item.id}"
+            )
+
+            Log.d(
+                "NIMBLU_QUEUE",
+                "About to enqueue item=${item.id}"
+            )
+
+            enqueue(
+                entityId = item.id,
+                listId = item.listId,
+                operation = "CREATE",
+                baseVersion = 0L
+            )
+
+            Log.d(
+                "NIMBLU_QUEUE",
+                "enqueue() finished item=${item.id}"
+            )
+
+            nimelisEventBus.emit(
+                LifeEvent.ItemAdded(
+                    itemId = item.id,
+                    listId = item.listId,
+                    itemName = item.name
+                )
+            )
+
+        } catch (e: Exception) {
+
+            Log.e(
+                "NIMBLU_QUEUE",
+                "createItem failed",
+                e
+            )
+
+            throw e
+        }
     }
 
     suspend fun updateItem(item: ShoppingItemEntity) {
 
         val current = itemDao.getById(item.id)
 
+        if (
+            current != null &&
+            current.name == item.name &&
+            current.quantity == item.quantity &&
+            current.isChecked == item.isChecked &&
+            current.deletedAt == item.deletedAt
+        ) {
+            return
+        }
+
+        val now = System.currentTimeMillis()
+
         itemDao.updateFullItem(
             id = item.id,
             name = item.name,
+            quantity = item.quantity,
             checked = item.isChecked,
             deletedAt = item.deletedAt,
-            updatedAt = item.updatedAt
+            updatedAt = now
         )
 
         enqueue(
@@ -176,11 +315,6 @@ class RoomShoppingRepository(
             updatedAt = now
         )
 
-        Log.d(
-            "DB_CHECK",
-            "DELETE item=${deleted.id} checked=${deleted.isChecked} deletedAt=${deleted.deletedAt}"
-        )
-
         itemDao.upsert(deleted)
 
         enqueue(
@@ -194,20 +328,22 @@ class RoomShoppingRepository(
     // ============================================================
     // CHANGE QUEUE
     // ============================================================
+
     fun observeItemsWithSyncStatus(
         listId: String
     ): Flow<List<Pair<ShoppingItemEntity, SyncStatus>>> {
 
         val itemsFlow = itemDao.observeItemsForList(listId)
 
-        val syncFlow = changeQueueDao.observeSyncStates()
-            .map { syncStates ->
-                syncStates
-                    .groupBy { it.entityId }
-                    .mapValues { (_, states) ->
-                        states.maxByOrNull { it.createdAt }
-                    }
-            }
+        val syncFlow: Flow<Map<String, SyncStateTuple?>> =
+            changeQueueDao.observeSyncStates()
+                .map { syncStates ->
+                    syncStates
+                        .groupBy { it.entityId }
+                        .mapValues { (_, states) ->
+                            states.maxByOrNull { it.createdAt }
+                        }
+                }
 
         return itemsFlow
             .combine(syncFlow) { items, latestStateMap ->
@@ -217,16 +353,22 @@ class RoomShoppingRepository(
                     val latest = latestStateMap[item.id]
 
                     val status = when (latest?.state) {
-                        "FAILED" -> SyncStatus.Failed()
-                        "SYNCING" -> SyncStatus.Syncing(progress = latest.progress)
+                        "FAILED" -> SyncStatus.Failed(
+                            retryCount = latest.retryCount
+                        )
+
+                        "SYNCING" -> SyncStatus.Syncing(
+                            progress = latest.progress ?: 0f
+                        )
+
                         "PENDING" -> SyncStatus.Pending
+
                         else -> SyncStatus.Synced
                     }
 
                     item to status
                 }
             }
-            // 🔥 DAS ist der echte Fix:
             .distinctUntilChangedBy { list ->
                 list.map { it.first.updatedAt to it.second }
             }
@@ -238,23 +380,57 @@ class RoomShoppingRepository(
 
     suspend fun retryChange(change: ChangeQueueEntity) {
 
+        val now =
+            System.currentTimeMillis()
+
+        val newRetry =
+            change.retryCount + 1
+
+        val retryDelayMs =
+            minOf(
+                newRetry * 5000L,
+                60000L
+            )
+
+        val nextRetryAt =
+            now + retryDelayMs
+
         changeQueueDao.updateRetry(
             id = change.id,
             state = "PENDING",
-            retryCount = change.retryCount + 1,
-            timestamp = System.currentTimeMillis()
+            retryCount = newRetry,
+            timestamp = now,
+            nextRetryAt = nextRetryAt
         )
     }
 
     suspend fun retryChangeByItemId(itemId: String) {
-        val change = changeQueueDao.getLatestChangeForItem("%$itemId%")
-            ?: return
+
+        val change =
+            changeQueueDao.getLatestChangeForItem("%$itemId%")
+                ?: return
+
+        val now =
+            System.currentTimeMillis()
+
+        val newRetry =
+            change.retryCount + 1
+
+        val retryDelayMs =
+            minOf(
+                newRetry * 5000L,
+                60000L
+            )
+
+        val nextRetryAt =
+            now + retryDelayMs
 
         changeQueueDao.updateRetry(
             id = change.id,
             state = "PENDING",
-            retryCount = change.retryCount + 1,
-            timestamp = System.currentTimeMillis()
+            retryCount = newRetry,
+            timestamp = now,
+            nextRetryAt = nextRetryAt
         )
     }
 
@@ -262,10 +438,15 @@ class RoomShoppingRepository(
         listDao.markDeleted(listId, System.currentTimeMillis())
     }
 
-    suspend fun createListDeleteSnapshot(listId: String): ListDeleteSnapshot {
+    suspend fun createListDeleteSnapshot(
+        listId: String
+    ): ListDeleteSnapshot {
 
-        val list = listDao.getListById(listId)
-            ?: throw IllegalStateException("List not found for snapshot: $listId")
+        val list =
+            listDao.getListById(listId)
+                ?: throw IllegalStateException(
+                    "List not found for snapshot: $listId"
+                )
 
         val items = itemDao.getItemsForList(listId)
 
@@ -285,7 +466,6 @@ class RoomShoppingRepository(
             now
         )
 
-        // 1. Queue
         changeQueueDao.insert(
             ChangeQueueEntity(
                 id = UUID.randomUUID().toString(),
@@ -297,11 +477,10 @@ class RoomShoppingRepository(
                 createdAt = now,
                 state = "PENDING",
                 progress = 0f,
-                baseVersion = 0L   // ✅ FIX: neue Creation → kein Remote-Vergleich
+                baseVersion = 0L
             )
         )
 
-        // 2. List
         listDao.upsert(
             snapshot.list.copy(
                 deletedAt = null,
@@ -309,7 +488,6 @@ class RoomShoppingRepository(
             )
         )
 
-        // 3. Items
         itemDao.insertAll(
             snapshot.items.map {
                 it.copy(
@@ -320,11 +498,13 @@ class RoomShoppingRepository(
         )
     }
 
-    suspend fun addMembership(listId: String, userId: String) {
+    suspend fun addMembership(
+        listId: String,
+        userId: String
+    ) {
 
         val now = System.currentTimeMillis()
 
-        // 🔥 Queue Event (v6)
         changeQueueDao.insert(
             ChangeQueueEntity(
                 id = UUID.randomUUID().toString(),
@@ -339,6 +519,8 @@ class RoomShoppingRepository(
                 baseVersion = 0L
             )
         )
+
+        syncCoordinator?.triggerSync()
     }
 
     suspend fun consumeInvite(inviteId: String) {
@@ -359,6 +541,8 @@ class RoomShoppingRepository(
                 baseVersion = 0L
             )
         )
+
+        syncCoordinator?.triggerSync()
     }
 
     private suspend fun enqueue(
@@ -367,38 +551,86 @@ class RoomShoppingRepository(
         operation: String,
         baseVersion: Long
     ) {
+        Log.d(
+            "NIMBLU_QUEUE",
+            "enqueue guard check operation=$operation"
+        )
 
-        val existing = changeQueueDao.getLatestPendingByEntityId(entityId)
+        val lastSynced = itemDao.getById(entityId)
+
+        if (
+            lastSynced != null &&
+            operation == "UPDATE"
+        ) {
+
+            val now = System.currentTimeMillis()
+
+            val lastRemoteWrite = lastWriteAt[entityId]
+
+            if (
+                lastRemoteWrite != null &&
+                now - lastRemoteWrite < 500
+            ) {
+
+                Log.d(
+                    "NIMBLU_QUEUE",
+                    "BURST GUARD RETURN operation=$operation"
+                )
+
+                return
+            }
+        }
+
+        val now = System.currentTimeMillis()
+
+        val last = lastWriteAt[entityId]
+
+        if (
+            operation == "UPDATE" &&
+            last != null &&
+            now - last < 500
+        ) {
+
+            Log.d(
+                "NIMBLU_QUEUE",
+                "WRITE DEBOUNCE RETURN operation=$operation"
+            )
+
+            return
+        }
+
+        val existing =
+            changeQueueDao.getLatestPendingByEntityId(entityId)
 
         if (existing != null) {
 
-            Log.d(
-                "QUEUE_DEDUP",
-                "Existing op=${existing.operation} → new op=$operation id=$entityId"
-            )
-
             when {
 
-                // DELETE überschreibt alles
                 operation == "DELETE" -> {
                     changeQueueDao.deleteById(existing.id)
                 }
 
-                // CREATE + UPDATE → CREATE behalten
-                existing.operation == "CREATE" && operation == "UPDATE" -> {
-                    Log.d("QUEUE_DEDUP", "Skip UPDATE because CREATE exists id=$entityId")
+                existing.operation == "CREATE" &&
+                        operation == "UPDATE" -> {
+
                     return
                 }
 
-                // UPDATE ersetzt UPDATE
-                existing.operation == "UPDATE" && operation == "UPDATE" -> {
+                existing.operation == "CREATE" &&
+                        operation == "DELETE" -> {
+
                     changeQueueDao.deleteById(existing.id)
+                    return
                 }
 
-                // CREATE + DELETE → no-op
-                existing.operation == "CREATE" && operation == "DELETE" -> {
-                    Log.d("QUEUE_DEDUP", "CREATE+DELETE → remove both id=$entityId")
-                    changeQueueDao.deleteById(existing.id)
+                existing.operation == "UPDATE" &&
+                        operation == "UPDATE" -> {
+
+                    changeQueueDao.updateBaseVersion(
+                        id = existing.id,
+                        baseVersion = baseVersion
+                    )
+
                     return
                 }
 
@@ -409,7 +641,7 @@ class RoomShoppingRepository(
         }
 
         val entity = ChangeQueueEntity(
-            id = java.util.UUID.randomUUID().toString(),
+            id = UUID.randomUUID().toString(),
             entityId = entityId,
             listId = listId,
             entityType = "item",
@@ -421,10 +653,60 @@ class RoomShoppingRepository(
         )
 
         Log.d(
-            "QUEUE_ENQUEUE",
-            "ADD op=$operation id=$entityId base=$baseVersion"
+            "NIMBLU_QUEUE",
+            "Insert queue entry op=$operation entity=$entityId state=${entity.state}"
         )
 
         changeQueueDao.insert(entity)
+
+        val afterInsert = changeQueueDao.getAllChanges()
+
+        Log.d(
+            "NIMBLU_QUEUE",
+            "Queue size after insert=${afterInsert.size}"
+        )
+
+        Log.d(
+            "NIMBLU_SYNC",
+            "Trigger sync from enqueue() op=$operation entity=$entityId"
+        )
+
+        syncCoordinator?.triggerSync()
+    }
+
+    fun observeSyncOverview(): Flow<SyncOverview> {
+
+        return changeQueueDao.observeQueueStats()
+            .map { stats ->
+
+                var pending = 0
+                var syncing = 0
+                var failed = 0
+
+                stats.forEach {
+
+                    when (it.state) {
+
+                        "PENDING" -> pending = it.count
+
+                        "SYNCING" -> syncing = it.count
+
+                        "FAILED" -> failed = it.count
+                    }
+                }
+
+                SyncOverview(
+                    pending = pending,
+                    syncing = syncing,
+                    failed = failed
+                )
+            }
+    }
+
+    fun onSyncWriteSuccess(
+        entityId: String,
+        timestamp: Long
+    ) {
+        lastWriteAt[entityId] = timestamp
     }
 }

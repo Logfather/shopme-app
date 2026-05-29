@@ -2,7 +2,6 @@ package de.shopme.presentation.state
 
 import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.model.ShoppingList
-import de.shopme.domain.model.ShoppingListEntity
 
 data class ShoppingState(
     val lists: List<ShoppingList> = emptyList(),
@@ -35,8 +34,54 @@ data class ShoppingState(
     val firstName: String? = null,
     val lastName: String? = null,
     val email: String? = null,
-    val showSaveChoice: Boolean = false
+    val showSaveChoice: Boolean = false,
+    val pendingShareListId: String? = null,
+    val showShareSuccess: Boolean = false,
 )
+
+fun ShoppingState.toViewState(): ShoppingViewState {
+
+    val activeList = lists.find { it.id == activeListId }
+
+    val groupedItems =
+        items.groupBy { it.category ?: "Other" }
+
+    return ShoppingViewState(
+        lists = lists,
+        activeList = activeList,
+        groupedItems = groupedItems
+    )
+}
+
+fun ShoppingState.deduplicate(): ShoppingState {
+
+    val deduplicatedItems = items
+        .groupBy { it.id }
+        .map { (_, list) ->
+            list
+                .sortedWith(
+                    compareByDescending<ShoppingItem> { it.updatedAt }
+                        .thenByDescending { it.createdAt }
+                )
+                .first()
+        }
+
+    val deduplicatedLists = lists
+        .groupBy { it.id }
+        .map { (_, list) ->
+            list
+                .sortedWith(
+                    compareByDescending<ShoppingList> { it.updatedAt }
+                        .thenByDescending { it.createdAt }
+                )
+                .first()
+        }
+
+    return this.copy(
+        items = deduplicatedItems,
+        lists = deduplicatedLists
+    )
+}
 
 enum class SortingPhase {
     Idle,

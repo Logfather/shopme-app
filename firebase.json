@@ -15,5 +15,15 @@
         "npm --prefix \"$RESOURCE_DIR\" run lint"
       ]
     }
-  ]
+  ],
+
+  "hosting": {
+    "public": "public",
+    "rewrites": [
+      {
+        "source": "/invite/**",
+        "destination": "/index.html"
+      }
+    ]
+  }
 }

@@ -12,7 +12,7 @@ class ChangeQueue {
 
         return mutex.withLock {
 
-            Log.d("CHANGE_QUEUE", "Executing: $tag")
+            //Log.d("CHANGE_QUEUE", "Executing: $tag")
 
             try {
                 block()

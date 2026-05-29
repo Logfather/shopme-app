@@ -12,7 +12,7 @@ interface ListDao {
     fun observeLists(): Flow<List<ShoppingListEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertLists(lists: List<ShoppingListEntity>)
+    suspend fun upsertLists(lists: List<ShoppingListEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(list: ShoppingListEntity)

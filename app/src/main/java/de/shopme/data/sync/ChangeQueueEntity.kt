@@ -1,8 +1,8 @@
 package de.shopme.data.sync
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 import androidx.room.Index
+import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "change_queue",
@@ -32,6 +32,8 @@ data class ChangeQueueEntity(
     val retryCount: Int = 0,
 
     val lastAttemptAt: Long? = null,
+
+    val nextRetryAt: Long? = null,
 
     val progress: Float? = null,
 

@@ -5,57 +5,50 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.room.Room
-import androidx.room.RoomDatabase
-import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.work.Constraints
+import androidx.work.NetworkType
 import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import de.shopme.auth.FirebaseAuthProvider
 import de.shopme.core.json.loadJsonMap
 import de.shopme.core.network.NetworkMonitor
-import de.shopme.auth.FirebaseAuthProvider
-import de.shopme.data.datasource.catalog.CatalogLoader
-import de.shopme.data.datasource.firestore.FirestoreDataSource
-import de.shopme.data.datasource.room.ShopMeDatabase
-import de.shopme.data.input.speech.SpeechController
-import de.shopme.data.repository.RoomShoppingRepository
-import de.shopme.data.sync.ConflictResolver
-import de.shopme.data.sync.FirestoreListener
-import de.shopme.data.sync.SyncCoordinator
-import de.shopme.domain.auth.AuthProvider
-import de.shopme.domain.catalog.CatalogIndex
-import de.shopme.domain.service.*
-import de.shopme.domain.usecase.CreateListUseCase
-import de.shopme.domain.usecase.DeleteListUseCase
-import de.shopme.R
-import de.shopme.core.AppScope
 import de.shopme.core.sound.SoundPlayer
+import de.shopme.data.datasource.catalog.CatalogLoader
+import de.shopme.data.input.speech.SpeechController
 import de.shopme.data.remote.MembershipListener
 import de.shopme.data.sync.ChangeQueue
+import de.shopme.data.sync.FirestoreListener
 import de.shopme.domain.account.AccountDeletionManager
-import de.shopme.presentation.effect.UIEffect
+import de.shopme.domain.auth.AuthProvider
+import de.shopme.domain.catalog.CatalogIndex
+import de.shopme.domain.service.CatalogService
+import de.shopme.domain.service.CategoryMapper
+import de.shopme.domain.service.QuantityMapper
+import de.shopme.domain.service.SpeechItemParser
+import de.shopme.domain.usecase.CreateListUseCase
+import de.shopme.domain.usecase.DeleteListUseCase
 import de.shopme.presentation.viewmodel.AuthViewModel
 import de.shopme.presentation.viewmodel.ShoppingViewModel
-import de.shopme.ui.app.ShopMeApp
-import kotlinx.coroutines.delay
+import de.shopme.ui.app.HivraApp
+import de.shopme.ui.theme.HivraTheme
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class MainActivity : ComponentActivity() {
 
     private val authProvider: AuthProvider = FirebaseAuthProvider()
-
 
     private val googleSignInLauncher =
         registerForActivityResult(
@@ -91,12 +84,12 @@ class MainActivity : ComponentActivity() {
 
         val uri: Uri? = intent?.data
 
-        Log.d("DEEPLINK", "RAW URI → $uri")
+        //Log.d("DEEPLINK", "RAW URI → $uri")
 
         val listId = uri?.getQueryParameter("listId")
         val inviteId = uri?.getQueryParameter("inviteId")
 
-        Log.d("DEEPLINK", "listId=$listId inviteId=$inviteId")
+        //Log.d("DEEPLINK", "listId=$listId inviteId=$inviteId")
         super.onCreate(savedInstanceState)
 
         val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
@@ -126,36 +119,17 @@ class MainActivity : ComponentActivity() {
 
             val activityContext = this@MainActivity
 
-            val database = remember {
-                Room.databaseBuilder(
-                    activityContext,
-                    ShopMeDatabase::class.java,
-                    "shopme_database"
-                )
-                    .addMigrations(
-                        ShopMeDatabase.MIGRATION_4_5
-                    )
-                    .addCallback(object : RoomDatabase.Callback() {
-                        override fun onCreate(db: SupportSQLiteDatabase) {}
-                    })
-                    .build()
-            }
 
-            val listDao = remember { database.listDao() }
-            val itemDao = remember { database.itemDao() }
-            val changeQueueDao = remember { database.changeQueueDao() }
-            val firestoreDataSource = remember { FirestoreDataSource() }
+            val runtime = (application as HivraApplication).runtime
+            val database = runtime.database
+            val firestoreDataSource = runtime.firestoreGateway
+            val listDao = runtime.listDao
+            val itemDao = runtime.itemDao
+            val changeQueueDao = runtime.changeQueueDao
+            val conflictResolver = runtime.conflictResolver
+            val roomRepository = runtime.roomRepository
+            val syncCoordinator = runtime.syncCoordinator
 
-            val roomRepository = remember {
-                RoomShoppingRepository(
-                    itemDao,
-                    listDao,
-                    changeQueueDao,
-                    firestoreDataSource // 🔥 NEU
-                )
-            }
-
-            val appScope = remember { AppScope() }
 
             val catalogService = remember {
                 val loader = CatalogLoader(activityContext)
@@ -167,7 +141,9 @@ class MainActivity : ComponentActivity() {
             val speechParser = remember {
                 SpeechItemParser(catalogService)
             }
-            val conflictResolver = remember { ConflictResolver() }
+
+
+            val authViewModel = remember { AuthViewModel(authProvider) }
 
             val firestoreListener = remember {
                 FirestoreListener(
@@ -175,19 +151,30 @@ class MainActivity : ComponentActivity() {
                     itemDao = itemDao,
                     listDao = listDao,
                     conflictResolver = conflictResolver,
-                    appScope = appScope
+                    appScope = runtime.runtimeScope
                 )
             }
 
-            val syncCoordinator = remember {
-                SyncCoordinator(
-                    changeQueueDao = changeQueueDao,
-                    itemDao = itemDao,
-                    listDao = listDao,
-                    firestore = firestoreDataSource,
-                    appScope = appScope,
-                    firebaseAuth = FirebaseAuth.getInstance() // 🔥 HIER
-                )
+            val authUser by authViewModel.authUser.collectAsState()
+
+            LaunchedEffect(authUser?.uid) {
+
+                val uid = authUser?.uid
+
+                if (uid != null) {
+
+                    //Log.d("SYNC_UI", "Start sync for uid=$uid")
+
+                    syncCoordinator.start()
+                    firestoreListener.startListSync(uid)
+
+                } else {
+
+                    //Log.d("SYNC_UI", "Stop sync")
+
+                    firestoreListener.stop()
+                    syncCoordinator.stop()
+                }
             }
 
             val membershipListener = remember {
@@ -211,32 +198,49 @@ class MainActivity : ComponentActivity() {
                 NetworkMonitor(activityContext)
             }
 
+            LaunchedEffect(Unit) {
+
+                networkMonitor
+                    .observe()
+                    .distinctUntilChanged()
+                    .collect { connected ->
+
+                        Log.d(
+                            "NETWORK_MONITOR",
+                            "connected=$connected"
+                        )
+
+                        if (connected) {
+
+                            Log.d(
+                                "SYNC_REPLAY",
+                                "Reconnect detected -> enqueue replay"
+                            )
+
+                            runtime.syncScheduler.enqueueSyncReplay()
+                        }
+                    }
+            }
+
             val factory = remember {
 
                 val createListUseCase = CreateListUseCase(roomRepository)
                 val deleteListUseCase =
                     DeleteListUseCase(roomRepository, firestoreDataSource)
 
-                // 🔥 NEU
-                val syncCoordinator = SyncCoordinator(
-                    changeQueueDao = changeQueueDao,
-                    itemDao = itemDao,
-                    listDao = listDao,
-                    firestore = firestoreDataSource,
-                    appScope = appScope,
-                    firebaseAuth = FirebaseAuth.getInstance() // 🔥 HIER
-                )
+                val syncCoordinatorRef = syncCoordinator
 
                 val inMemoryChangeQueue = ChangeQueue()
 
-                val authViewModel = AuthViewModel(authProvider)
+                val authViewModelRef = authViewModel
+                val conflictResolverRef = conflictResolver
 
                 val accountDeletionManager = AccountDeletionManager(
-                    syncCoordinator = syncCoordinator,
+                    syncCoordinator = syncCoordinatorRef,
                     listDao = listDao,
                     changeQueueDao = changeQueueDao,
                     firestore = firestoreDataSource,
-                    authViewModel = authViewModel,
+                    authViewModel = authViewModelRef,
                     authProvider = authProvider
                 )
 
@@ -254,14 +258,11 @@ class MainActivity : ComponentActivity() {
                             firestoreDataSource = firestoreDataSource,
                             itemDao = itemDao,
                             listDao = listDao,
-                            firestoreListener = firestoreListener,
                             changeQueue = inMemoryChangeQueue,
-                            syncCoordinator = syncCoordinator,
                             changeQueueDao = changeQueueDao,
-
-                            // 🔥 NEU
                             authViewModel = authViewModel,
-                            accountDeletionManager = accountDeletionManager
+                            accountDeletionManager = accountDeletionManager,
+                            appContext = this@MainActivity.applicationContext // 🔥 DAS FEHLT
                         )
                     }
                 }
@@ -278,15 +279,17 @@ class MainActivity : ComponentActivity() {
             shoppingViewModel = vm
 
 
-            Log.d("VM_CHECK", "Activity VM = $shoppingViewModel")
-
             vm.syncUserFromFirebase()
 
             LaunchedEffect(Unit) {
 
-                vm.shareEvent.collect { link ->
+                val constraints = Constraints.Builder()
+                    .setRequiredNetworkType(
+                        NetworkType.CONNECTED
+                    )
+                    .build()
 
-                    Log.d("SHARE", "Opening share sheet with link=$link")
+                vm.shareEvent.collect { link ->
 
                     val intent = android.content.Intent().apply {
                         action = android.content.Intent.ACTION_SEND
@@ -312,65 +315,97 @@ class MainActivity : ComponentActivity() {
 
                 bootstrapped = true
 
-                try {
+                // ============================================================
+                // ✅ LOCAL BOOTSTRAP IMMER SOFORT
+                // ============================================================
 
-                    Log.d("BOOT", "START BOOTSTRAP")
+                val uri: Uri? = intent?.data
+                val listId = uri?.getQueryParameter("listId")
+                val inviteId = uri?.getQueryParameter("inviteId")
 
-                    val user = try {
+                vm.bootstrap(
+                    deepLinkListId = listId,
+                    deepLinkInviteId = inviteId
+                )
 
-                        val current = auth.currentUser
+                // ============================================================
+                // ✅ REMOTE AUTH SEPARAT
+                // ============================================================
 
-                        if (current != null) {
-                            Log.d("BOOT", "TRY EXISTING USER → ${current.uid}")
+                lifecycleScope.launch {
 
-                            try {
-                                current.getIdToken(true).await()
-                                current
-                            } catch (e: Exception) {
-                                Log.w("BOOT", "USER INVALID → FORCE RECREATE", e)
+                    try {
 
-                                auth.signOut()
-                                val result = auth.signInAnonymously().await()
+                        //Log.d("BOOT", "START AUTH FLOW")
 
-                                Log.d("BOOT", "ANON LOGIN SUCCESS (recreated)")
+                        val user = try {
 
-                                result.user ?: throw IllegalStateException("User null after recreate")
+                            val current = auth.currentUser
+
+                            if (current != null) {
+
+                                //Log.d("BOOT", "TRY EXISTING USER → ${current.uid}")
+
+                                try {
+
+                                    current.getIdToken(true).await()
+                                    current
+
+                                } catch (e: Exception) {
+
+                                    Log.w(
+                                        "BOOT",
+                                        "USER INVALID → FORCE RECREATE",
+                                        e
+                                    )
+
+                                    auth.signOut()
+
+                                    val result =
+                                        auth.signInAnonymously().await()
+
+                                    result.user
+                                        ?: throw IllegalStateException(
+                                            "User null after recreate"
+                                        )
+                                }
+
+                            } else {
+
+                                throw Exception("No user")
                             }
 
-                        } else {
-                            throw Exception("No user")
+                        } catch (e: Exception) {
+
+                            Log.w(
+                                "BOOT",
+                                "USER INVALID → RECREATE",
+                                e
+                            )
+
+                            auth.signOut()
+
+                            val result =
+                                auth.signInAnonymously().await()
+
+                            result.user
+                                ?: throw IllegalStateException(
+                                    "User null after recreate"
+                                )
                         }
+
+                        vm.syncUserFromFirebase()
+
+                        //Log.d("BOOT", "USER READY → ${user.uid}")
 
                     } catch (e: Exception) {
 
-                        Log.w("BOOT", "USER INVALID → RECREATE", e)
-
-                        auth.signOut()
-
-                        val result = auth.signInAnonymously().await()
-
-                        Log.d("BOOT", "ANON LOGIN SUCCESS")
-
-                        result.user ?: throw IllegalStateException("User null after recreate")
+                        Log.e(
+                            "BOOT",
+                            "AUTH FAILED",
+                            e
+                        )
                     }
-
-                    vm.syncUserFromFirebase()
-
-                    Log.d("BOOT", "USER READY → ${user.uid}")
-
-                    //syncCoordinator.start()
-                    val uri: Uri? = intent?.data
-                    val listId = uri?.getQueryParameter("listId")
-                    val inviteId = uri?.getQueryParameter("inviteId")
-
-                    // 🔥 EINZIGER Bootstrap-Aufruf (hier!)
-                    vm.bootstrap(
-                        deepLinkListId = listId,
-                        deepLinkInviteId = inviteId
-                    )
-
-                } catch (e: Exception) {
-                    Log.e("BOOT", "BOOT FAILED", e)
                 }
             }
 
@@ -381,20 +416,22 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-            ShopMeApp(
-                vm = vm,
-                speechController = speechController,
-                catalogService = catalogService
-            )
+            HivraTheme() {
+                HivraApp(
+                    vm = vm,
+                    speechController = speechController,
+                    catalogService = catalogService
+                )
+            }
         }
     }
 
     private fun onGoogleIdTokenReceived(idToken: String) {
 
-        Log.d("AUTH", "ID TOKEN RECEIVED: ${idToken.take(10)}...")
+        //Log.d("AUTH", "ID TOKEN RECEIVED: ${idToken.take(10)}...")
 
         val beforeUid = com.google.firebase.auth.FirebaseAuth.getInstance().uid
-        Log.d("AUTH", "UID BEFORE LINK: $beforeUid")
+        //Log.d("AUTH", "UID BEFORE LINK: $beforeUid")
 
         lifecycleScope.launch {
 
@@ -425,7 +462,7 @@ class MainActivity : ComponentActivity() {
             }
 
             val afterUid = FirebaseAuth.getInstance().uid
-            Log.d("AUTH", "UID AFTER LINK: $afterUid")
+            //Log.d("AUTH", "UID AFTER LINK: $afterUid")
 
             lifecycleScope.launch {
 

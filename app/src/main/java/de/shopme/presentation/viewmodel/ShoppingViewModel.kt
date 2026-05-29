@@ -1,5 +1,7 @@
 package de.shopme.presentation.viewmodel
 
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,7 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
 import de.shopme.core.network.NetworkMonitor
-import de.shopme.data.datasource.firestore.FirestoreDataSource
+import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
 import de.shopme.data.mapper.EntityMapper.toDomain
@@ -17,15 +19,15 @@ import de.shopme.data.mapper.EntityMapper.toEntity
 import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.data.sync.ChangeQueue
 import de.shopme.data.sync.ChangeQueueDao
-import de.shopme.data.sync.ChangeQueueEntity
-import de.shopme.data.sync.FirestoreListener
-import de.shopme.data.sync.SyncCoordinator
 import de.shopme.domain.account.AccountDeletionManager
 import de.shopme.domain.auth.AuthProvider
 import de.shopme.domain.invite.InviteFlowHandler
 import de.shopme.domain.item.ItemActionHandler
-import de.shopme.domain.model.*
-import de.shopme.domain.model.SyncStatus
+import de.shopme.domain.model.ShoppingItem
+import de.shopme.domain.model.ShoppingList
+import de.shopme.domain.model.ShoppingListEntity
+import de.shopme.domain.model.StoreType
+import de.shopme.domain.model.SyncOverview
 import de.shopme.domain.service.CategoryMapper
 import de.shopme.domain.service.QuantityMapper
 import de.shopme.domain.service.SpeechItemParser
@@ -36,15 +38,29 @@ import de.shopme.presentation.effect.ShoppingEffectHandler
 import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.reducer.reduce
-import de.shopme.presentation.state.*
+import de.shopme.presentation.state.ShoppingScreenMode
+import de.shopme.presentation.state.ShoppingState
+import de.shopme.presentation.state.ShoppingViewState
+import de.shopme.presentation.state.SortingPhase
 import de.shopme.presentation.undo.UndoAction
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.yield
 import java.util.UUID
-import kotlinx.coroutines.tasks.await
 
 data class Quadruple<A, B, C, D>(
     val first: A,
@@ -53,23 +69,28 @@ data class Quadruple<A, B, C, D>(
     val fourth: D
 )
 class ShoppingViewModel(
+    //TODO: Property "createListUseCase" is never used
     private val createListUseCase: CreateListUseCase,
     private val deleteListUseCase: DeleteListUseCase,
     private val roomRepository: RoomShoppingRepository,
+    //TODO: Constructor Parameter is never used as a property
     private val quantityMapper: QuantityMapper,
+    //TODO: Constructor Parameter is never used as a property
     private val categoryMapper: CategoryMapper,
+    //TODO: Property "networkMonitor" is never used
     private val networkMonitor: NetworkMonitor,
     private val authProvider: AuthProvider,
+    //TODO: Property "speechItemParser" is never used
     private val speechItemParser: SpeechItemParser,
-    private val firestoreDataSource: FirestoreDataSource,
+    private val firestoreDataSource: FirestoreGateway,
+    //TODO: Property "itemDao" is never used
     private val itemDao: ItemDao,
     private val listDao: ListDao,
-    private val firestoreListener: FirestoreListener,
     private val changeQueue: ChangeQueue,
-    private val syncCoordinator: SyncCoordinator,
     private val changeQueueDao: ChangeQueueDao,
     private val authViewModel: AuthViewModel,
     private val accountDeletionManager: AccountDeletionManager,
+    private val appContext: Context
 ) : ViewModel() {
 
     private val itemActionHandler = ItemActionHandler(
@@ -84,14 +105,15 @@ class ShoppingViewModel(
         roomRepository
     )
 
+
     private val effectHandler = ShoppingEffectHandler(
         authProvider = authProvider,
         viewModel = this,
         scope = viewModelScope,
-        itemActionHandler = itemActionHandler
+        itemActionHandler = itemActionHandler,
+        firestoreGateway = firestoreDataSource,
+        appContext = appContext // ✅ statt applicationContext
     )
-
-    private var effectsJob: Job? = null
 
     // ============================================================
     // 🔥 UI FLAGS & DIALOG STATE
@@ -126,6 +148,8 @@ class ShoppingViewModel(
     // Stabilitätsrelevanz:
     // - KRITISCH → falsche Änderungen führen zu UI Inkonsistenzen
     // ============================================================
+
+    private val _syncOverview = MutableStateFlow(SyncOverview())
 
     private val _state = MutableStateFlow(ShoppingState())
     val state: StateFlow<ShoppingState> = _state.asStateFlow()
@@ -172,6 +196,8 @@ class ShoppingViewModel(
 // - KRITISCH → steuert Zugriff, Sync und Ownership
 // ============================================================
 
+
+
     private val _firstName = MutableStateFlow<String?>(null)
     val firstName = _firstName.asStateFlow()
 
@@ -201,6 +227,7 @@ class ShoppingViewModel(
 
     private val _currentListId = MutableStateFlow<String?>(null)
     val currentListId: StateFlow<String?> = _currentListId
+    private var listsObserved = false
 
     private var bufferedLists: List<ShoppingListEntity>? = null
     private var lastBootstrapUid: String? = null
@@ -296,31 +323,29 @@ class ShoppingViewModel(
 // ============================================================
 
     init {
-
-        viewModelScope.launch {
-            authProvider.observeAuthState().collect { uid ->
-
-                if (uid != null) {
-                    Log.d("AUTH", "User logged in → start sync")
-                    startSync(uid)
-
-                    dispatch(
-                        ShoppingAction.LoadUserProfile(uid)
-                    )
-
-                } else {
-                    Log.d("AUTH", "User logged out → stop sync")
-                    stopSync()
-                }
-            }
-        }
-
+        observeAuthUser()
         observeItems()
         observeEffects()
+        observeSyncOverview()
     }
 
-    fun itemsForList(listId: String) =
-        roomRepository.observeItems(listId)
+    fun itemsForList(listId: String): Flow<List<ShoppingItem>> {
+        return roomRepository.observeItems(listId)
+            .map { entities ->
+
+                entities
+                    .map { it.toDomain() }
+                    .groupBy { it.id }
+                    .map { (_, list) ->
+                        list
+                            .sortedWith(
+                                compareByDescending<ShoppingItem> { it.updatedAt }
+                                    .thenByDescending { it.createdAt }
+                            )
+                            .first()
+                    }
+            }
+    }
 
     fun bootstrap(
         deepLinkListId: String? = null,
@@ -329,6 +354,18 @@ class ShoppingViewModel(
 
         viewModelScope.launch {
 
+            Log.d("LISTS_OBSERVED",
+                "Before if condition: Observed List=${listsObserved}")
+
+            // 1. Zuerst System Start
+            if (!listsObserved) {
+                Log.d("LISTS_OBSERVED",
+                    "Inside if condition: Observed List=${listsObserved}")
+                observeLists()
+                listsObserved = true
+            }
+
+            // 2. Danach Authentication
             updateAuthState()
 
             val uid = authProvider.currentUserId()
@@ -339,12 +376,6 @@ class ShoppingViewModel(
             }
 
             lastBootstrapUid = uid
-
-            // 1. System Start
-            //syncCoordinator.start()
-            firestoreListener.startListSync(uid)
-
-            observeLists()
 
             // 🔥 Invite Flow
             handleInviteFlow(deepLinkInviteId)
@@ -370,7 +401,10 @@ class ShoppingViewModel(
         action: ShoppingAction? = null,
         event: ShopEvent? = null
     ) {
-        Log.d("SORT_DEBUG", "Dispatch action=$action event=$event")
+        Log.d(
+            "CREATE_TRACE",
+            "Dispatch action=$action event=$event screenMode=${_state.value.screenMode}"
+        )
 
         val result = reduce(
             state = _state.value,
@@ -408,131 +442,12 @@ class ShoppingViewModel(
         }
     }
 
-
-//  Code zum späteren ändern
-// TODO REMOVE AFTER REFACTOR
-//    private fun observeEffects() {
-//
-//        if (effectsJob != null) {
-//            Log.d("EFFECT_OBSERVER", "ALREADY RUNNING")
-//            return
-//        }
-//
-//        Log.d("EFFECT_OBSERVER", "STARTED")
-//
-//        effectsJob = viewModelScope.launch {
-//            effects.collect { effect ->
-//                Log.d("EFFECT_DEBUG", "COLLECT $effect")
-//                handleEffect(effect)
-//            }
-//        }
-//    }
-// Original logic moved to ShoppingEffectHandler
-//    private fun handleEffect(effect: UIEffect) {
-//
-//        when (effect) {
-//
-//            is UIEffect.AddItem -> {
-//                Log.d("EFFECT_DEBUG", "AddItem effect: ${effect.name}")
-//
-//                viewModelScope.launch {
-//                    val listId = currentListId.value ?: return@launch
-//                    itemActionHandler.addItem(effect.name, listId)
-//                }
-//            }
-//
-//            is UIEffect.UpdateItem -> {
-//                viewModelScope.launch {
-//                    itemActionHandler.updateItem(effect.item, effect.newName)
-//                }
-//            }
-//
-//            is UIEffect.DeleteItem -> {
-//                viewModelScope.launch {
-//                    itemActionHandler.deleteItem(effect.item)
-//                }
-//            }
-//
-//            is UIEffect.ToggleItem -> {
-//                viewModelScope.launch {
-//                    itemActionHandler.updateItemChecked(
-//                        itemId = effect.itemId,
-//                        newChecked = effect.newChecked
-//                    )
-//                }
-//            }
-//
-//            is UIEffect.LoadUserProfile -> {
-//                viewModelScope.launch {
-//                    performLoadUserProfile(effect)
-//                }
-//            }
-//
-//            is UIEffect.UpdateUserProfile -> {
-//                viewModelScope.launch {
-//                    performUpdateUserProfile(effect)
-//                }
-//            }
-//
-//            is UIEffect.DeleteAccount -> {
-//                viewModelScope.launch {
-//
-//                    val userId = authViewModel.authUser.value?.uid ?: return@launch
-//
-//                    performDeleteAccountFlow(
-//                        userId = userId,
-//                        getIdToken = {
-//                            null
-//                        }
-//                    )
-//                }
-//            }
-//
-//            is UIEffect.UnlinkGoogle -> {
-//                viewModelScope.launch {
-//                    performUnlinkGoogle()
-//                }
-//            }
-//
-//            else -> {
-//                Log.w("UI_EFFECT", "Unhandled effect: $effect")
-//            }
-//        }
-//    }
-
     private fun handleEffect(effect: UIEffect) {
         Log.d(
             "EFFECT_HANDLER",
             "HANDLE vm=${this.hashCode()} effect=$effect"
         )
         effectHandler.handle(effect)
-    }
-
-
-//  Code zum späteren ändern
-// TODO REMOVE AFTER REFACTOR
-//    private fun handleEffect(effect: UIEffect) {
-//        effectHandler.handle(effect)
-//    }
-
-// ============================================================
-// 🔥 SYNC CONTROL (Teil von Lifecycle)
-// Zweck:
-// - Start/Stop der Synchronisation
-//
-// Stabilitätsrelevanz:
-// - KRITISCH → falscher Zustand = Dateninkonsistenz
-// ============================================================
-
-    private fun startSync(uid: String) {
-        Log.d("SYNC_INIT", "Start sync for uid=$uid")
-        syncCoordinator.start()
-    }
-
-    private fun stopSync() {
-        Log.d("SYNC_INIT", "Stop sync")
-        firestoreListener.stop()
-        syncCoordinator.stop()
     }
 
 // ============================================================
@@ -615,6 +530,7 @@ class ShoppingViewModel(
                     // verhindert Navigation Jump bei kurzen Leerzuständen
                     // ============================================================
                     if (
+                        currentState.screenMode !is ShoppingScreenMode.Loading &&
                         domainLists.isEmpty() &&
                         currentState.activeListId != null &&
                         !currentState.isDeletingAll &&
@@ -627,6 +543,12 @@ class ShoppingViewModel(
                     // ============================================================
                     // 🔥 NORMAL FLOW
                     // ============================================================
+
+                    Log.d(
+                        "OFFLINE_DEBUG",
+                        "observeLists emission size=${domainLists.size} screen=${currentState.screenMode}"
+                    )
+
                     _state.update { current ->
 
                         val validActiveId =
@@ -638,13 +560,20 @@ class ShoppingViewModel(
                                 ?: current.activeListId   // 🔥 KEY FIX
                                 ?: domainLists.firstOrNull()?.id
 
+                        val nextScreen =
+                            if (current.screenMode is ShoppingScreenMode.Loading)
+                                ShoppingScreenMode.MultiOverview
+                            else
+                                current.screenMode
+
+                        Log.d(
+                            "OFFLINE_DEBUG",
+                            "Updating screenMode from=${current.screenMode} to=$nextScreen"
+                        )
+
                         current.copy(
                             lists = domainLists,
-                            screenMode =
-                                if (current.screenMode is ShoppingScreenMode.Loading)
-                                    ShoppingScreenMode.MultiOverview
-                                else
-                                    current.screenMode,
+                            screenMode = nextScreen,
                             activeListId = newActiveId
                         )
                     }
@@ -660,12 +589,14 @@ class ShoppingViewModel(
 
     fun createListFromStore(store: StoreType) {
 
+        Log.d("CREATE_TRACE", "createListFromStore CALLED store=${store.name}")
+
         viewModelScope.launch {
 
             val list = ShoppingListEntity(
                 id = UUID.randomUUID().toString(),
                 name = store.displayName,
-                ownerId = "", // wird im Sync gesetzt
+                ownerId = "",
                 storeTypes = listOf(store),
                 createdAt = System.currentTimeMillis(),
                 updatedAt = System.currentTimeMillis()
@@ -676,6 +607,8 @@ class ShoppingViewModel(
     }
 
     fun createCustomList(name: String) {
+
+        Log.d("CREATE_TRACE", "createCustomList CALLED name=$name")
 
         viewModelScope.launch {
 
@@ -712,9 +645,6 @@ class ShoppingViewModel(
         _state.update {
             it.copy(activeListId = listId)
         }
-
-        // 🔥 NEU: Sync starten
-        syncCoordinator.startSingleListSync(listId)
     }
 
 // ------------------------------------------------------------
@@ -768,12 +698,7 @@ class ShoppingViewModel(
 
             val lists = listDao.observeListsOnce()
 
-            // 🔥 Sync stoppen
-            lists.forEach { list ->
-                syncCoordinator.stopSingleListSync(list.id)
-            }
-
-            // 🔥 Lokal löschen
+            // 🔥 NUR lokale + Queue Operation
             lists.forEach { list ->
                 roomRepository.deleteList(list.id)
             }
@@ -808,64 +733,72 @@ class ShoppingViewModel(
         }
     }
 
-    fun createListsWithSorting(
+    suspend fun createListsWithSorting(
         stores: List<StoreType>,
         customLists: List<String>
     ) {
-        viewModelScope.launch {
 
-            dispatch(event = ShopEvent.List.StartSorting)
+        Log.d("CREATE_TRACE", "ENTER createListsWithSorting stores=${stores.size} custom=${customLists.size}")
 
-            yield()
+        dispatch(event = ShopEvent.List.StartSorting)
 
-            dispatch(event = ShopEvent.List.SetSortingPhase(SortingPhase.Preparing))
+        yield()
 
-            val startTime = System.currentTimeMillis()
-            val minDuration = 2000L
+        dispatch(event = ShopEvent.List.SetSortingPhase(SortingPhase.Preparing))
 
-            try {
-                stores.forEach { createListFromStore(it) }
-                customLists.forEach { createCustomList(it) }
+        val startTime = System.currentTimeMillis()
+        val minDuration = 2000L
 
-            } finally {
-                val elapsed = System.currentTimeMillis() - startTime
-                val remaining = minDuration - elapsed
+        try {
 
-                if (remaining > 0) delay(remaining)
+            stores.forEach {
+                Log.d("CREATE_TRACE", "CREATE STORE ${it.name}")
+                createListFromStore(it)
+            }
 
-                dispatch(event = ShopEvent.List.FinishSorting)
+            customLists.forEach {
+                Log.d("CREATE_TRACE", "CREATE CUSTOM $it")
+                createCustomList(it)
+            }
 
-                bufferedLists?.let { lists ->
-                    Log.d("SORT_DEBUG", "Apply buffered lists after sorting")
-                    bufferedLists = null
+        } finally {
+            val elapsed = System.currentTimeMillis() - startTime
+            val remaining = minDuration - elapsed
 
-                    val domainLists = lists
-                        .map { it.toDomain() }
-                        .filter { it.name.isNotBlank() }
-                        .sortedBy { it.name.lowercase() }
+            if (remaining > 0) delay(remaining)
 
-                    _state.update { current ->
+            dispatch(event = ShopEvent.List.FinishSorting)
 
-                        val validActiveId =
-                            current.activeListId
-                                ?.takeIf { id -> domainLists.any { it.id == id } }
+            bufferedLists?.let { lists ->
+                Log.d("SORT_DEBUG", "Apply buffered lists after sorting")
+                bufferedLists = null
 
-                        val newActiveId =
-                            validActiveId ?: domainLists.firstOrNull()?.id
+                val domainLists = lists
+                    .map { it.toDomain() }
+                    .filter { it.name.isNotBlank() }
+                    .sortedBy { it.name.lowercase() }
 
-                        current.copy(
-                            lists = domainLists,
-                            screenMode =
-                                if (current.screenMode is ShoppingScreenMode.MultiSelect)
-                                    ShoppingScreenMode.MultiOverview
-                                else
-                                    current.screenMode,
-                            activeListId = newActiveId
-                        )
-                    }
+                _state.update { current ->
 
-                    _showWelcomeDialog.value = domainLists.isEmpty()
+                    val validActiveId =
+                        current.activeListId
+                            ?.takeIf { id -> domainLists.any { it.id == id } }
+
+                    val newActiveId =
+                        validActiveId ?: domainLists.firstOrNull()?.id
+
+                    current.copy(
+                        lists = domainLists,
+                        screenMode =
+                            if (current.screenMode is ShoppingScreenMode.MultiSelect)
+                                ShoppingScreenMode.MultiOverview
+                            else
+                                current.screenMode,
+                        activeListId = newActiveId
+                    )
                 }
+
+                _showWelcomeDialog.value = domainLists.isEmpty()
             }
         }
     }
@@ -1329,39 +1262,29 @@ class ShoppingViewModel(
         }
     }
 
-// ------------------------------------------------------------
-// 🔥 Firebase Auth Listener
-// ------------------------------------------------------------
-// TODO REMOVE (Auth handled via AuthProvider.observeAuthState)
-//    fun startAuthListener() {
-//
-//        if (authListener != null) return
-//
-//        authListener = FirebaseAuth.AuthStateListener { auth ->
-//
-//            val user = auth.currentUser
-//
-//            val isGoogle = user
-//                ?.providerData
-//                ?.any { it.providerId == "google.com" } == true
-//
-//
-//            val uid = user?.uid ?: return@AuthStateListener
-//
-//            startUserProfileListener(uid)
-//
-//            dispatch(
-//                ShoppingAction.LoadUserProfile(uid)
-//            )
-//        }
-//    }
-//
-//    fun stopAuthListener() {
-//        authListener?.let {
-//            FirebaseAuth.getInstance().removeAuthStateListener(it)
-//        }
-//        authListener = null
-//    }
+    private fun observeAuthUser() {
+
+        viewModelScope.launch {
+
+            authViewModel.authUser.collect { user ->
+
+                val uid = user?.uid
+
+                if (uid != null) {
+
+                    Log.d("AUTH", "User logged in")
+
+                    dispatch(
+                        ShoppingAction.LoadUserProfile(uid)
+                    )
+
+                } else {
+
+                    Log.d("AUTH", "User logged out")
+                }
+            }
+        }
+    }
 
 // ============================================================
 // 🔥 USER PROFILE LISTENER (Realtime Firestore)
@@ -1372,6 +1295,20 @@ class ShoppingViewModel(
 // Stabilitätsrelevanz:
 // - HOCH → falsche Listener = veraltete UI oder Memory Leaks
 // ============================================================
+
+    private fun observeSyncOverview() {
+        viewModelScope.launch {
+            roomRepository.observeSyncOverview()
+                .collect { overview ->
+                    _syncOverview.value = overview
+
+                    Log.d(
+                        "SYNC_OVERVIEW",
+                        "pending=${overview.pending} syncing=${overview.syncing} failed=${overview.failed}"
+                    )
+                }
+        }
+    }
 
     private var userProfileListener: ListenerRegistration? = null
 
@@ -1427,8 +1364,6 @@ class ShoppingViewModel(
                     email = email
                 )
 
-                dispatch(event = ShopEvent.System.OpenProfileScreen)
-
                 val listIds = pendingShareListIds
 
                 if (listIds != null) {
@@ -1476,8 +1411,6 @@ class ShoppingViewModel(
                     profileName = nickName
                 )
             }
-
-            dispatch(event = ShopEvent.System.OpenProfileScreen)
         }
     }
 
@@ -1529,8 +1462,6 @@ class ShoppingViewModel(
                 lastName,
                 email
             )
-
-            dispatch(event = ShopEvent.System.ShowSaveChoice)
         }
     }
 
@@ -1547,7 +1478,7 @@ class ShoppingViewModel(
             email
         )
 
-        dispatch(event = ShopEvent.System.ShowSaveChoice)
+        onEvent(ShopEvent.System.ShowSaveChoice)
     }
 
     fun hideSaveChoice() {
@@ -1555,6 +1486,8 @@ class ShoppingViewModel(
     }
 
     fun confirmManualSave() {
+
+        Log.d("SHARE_FLOW", "confirmManualSave CALLED")
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val data = pendingProfileUpdate ?: return
 
@@ -1568,24 +1501,31 @@ class ShoppingViewModel(
                 profileName = data.first.trim()
             )
 
-            pendingProfileUpdate = null
-
-            _state.update {
-                it.copy(
-                    showSaveChoice = false,
-                    showProfileScreen = false
+            // 🔥 NEU: Reducer informieren (entscheidend)
+            onEvent(
+                ShopEvent.System.ConfirmManualSave(
+                    firstName = data.second,
+                    lastName = data.third,
+                    email = data.fourth,
+                    nickName = data.first.trim()
                 )
-            }
+            )
+
+            pendingProfileUpdate = null
         }
     }
 
     fun confirmGoogleSave() {
 
+        Log.d("SHARE_FLOW", "confirmGoogleSave CALLED")
+
         val data = pendingProfileUpdate ?: return
 
         _nickName.value = data.first
 
-        pendingProfileUpdate = null
+        // 🔥 WICHTIG: pending NICHT löschen!
+        // sonst verlierst du firstName/lastName
+        // pendingProfileUpdate bleibt bestehen bis Success
 
         _state.update {
             it.copy(showSaveChoice = false)
@@ -1887,7 +1827,6 @@ class ShoppingViewModel(
             val lastName = pending?.third
 
             if (nickName != null) {
-
                 firestoreDataSource.upsertUserProfile(
                     uid = uid,
                     firstName = firstName ?: "",
@@ -1897,29 +1836,23 @@ class ShoppingViewModel(
                 )
             }
 
-            val authAction = pendingAuthAction
-
-            if (authAction != null) {
-                pendingAuthAction = null
-                authAction.invoke()
-                return@launch
-            }
-
             pendingProfileUpdate = null
 
+            // 🔥 HIER gehört der Share hin
             val listIds = pendingShareListIds
 
             if (listIds != null) {
                 pendingShareListIds = null
 
-                dispatch(event = ShopEvent.System.OpenProfileScreen)
+                val listId = listIds.firstOrNull()
 
-                createInviteAndShare(
-                    listIds = listIds,
-                    skipProfileCheck = true
-                )
-            } else {
-                dispatch(event = ShopEvent.System.OpenProfileScreen)
+                if (listId != null) {
+                    Log.d("SHARE_FLOW", "Google success → dispatch StartSharing listId=$listId")
+
+                    dispatch(
+                        event = ShopEvent.List.StartSharing(listId)
+                    )
+                }
             }
         }
     }
@@ -1999,5 +1932,51 @@ class ShoppingViewModel(
         shouldAnimateOnReturn = false
 
         _shareReturnTrigger.value += 1
+    }
+
+    private fun startShareIntent(listId: String) {
+
+        // 🔥 GUARD MUSS VOR launch stehen
+        if (isSharingInProgress) {
+            Log.w("SHARE_FLOW", "Direct intent blocked (already handled by effect)")
+            return
+        }
+
+        viewModelScope.launch {
+
+            try {
+
+                Log.d("SHARE_FLOW", "Start share intent for list=$listId")
+
+                val ownerId = authProvider.currentUserId()
+
+                val createdByName = state.value.displayName
+                    ?: authProvider.getDisplayName()
+                    ?: "Unbekannt"
+
+                val inviteLink = firestoreDataSource.createInviteLink(
+                    listId = listId,
+                    createdByName = createdByName,
+                    ownerId = ownerId
+                )
+
+                Log.d("SHARE_FLOW", "Invite link created: $inviteLink")
+
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, inviteLink)
+                }
+
+                val chooser = Intent.createChooser(intent, "Liste teilen").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                appContext.startActivity(chooser)
+
+            } catch (e: Exception) {
+
+                Log.e("SHARE_FLOW", "Failed to create invite", e)
+            }
+        }
     }
 }

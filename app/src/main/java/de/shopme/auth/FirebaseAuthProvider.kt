@@ -45,6 +45,10 @@ class FirebaseAuthProvider : AuthProvider {
         return auth.currentUser?.uid
     }
 
+    override fun getUserId(): String? {
+        return auth.currentUser?.uid
+    }
+
     override fun isAnonymous(): Boolean {
         return auth.currentUser?.isAnonymous ?: true
     }
@@ -123,7 +127,7 @@ class FirebaseAuthProvider : AuthProvider {
             }
 
             if (alreadyLinked) {
-                Log.d("AUTH", "Already linked → skip")
+                //Log.d("AUTH", "Already linked → skip")
                 return Result.success(Unit)
             }
 
@@ -185,7 +189,7 @@ class FirebaseAuthProvider : AuthProvider {
             val hasGoogle = providers.contains(GoogleAuthProvider.PROVIDER_ID)
 
             if (!hasGoogle) {
-                Log.d("AUTH", "Google not linked → nothing to unlink")
+                //Log.d("AUTH", "Google not linked → nothing to unlink")
                 return Result.success(Unit)
             }
 
@@ -200,7 +204,7 @@ class FirebaseAuthProvider : AuthProvider {
 
             user.unlink(GoogleAuthProvider.PROVIDER_ID).await()
 
-            Log.d("AUTH", "Google successfully unlinked")
+            //Log.d("AUTH", "Google successfully unlinked")
 
             Result.success(Unit)
 
@@ -222,7 +226,7 @@ class FirebaseAuthProvider : AuthProvider {
 
             user.reauthenticate(credential).await()
 
-            Log.d("AUTH", "Reauthentication successful")
+            //Log.d("AUTH", "Reauthentication successful")
 
             Result.success(Unit)
 
@@ -242,7 +246,7 @@ class FirebaseAuthProvider : AuthProvider {
 
             user.delete().await()
 
-            Log.d("AUTH", "User deleted successfully")
+            //Log.d("AUTH", "User deleted successfully")
 
             Result.success(Unit)
 

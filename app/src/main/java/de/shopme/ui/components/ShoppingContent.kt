@@ -1,5 +1,6 @@
 package de.shopme.ui.components
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,7 +24,10 @@ import de.shopme.data.input.speech.SpeechController
 import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.service.CatalogService
 import de.shopme.presentation.event.ShopEvent
+import de.shopme.presentation.state.ShoppingScreenMode
 import de.shopme.presentation.viewmodel.ShoppingViewModel
+import de.shopme.ui.components.button.ShopBuddyButton
+import de.shopme.ui.components.button.ShopBuddyButtonType
 import de.shopme.ui.theme.AppButtonDefaults
 import de.shopme.ui.theme.BrandOlive
 import de.shopme.ui.theme.CategoryColors
@@ -42,6 +46,17 @@ fun ShoppingContent(
 ) {
 
     val state by vm.state.collectAsStateWithLifecycle()
+
+    val duplicateItems = state.items
+        .groupBy { it.id }
+        .filter { it.value.size > 1 }
+
+    if (duplicateItems.isNotEmpty()) {
+        Log.e("DUPLICATE_DEBUG", "STATE DUPLICATES FOUND:")
+        duplicateItems.forEach { (id, list) ->
+            Log.e("DUPLICATE_DEBUG", "ID=$id count=${list.size}")
+        }
+    }
 
     val groupedItems =
         state.items
@@ -169,18 +184,17 @@ fun ShoppingContent(
 
                 Spacer(Modifier.width(8.dp))
 
-                Button(
+
+                ShopBuddyButton(
+                    text = "Hinzufügen",
                     onClick = {
+                        //Log.d("MY_BUTTON", "Hinzufügen clicked")
                         if (text.isNotBlank()) {
                             vm.onEvent(ShopEvent.Item.Add(text)) // ✅ WICHTIG
                             text = ""
                         }
-                    },
-                    modifier = Modifier.height(56.dp),
-                    colors = AppButtonDefaults.primary()
-                ) {
-                    Text("Hinzufügen")
-                }
+                    }
+                )
             }
 
             Spacer(Modifier.height(16.dp))
@@ -274,16 +288,23 @@ fun ShoppingContent(
 
             Spacer(Modifier.height(16.dp))
 
-            Button(
-                onClick = {
-                    vm.dispatch(de.shopme.presentation.action.ShoppingAction.CancelMultiCreation)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = AppButtonDefaults.primary()
-            ) {
-                Text("Liste erstellen fertig")
+            val state by vm.state.collectAsState()
+
+            if (state.screenMode is ShoppingScreenMode.Normal) {
+
+                Button(
+                    onClick = {
+                        vm.dispatch(
+                            de.shopme.presentation.action.ShoppingAction.FinishListCreation
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = AppButtonDefaults.primary()
+                ) {
+                    Text("Liste erstellen fertig")
+                }
             }
 
             Spacer(Modifier.height(24.dp))

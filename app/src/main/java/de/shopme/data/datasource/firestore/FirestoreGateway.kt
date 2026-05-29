@@ -1,12 +1,19 @@
 package de.shopme.data.datasource.firestore
 
+import com.google.firebase.firestore.ListenerRegistration
+import de.shopme.domain.model.InviteData
 import de.shopme.domain.model.ShoppingItemEntity
 import de.shopme.domain.model.ShoppingListEntity
 import kotlinx.coroutines.flow.Flow
 
 interface FirestoreGateway {
 
+
     // LIST
+
+    fun observeListsForUser(
+        userId: String
+    ): Flow<List<ShoppingListEntity>>
     suspend fun createList(list: ShoppingListEntity, authUid: String): Boolean
     suspend fun softDeleteList(listId: String)
 
@@ -25,8 +32,40 @@ interface FirestoreGateway {
 
     // READ
     suspend fun getItemVersion(listId: String, itemId: String): Long?
+
     fun observeItems(listId: String): Flow<List<ShoppingItemEntity>>
     fun observeListById(listId: String): Flow<ShoppingListEntity?>
 
     suspend fun removeUserFromList(listId: String, userId: String)
+
+    suspend fun getItem(
+        listId: String,
+        itemId: String
+    ): ShoppingItemEntity?
+
+    suspend fun getInviteData( inviteId: String ): InviteData?
+
+    suspend fun createInviteLink( listId: String, createdByName: String, ownerId: String ): String
+    suspend fun createInvite( listIds: List<String>, createdByName: String, ownerId: String ): String
+
+    suspend fun getListOnce( listId: String ): ShoppingListEntity?
+
+
+    // ============================================================
+    // USER PROFILE
+    // ============================================================
+
+    suspend fun upsertUserProfile(
+        uid: String, firstName: String?,
+        lastName: String?,
+        email: String?,
+        profileName: String?
+    )
+    fun listenToUserProfile( uid: String, onChange: (Map<String, Any>?) -> Unit ): ListenerRegistration?
+    suspend fun saveUserProfile(uid: String,
+                                firstName: String,
+                                lastName: String,
+                                email: String
+    )
+    suspend fun getUserProfile(uid: String ): Map<String, Any>?
 }

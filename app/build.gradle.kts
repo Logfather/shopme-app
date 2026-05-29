@@ -3,20 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
-
-    id("kotlin-kapt")
+    id("org.jetbrains.kotlin.plugin.compose") // 🔥 NEU
 }
-
-kapt {
-    correctErrorTypes = true
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        if (name.contains("UnitTest")) {
-            kapt.includeCompileClasspath = false
-        }
-    }
-}
-
-
 
 android {
     namespace = "de.shopme"
@@ -34,6 +22,22 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(System.getProperty("user.home") + "/keystores/shopme/shopme-release-key.keystore")
+
+            storePassword = System.getenv("SHOPME_STORE_PASSWORD")
+                ?: project.findProperty("SHOPME_STORE_PASSWORD")?.toString()
+                        ?: error("SHOPME_STORE_PASSWORD not found")
+
+            keyAlias = "shopme"
+
+            keyPassword = System.getenv("SHOPME_KEY_PASSWORD")
+                ?: project.findProperty("SHOPME_KEY_PASSWORD")?.toString()
+                        ?: error("SHOPME_KEY_PASSWORD not found")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -41,15 +45,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
     buildFeatures {
         compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
     }
 
     compileOptions {
@@ -66,7 +67,6 @@ kotlin {
 
 dependencies {
 
-    // Compose BOM
     implementation(platform(libs.androidx.compose.bom))
 
     // Compose Core
@@ -74,17 +74,11 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.compose.material.icons.extended)
 
     implementation(libs.androidx.compose.runtime.saveable)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.compose.foundation)
-    implementation(libs.engage.core)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.compose.runtime)
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.compose.ui.text)
+
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
@@ -99,33 +93,36 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
 
     // 🔥 Firebase (SAUBER)
-    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+    implementation(platform(libs.firebase.bom))
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
 
     // JSON
     implementation("com.google.code.gson:gson:2.10.1")
 
-    implementation(platform("androidx.compose:compose-bom:2024.04.01"))
-
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
 
     // Google Play Store SignIn
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    //implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("com.google.android.gms:play-services-auth:20.6.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
-
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-
     testImplementation("io.mockk:mockk:1.13.5")
-
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.0")
-
     implementation("androidx.compose.animation:animation")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+
+    // WORKER
+    implementation("androidx.work:work-runtime-ktx:2.10.1")
+    implementation("androidx.work:work-runtime-ktx:2.10.1")
 }

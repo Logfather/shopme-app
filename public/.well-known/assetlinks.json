@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "de.shopme",
+      "sha256_cert_fingerprints": [
+        "11:34:25:69:6F:F8:1B:3C:12:6A:BD:1E:94:4B:CB:13:F1:55:EB:63:9F:29:E6:CF:9F:75:BE:F3:C8:36:94:42",
+        "EC:4E:C8:BA:FA:86:E9:C1:9A:8E:FE:B3:3B:82:82:FE:8C:1C:8C:C1:4B:A2:7D:9F:D5:78:9A:09:C0:25:56:7E"
+      ]
+    }
+  }
+]

@@ -64,6 +64,18 @@ sealed class UIEffect {
         val email: String?
     ) : UIEffect()
 
+    data class StartShareIntent(
+        val listId: String
+    ) : UIEffect()
+
+    data class OpenShareSheet(
+        val text: String
+    ) : UIEffect()
+
+    data class ShareList(
+        val listId: String
+    ) : UIEffect()
+
     object DeleteAllLists : UIEffect()
 
     object StartGoogleSignIn : UIEffect()

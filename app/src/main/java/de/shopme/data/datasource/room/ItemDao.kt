@@ -1,11 +1,20 @@
 package de.shopme.data.datasource.room
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 import de.shopme.domain.model.ShoppingItemEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ItemDao {
+
+    @Query(
+        "SELECT * FROM items"
+    )
+    suspend fun getAll(): List<ShoppingItemEntity>
 
     @Query("SELECT * FROM items")
     fun observeItems(): Flow<List<ShoppingItemEntity>>
@@ -56,22 +65,25 @@ interface ItemDao {
 """)
     suspend fun getPendingItemIds(): List<String>
 
+
+
     @Query("""
     SELECT * FROM items 
     WHERE listId = :listId 
     AND deletedAt IS NULL
-    ORDER BY createdAt ASC
-""")
+    GROUP BY id
+    ORDER BY MAX(updatedAt) DESC
+    """)
     fun observeItems(listId: String): Flow<List<ShoppingItemEntity>>
 
     @Query("SELECT * FROM items WHERE id = :itemId LIMIT 1")
     suspend fun getItemById(itemId: String): ShoppingItemEntity?
 
     @Query("""
-    UPDATE items 
-    SET isChecked = :checked, updatedAt = :updatedAt 
-    WHERE id = :id
-""")
+        UPDATE items 
+        SET isChecked = :checked, updatedAt = :updatedAt 
+        WHERE id = :id
+    """)
     suspend fun updateChecked(
         id: String,
         checked: Boolean,
@@ -79,17 +91,19 @@ interface ItemDao {
     )
 
     @Query("""
-    UPDATE items 
-    SET 
-        name = :name,
-        isChecked = :checked,
-        deletedAt = :deletedAt,
-        updatedAt = :updatedAt
-    WHERE id = :id
-""")
+        UPDATE items 
+        SET 
+            name = :name,
+            quantity = :quantity,
+            isChecked = :checked,
+            deletedAt = :deletedAt,
+            updatedAt = :updatedAt
+        WHERE id = :id
+        """)
     suspend fun updateFullItem(
         id: String,
         name: String,
+        quantity: Int,
         checked: Boolean,
         deletedAt: Long?,
         updatedAt: Long

@@ -65,9 +65,13 @@ sealed interface ShopEvent {
 
         object FinishDeleteAll : List
 
-        object StartSharing : List
+        data class StartSharing(
+            val listId: String
+        ) : List
 
         object FinishSharing : List
+
+        object ShareStarted : List
     }
 
     // -----------------------------

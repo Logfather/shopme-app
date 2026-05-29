@@ -33,6 +33,9 @@ sealed class ShoppingAction {
     object DeleteAllLists : ShoppingAction()
 
 
+    object FinishListCreation : ShoppingAction()
+
+
 
     // -----------------------------
     // USER / PROFILE EVENTS
@@ -48,7 +51,7 @@ sealed class ShoppingAction {
         val firstName: String?,
         val lastName: String?,
         val email: String?,
-        val exists: Boolean
+        val exists: Boolean,
     ) : ShoppingAction()
 
     data class UpdateUserProfile(

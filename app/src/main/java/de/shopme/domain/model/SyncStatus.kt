@@ -2,15 +2,19 @@ package de.shopme.domain.model
 
 sealed class SyncStatus {
 
-    data object Pending : SyncStatus()
+    object Synced : SyncStatus()
+
+    object Pending : SyncStatus()
 
     data class Syncing(
-        val progress: Float? = null // optional!
+        val progress: Float = 0f
     ) : SyncStatus()
-
-    data object Synced : SyncStatus()
 
     data class Failed(
-        val canRetry: Boolean = true
-    ) : SyncStatus()
+        val retryCount: Int
+    ) : SyncStatus() {
+
+        val canRetry: Boolean
+            get() = retryCount < 5
+    }
 }

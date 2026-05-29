@@ -1,11 +1,11 @@
 package de.shopme.data.datasource.firestore
 
 import android.util.Log
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.Timestamp
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import de.shopme.domain.model.InviteData
@@ -16,7 +16,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
@@ -25,18 +24,11 @@ class FirestoreDataSource : FirestoreGateway {
 
     private val firestore = FirebaseFirestore.getInstance()
 
-    private fun requireUid(): String =
-        FirebaseAuth.getInstance().currentUser?.uid
-            ?: throw IllegalStateException("User not authenticated")
-
     // ============================================================
     // LISTS
     // ============================================================
 
     override suspend fun addMembership(userId: String, listId: String) {
-
-        Log.d("MEMBERSHIP_WRITE", "authUid=${FirebaseAuth.getInstance().currentUser?.uid}")
-        Log.d("MEMBERSHIP_WRITE", "targetUserId=$userId listId=$listId")
 
         firestore
             .collection("lists")
@@ -66,7 +58,7 @@ class FirestoreDataSource : FirestoreGateway {
 
             val isMember = userId in sharedWith
 
-            Log.d("MEMBERSHIP_DEBUG", "Check membership → list=$listId isMember=$isMember")
+            //Log.d("MEMBERSHIP_DEBUG", "Check membership → list=$listId isMember=$isMember")
 
             isMember
 
@@ -112,7 +104,7 @@ class FirestoreDataSource : FirestoreGateway {
         awaitClose { listener.remove() }
     }
 
-    fun observeListsForUser(uid: String): Flow<List<ShoppingListEntity>> {
+    override fun observeListsForUser(uid: String): Flow<List<ShoppingListEntity>> {
 
         val ownedFlow = callbackFlow {
             val listener = firestore
@@ -174,24 +166,6 @@ class FirestoreDataSource : FirestoreGateway {
         }
     }
 
-    fun observeList(listId: String): Flow<ShoppingListEntity?> = callbackFlow {
-        val listener = firestore
-            .collection("lists")
-            .document(listId)
-            .addSnapshotListener { snapshot, error ->
-
-                if (error != null) {
-                    Log.e("LIST_FLOW", "Listener error", error)
-                    return@addSnapshotListener
-                }
-
-                val entity = snapshot?.toShoppingListEntity()
-                trySend(entity).isSuccess
-            }
-
-        awaitClose { listener.remove() }
-    }
-
     // ============================================================
     // ITEMS
     // ============================================================
@@ -200,24 +174,6 @@ class FirestoreDataSource : FirestoreGateway {
         firestore.collection("lists")
             .document(listId)
             .collection("items")
-
-    suspend fun getListOnce(listId: String): ShoppingListEntity? {
-        return try {
-            val doc = firestore
-                .collection("lists")
-                .document(listId)
-                .get()
-                .await()
-
-            if (!doc.exists()) return null
-
-            doc.toShoppingListEntity()
-
-        } catch (e: Exception) {
-            Log.e("FIRESTORE", "getListOnce FAILED", e)
-            throw e
-        }
-    }
 
     override suspend fun getItemVersion(
         listId: String,
@@ -232,6 +188,52 @@ class FirestoreDataSource : FirestoreGateway {
             snapshot.getLong("updatedAt")
 
         } catch (e: Exception) {
+            null
+        }
+    }
+
+    override suspend fun getItem(
+        listId: String,
+        itemId: String
+    ): ShoppingItemEntity? {
+
+        return try {
+
+            val doc = itemsRef(listId)
+                .document(itemId)
+                .get()
+                .await()
+
+            if (!doc.exists()) return null
+
+            val createdAt =
+                (doc.get("createdAt") as? Timestamp)
+                    ?.toDate()?.time ?: 0L
+
+            val updatedAt =
+                (doc.get("updatedAt") as? Timestamp)
+                    ?.toDate()?.time ?: 0L
+
+            val deletedAt =
+                (doc.get("deletedAt") as? Timestamp)
+                    ?.toDate()?.time
+
+            val name = doc.getString("name") ?: return null
+
+            ShoppingItemEntity(
+                id = doc.id,
+                listId = listId,
+                name = name,
+                quantity = (doc.getLong("quantity") ?: 1).toInt(),
+                category = doc.getString("category") ?: "Sonstiges",
+                isChecked = doc.getBoolean("isChecked") ?: false,
+                deletedAt = deletedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt
+            )
+
+        } catch (e: Exception) {
+            Log.e("FIRESTORE", "getItem FAILED", e)
             null
         }
     }
@@ -287,21 +289,23 @@ class FirestoreDataSource : FirestoreGateway {
     override suspend fun addItem(listId: String, item: ShoppingItemEntity): Boolean {
         return try {
 
+            val payload = mapOf(
+                "id" to item.id,               // 🔥 NEU
+                "listId" to item.listId,       // 🔥 NEU
+                "name" to item.name,
+                "quantity" to item.quantity,
+                "category" to item.category,
+                "isChecked" to item.isChecked,
+                "deletedAt" to item.deletedAt,
+                "createdAt" to item.createdAt,
+                "updatedAt" to item.updatedAt
+            )
+
+            //Log.d("FIRESTORE_WRITE", "CREATE id=${item.id} data=$payload")
+
             itemsRef(listId)
                 .document(item.id)
-                .set(
-                    mapOf(
-                        "name" to item.name,
-                        "quantity" to item.quantity,
-                        "category" to item.category,
-                        "isChecked" to item.isChecked,
-                        "deletedAt" to item.deletedAt,
-                        "createdAt" to item.createdAt,
-                        "updatedAt" to item.updatedAt,
-                        "version" to item.updatedAt
-                    ),
-                    SetOptions.merge()
-                )
+                .set(payload)
                 .await()
 
             true
@@ -315,6 +319,19 @@ class FirestoreDataSource : FirestoreGateway {
     override suspend fun updateItem(listId: String, item: ShoppingItemEntity): Boolean {
         return try {
 
+            val payload = mapOf(
+                "name" to item.name,
+                "quantity" to item.quantity,
+                "category" to item.category,
+                "isChecked" to item.isChecked,
+                "deletedAt" to item.deletedAt,
+                "updatedAt" to item.updatedAt,
+                "createdAt" to item.createdAt, // 🔥 NEU
+                "listId" to item.listId        // 🔥 NEU
+            )
+
+            //Log.d("FIRESTORE_WRITE", "UPDATE id=${item.id} data=$payload")
+
             itemsRef(listId)
                 .document(item.id)
                 .set(
@@ -325,9 +342,9 @@ class FirestoreDataSource : FirestoreGateway {
                         "isChecked" to item.isChecked,
                         "deletedAt" to item.deletedAt,
                         "updatedAt" to item.updatedAt,
-                        "version" to item.updatedAt
-                    ),
-                    SetOptions.merge()
+                        "createdAt" to item.createdAt,
+                        "listId" to item.listId
+                    )
                 )
                 .await()
 
@@ -342,13 +359,11 @@ class FirestoreDataSource : FirestoreGateway {
     override suspend fun deleteItem(listId: String, itemId: String): Boolean {
         return try {
 
+            //Log.d("FIRESTORE_WRITE", "HARD DELETE id=$itemId")
+
             itemsRef(listId)
                 .document(itemId)
-                .update(
-                    mapOf(
-                        "deletedAt" to FieldValue.serverTimestamp()
-                    )
-                )
+                .delete()
                 .await()
 
             true
@@ -401,6 +416,24 @@ class FirestoreDataSource : FirestoreGateway {
             .await()
     }
 
+    override suspend fun getListOnce(listId: String): ShoppingListEntity? {
+        return try {
+            val doc = firestore
+                .collection("lists")
+                .document(listId)
+                .get()
+                .await()
+
+            if (!doc.exists()) return null
+
+            doc.toShoppingListEntity()
+
+        } catch (e: Exception) {
+            Log.e("FIRESTORE", "getListOnce FAILED", e)
+            throw e
+        }
+    }
+
     fun DocumentSnapshot.toShoppingListEntity(): ShoppingListEntity? {
 
         val name = getString("name") ?: return null
@@ -444,7 +477,7 @@ class FirestoreDataSource : FirestoreGateway {
         )
     }
 
-    suspend fun createInvite(
+    override suspend fun createInvite(
         listIds: List<String>,
         createdByName: String,
         ownerId: String
@@ -468,7 +501,7 @@ class FirestoreDataSource : FirestoreGateway {
         return inviteId
     }
 
-    suspend fun getInviteData(inviteId: String): InviteData? {
+    override suspend fun getInviteData(inviteId: String): InviteData? {
 
         return try {
 
@@ -499,26 +532,6 @@ class FirestoreDataSource : FirestoreGateway {
         }
     }
 
-    suspend fun getInviteListId(inviteId: String): String? {
-        val snapshot = firestore
-            .collection("invites")
-            .document(inviteId)
-            .get()
-            .await()
-
-        return snapshot.getString("listId")
-    }
-
-    suspend fun getListsForUser(userId: String): List<ShoppingListEntity> {
-        val snapshot = firestore
-            .collection("lists")
-            .whereEqualTo("ownerId", userId)
-            .get()
-            .await()
-
-        return snapshot.documents.mapNotNull { it.toShoppingListEntity() }
-    }
-
     override suspend fun markInviteConsumed(inviteId: String) {
 
         firestore
@@ -531,7 +544,7 @@ class FirestoreDataSource : FirestoreGateway {
             .await()
     }
 
-    suspend fun saveUserProfile(
+    override suspend fun saveUserProfile(
         uid: String,
         firstName: String,
         lastName: String,
@@ -551,7 +564,7 @@ class FirestoreDataSource : FirestoreGateway {
             .await()
     }
 
-    suspend fun upsertUserProfile(
+    override suspend fun upsertUserProfile(
         uid: String,
         firstName: String?,
         lastName: String?,
@@ -584,7 +597,7 @@ class FirestoreDataSource : FirestoreGateway {
             .set(updates, SetOptions.merge())
     }
 
-    suspend fun getUserProfile(uid: String): Map<String, Any>? {
+    override suspend fun getUserProfile(uid: String): Map<String, Any>? {
         return firestore.collection("users")
             .document(uid)
             .get()
@@ -592,7 +605,7 @@ class FirestoreDataSource : FirestoreGateway {
             .data
     }
 
-    fun listenToUserProfile(
+    override fun listenToUserProfile(
         uid: String,
         onChange: (Map<String, Any>?) -> Unit
     ): ListenerRegistration {
@@ -609,6 +622,38 @@ class FirestoreDataSource : FirestoreGateway {
                 onChange(snapshot?.data)
             }
     }
+
+    override suspend fun createInviteLink(
+        listId: String,
+        createdByName: String,
+        ownerId: String
+    ): String {
+
+        val inviteId = createInvite(
+            listIds = listOf(listId),
+            createdByName = createdByName,
+            ownerId = ownerId
+        )
+
+        return "https://shopme.app/invite/$inviteId"
+    }
+
+
+    //AB HIER UNGENUTZTE FUNKTIONEN
+
+
+
+    private fun requireUid(): String =
+        FirebaseAuth.getInstance().currentUser?.uid
+            ?: throw IllegalStateException("User not authenticated")
+
+
+
+    // TODO:
+    // Move to AccountDeletionService / UseCase.
+    // This method contains cross-collection business orchestration
+    // and should not live inside FirestoreDataSource long-term.
+
 
     suspend fun deleteUserCompletely(uid: String) {
 

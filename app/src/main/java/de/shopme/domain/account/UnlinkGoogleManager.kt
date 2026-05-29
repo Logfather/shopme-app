@@ -13,7 +13,7 @@ class UnlinkGoogleManager(
 
     suspend fun unlink(): Result<Unit> = withContext(Dispatchers.IO) {
 
-        Log.d("UNLINK", "Start unlink process")
+       //Log.d("UNLINK", "Start unlink process")
 
         // ============================================================
         // 1. STOP SYNC (safety)
@@ -23,7 +23,7 @@ class UnlinkGoogleManager(
         val result = authProvider.unlinkGoogle()
 
         if (result.isSuccess) {
-            Log.d("UNLINK", "Success")
+            //Log.d("UNLINK", "Success")
         } else {
             Log.e("UNLINK", "Failed", result.exceptionOrNull())
         }
@@ -35,7 +35,7 @@ class UnlinkGoogleManager(
         getIdToken: suspend () -> String?
     ): Result<Unit> = withContext(Dispatchers.IO) {
 
-        Log.d("UNLINK", "Start unlink with reauth flow")
+        //Log.d("UNLINK", "Start unlink with reauth flow")
 
         // ============================================================
         // 1. STOP SYNC
@@ -48,7 +48,7 @@ class UnlinkGoogleManager(
         val firstAttempt = authProvider.unlinkGoogle()
 
         if (firstAttempt.isSuccess) {
-            Log.d("UNLINK", "Success without reauth")
+            //Log.d("UNLINK", "Success without reauth")
             return@withContext Result.success(Unit)
         }
 
@@ -65,7 +65,7 @@ class UnlinkGoogleManager(
             return@withContext Result.failure(error ?: Exception("Unknown error"))
         }
 
-        Log.d("UNLINK", "Reauth required → requesting token")
+        //Log.d("UNLINK", "Reauth required → requesting token")
 
         // ============================================================
         // 4. REQUEST NEW TOKEN (UI)
@@ -87,7 +87,7 @@ class UnlinkGoogleManager(
             return@withContext reauthResult
         }
 
-        Log.d("UNLINK", "Reauth success → retry unlink")
+        //Log.d("UNLINK", "Reauth success → retry unlink")
 
         // ============================================================
         // 6. RETRY UNLINK
@@ -95,7 +95,7 @@ class UnlinkGoogleManager(
         val retry = authProvider.unlinkGoogle()
 
         if (retry.isSuccess) {
-            Log.d("UNLINK", "Success after reauth")
+            //Log.d("UNLINK", "Success after reauth")
         } else {
             Log.e("UNLINK", "Retry failed", retry.exceptionOrNull())
         }

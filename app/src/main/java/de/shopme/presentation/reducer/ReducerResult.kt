@@ -8,6 +8,7 @@ import de.shopme.presentation.state.ShoppingScreenMode
 import de.shopme.presentation.state.ShoppingState
 import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.state.SortingPhase
+import de.shopme.presentation.state.deduplicate
 
 
 data class ReducerResult(
@@ -83,25 +84,6 @@ fun reduce(
                 state
             }
 
-//            is ShopEvent.Item.Update -> {
-//
-//                val updatedItem = it.item.copy(
-//                    name = it.newName,
-//                    isChecked = true,
-//                    updatedAt = System.currentTimeMillis()
-//                )
-//
-//                effects = listOf(
-//                    UIEffect.UpdateItem(
-//                        item = updatedItem,
-//                        newName = it.newName
-//                    ),
-//                    UIEffect.ShowUndo("Item geändert (Update)")
-//                )
-//
-//                state // ✅ das ist der Return für den when-Block
-//            }
-
             is ShopEvent.List.DeleteAllLists -> {
                 effects = listOf(UIEffect.DeleteAllLists)
                 state
@@ -133,16 +115,50 @@ fun reduce(
             }
 
             is ShopEvent.List.StartSharing -> {
-                Log.d("SHARE_FLOW", "Reducer → StartSharing")
-                state.copy(isSharing = true)
+
+                Log.d("SHARE_FLOW", "Reducer → StartSharing listId=${it.listId}")
+
+                val hasProfile = state.hasProfile
+
+                val updatedState = state.copy(
+                    isSharing = true,
+                    profileTriggeredByShare = !hasProfile,
+                    pendingShareListId = it.listId
+                )
+
+                if (hasProfile) {
+                    effects = effects + UIEffect.ShareList(it.listId)
+
+                    Log.d(
+                        "SHARE_FLOW",
+                        "Direct share (profile exists) listId=${it.listId}"
+                    )
+                } else {
+                    Log.d(
+                        "SHARE_FLOW",
+                        "Profile missing → waiting for profile flow"
+                    )
+                }
+
+                updatedState
             }
 
             is ShopEvent.List.FinishSharing -> {
-                state.copy(isSharing = false)
+                state.copy(
+                    isSharing = false,
+                    showShareSuccess = false
+                )
+            }
+
+            is ShopEvent.List.ShareStarted -> {
+                state.copy(
+                    isSharing = false,
+                    showShareSuccess = true
+                )
             }
 
             is ShopEvent.System.OpenProfileScreen -> {
-                state.copy(showProfileScreen = false)
+                state.copy(showProfileScreen = true)
             }
 
             is ShopEvent.System.ShowSaveChoice -> {
@@ -154,11 +170,19 @@ fun reduce(
             }
 
             is ShopEvent.System.ConfirmGoogleSave -> {
+
+                Log.d("SHARE_FLOW", "confirmGoogleSave CALLED")
+
                 effects = effects + UIEffect.StartGoogleSignIn
-                state.copy(showSaveChoice = false)
+
+                state.copy(
+                    showSaveChoice = false,
+                    showProfileScreen = false   // 🔥 FIX: verhindert Rücksprung
+                )
             }
 
             is ShopEvent.System.ConfirmManualSave -> {
+
                 effects = effects + UIEffect.UpdateUserProfile(
                     uid = "",
                     nickName = it.nickName,
@@ -166,9 +190,26 @@ fun reduce(
                     lastName = it.lastName,
                     email = it.email
                 )
-                state.copy(showSaveChoice = false)
-            }
 
+                // 🔥 WICHTIG: Share Flow fortsetzen
+                val shareListId = state.pendingShareListId
+
+                if (state.profileTriggeredByShare && shareListId != null) {
+
+                    effects = effects + UIEffect.ShareList(shareListId)
+
+                    Log.d(
+                        "SHARE_FLOW",
+                        "Resume share after profile save listId=$shareListId"
+                    )
+                }
+
+                state.copy(
+                    showSaveChoice = false,
+                    showProfileScreen = false, // 🔥 FIX
+                    profileTriggeredByShare = false
+                )
+            }
             else -> state
         }
     }
@@ -189,6 +230,15 @@ fun reduce(
                         itemId = it.item.id,
                         newChecked = newChecked
                     )
+                )
+            }
+
+            is ShoppingAction.FinishListCreation -> {
+
+                Log.d("CREATE_FLOW", "FinishListCreation TRIGGERED")
+
+                newState = newState.copy(
+                    screenMode = ShoppingScreenMode.MultiOverview
                 )
             }
 
@@ -215,15 +265,33 @@ fun reduce(
             }
 
             is ShoppingAction.UserProfileLoaded -> {
-                val profileName = it.profileName?.trim()
-                val hasValidProfile = !profileName.isNullOrBlank()
 
-                newState = newState.copy(
+                // 🔥 FALLBACK: Google liefert oft keinen profileName
+                val profileName = it.profileName?.trim()
+                    ?: it.email?.substringBefore("@")
+
+                val hasValidProfile =
+                    !profileName.isNullOrBlank() || it.exists
+
+                val shareListId = state.pendingShareListId
+
+                if (state.profileTriggeredByShare && shareListId != null) {
+
+                    effects = effects + UIEffect.ShareList(shareListId)
+
+                    Log.d(
+                        "SHARE_FLOW",
+                        "Resume share after GOOGLE login listId=$shareListId"
+                    )
+                }
+
+                newState = state.copy(
                     displayName = profileName,
                     hasProfile = hasValidProfile,
                     firstName = it.firstName,
                     lastName = it.lastName,
-                    email = it.email
+                    email = it.email,
+                    profileTriggeredByShare = false
                 )
             }
 
@@ -260,6 +328,22 @@ fun reduce(
 
                 when (it) {
 
+                    is ShoppingAction.ConfirmStores -> {
+
+                        Log.d("CREATE_TRACE", "Reducer ConfirmStores TRIGGERED")
+
+                        val stores = screenMode.selectedStores
+
+                        effects = effects + UIEffect.CreateLists(
+                            stores = stores,
+                            customLists = it.customLists
+                        )
+
+                        newState = newState.copy(
+                            screenMode = ShoppingScreenMode.MultiOverview
+                        )
+                    }
+
                     is ShoppingAction.ToggleStore -> {
 
                         val current = screenMode
@@ -272,22 +356,6 @@ fun reduce(
 
                         newState = newState.copy(
                             screenMode = ShoppingScreenMode.MultiSelect(updated)
-                        )
-                    }
-
-                    is ShoppingAction.ConfirmStores -> {
-
-                        val stores = screenMode.selectedStores
-
-                        effects = listOf(
-                            UIEffect.CreateLists(
-                                stores = stores,
-                                customLists = it.customLists
-                            )
-                        )
-
-                        newState = newState.copy(
-                            screenMode = ShoppingScreenMode.MultiOverview
                         )
                     }
 
@@ -307,8 +375,10 @@ fun reduce(
         }
     }
 
+    val safeState = newState.deduplicate()
+
     return ReducerResult(
-        state = newState,
+        state = safeState,
         effects = effects
     )
 }

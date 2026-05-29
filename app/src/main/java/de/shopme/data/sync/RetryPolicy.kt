@@ -2,24 +2,32 @@ package de.shopme.data.sync
 
 object RetryPolicy {
 
-    private const val BASE_DELAY_MS = 1_000L
-    private const val MAX_DELAY_MS = 60_000L
-
-    fun calculateDelay(retryCount: Int): Long {
-        val delay = BASE_DELAY_MS * (1 shl retryCount)
-        return delay.coerceAtMost(MAX_DELAY_MS)
-    }
+    private const val BASE_DELAY = 1_000L       // 1s
+    private const val MAX_DELAY = 60_000L       // 60s
+    private const val MAX_RETRIES = 5
 
     fun shouldRetry(
         retryCount: Int,
         lastAttemptAt: Long?
     ): Boolean {
 
+        if (retryCount >= MAX_RETRIES) return false
+
         if (lastAttemptAt == null) return true
 
-        val delay = calculateDelay(retryCount)
-        val now = System.currentTimeMillis()
+        val delay = computeDelay(retryCount)
 
-        return now - lastAttemptAt >= delay
+        val nextAllowed = lastAttemptAt + delay
+
+        return System.currentTimeMillis() >= nextAllowed
+    }
+
+    fun computeDelay(retryCount: Int): Long {
+
+        val exp = BASE_DELAY * (1 shl retryCount)
+
+        val jitter = (0..500).random()
+
+        return minOf(exp + jitter, MAX_DELAY)
     }
 }

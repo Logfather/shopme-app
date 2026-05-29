@@ -1,7 +1,7 @@
 package de.shopme.domain.invite
 
 import android.util.Log
-import de.shopme.data.datasource.firestore.FirestoreDataSource
+import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.domain.model.ShoppingList
 import de.shopme.presentation.state.ShoppingState
@@ -14,7 +14,7 @@ data class InviteResult(
     val consumedAt: Long?
 )
 class InviteFlowHandler(
-    private val firestoreDataSource: FirestoreDataSource,
+    private val firestoreDataSource: FirestoreGateway,
     private val roomRepository: RoomShoppingRepository
 ) {
 

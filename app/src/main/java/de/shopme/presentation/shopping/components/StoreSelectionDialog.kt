@@ -60,7 +60,7 @@ fun StoreSelectionDialog(
     selectedStores: List<StoreType>,
     existingStores: List<StoreType>,
     onToggle: (StoreType) -> Unit,
-    onConfirm: (List<String>) -> Unit,
+    onConfirm: (List<StoreType>, List<String>) -> Unit,
     onDismiss: () -> Unit
 ){
 
@@ -92,6 +92,7 @@ fun StoreSelectionDialog(
 
         confirmButton = {
             Log.d("CREATE_FLOW", "BUTTON CLICKED")
+
             TextButton(
                 onClick = {
 
@@ -103,9 +104,10 @@ fun StoreSelectionDialog(
                         lists = lists + name
                     }
 
-                    onConfirm(lists)
-
-                    //onDismiss()
+                    onConfirm(
+                        selectedStores,
+                        lists
+                    )
                 }
             ) {
                 Text("Erstellen")

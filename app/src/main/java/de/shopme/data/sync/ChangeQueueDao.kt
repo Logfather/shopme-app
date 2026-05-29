@@ -6,9 +6,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
-import de.shopme.data.sync.ChangeQueueEntity
-import de.shopme.domain.model.ShoppingItemEntity
-
 
 @Dao
 interface ChangeQueueDao {
@@ -18,7 +15,7 @@ interface ChangeQueueDao {
     SET progress = :progress,
         state = 'SYNCING'
     WHERE id = :id
-""")
+    """)
     suspend fun updateProgress(
         id: String,
         progress: Float
@@ -27,8 +24,20 @@ interface ChangeQueueDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(change: ChangeQueueEntity)
 
-    @Query("SELECT * FROM change_queue WHERE state = 'PENDING' ORDER BY createdAt ASC")
+    @Query("""
+    SELECT * FROM change_queue 
+    WHERE state = 'PENDING'
+    ORDER BY createdAt ASC
+""")
     suspend fun getPendingChanges(): List<ChangeQueueEntity>
+
+    @Query("""
+    SELECT * FROM change_queue
+    WHERE state = 'PENDING'
+    ORDER BY createdAt ASC
+    LIMIT 1
+""")
+    suspend fun getOldestPendingChange(): ChangeQueueEntity?
 
     @Query("""
     UPDATE change_queue
@@ -45,28 +54,30 @@ interface ChangeQueueDao {
     WHERE state = 'PENDING'
     ORDER BY createdAt ASC
     LIMIT :limit
-""")
+    """)
     suspend fun getPending(limit: Int): List<ChangeQueueEntity>
 
     @Query("""
-        UPDATE change_queue 
-        SET state = :state, 
-            retryCount = :retryCount,
-            lastAttemptAt = :timestamp
-        WHERE id = :id
-        """)
+    UPDATE change_queue 
+    SET state = :state, 
+        retryCount = :retryCount,
+        lastAttemptAt = :timestamp,
+        nextRetryAt = :nextRetryAt
+    WHERE id = :id
+    """)
     suspend fun updateRetry(
         id: String,
         state: String,
         retryCount: Int,
-        timestamp: Long
+        timestamp: Long,
+        nextRetryAt: Long
     )
 
     @Query("""
-    SELECT entityId, state, progress, createdAt
+    SELECT entityId, state, progress, createdAt, retryCount
     FROM change_queue
     WHERE state IN ('PENDING', 'SYNCING', 'FAILED', 'DONE')
-""")
+    """)
     fun observeSyncStates(): Flow<List<SyncStateTuple>>
 
     @Query("""
@@ -75,7 +86,7 @@ interface ChangeQueueDao {
         progress = 0
     WHERE entityId = :entityId
     AND state = 'FAILED'
-""")
+    """)
     suspend fun retryFailedChanges(entityId: String)
 
     @Query("""
@@ -91,7 +102,7 @@ interface ChangeQueueDao {
     SET state = 'SYNCING',
         lastAttemptAt = :timestamp
     WHERE id = :id AND state = 'PENDING'
-""")
+    """)
     suspend fun markSyncing(id: String, timestamp: Long)
 
     @Query("""
@@ -115,7 +126,7 @@ interface ChangeQueueDao {
     SELECT * FROM change_queue 
     WHERE entityId = :entityId 
     AND state = 'PENDING'
-""")
+    """)
     suspend fun getPendingForEntity(entityId: String): List<ChangeQueueEntity>
 
     @Query("SELECT * FROM change_queue WHERE entityId = :entityId AND state = 'PENDING'")
@@ -125,14 +136,14 @@ interface ChangeQueueDao {
     SELECT * FROM change_queue 
     WHERE entityId = :entityId 
     AND state IN ('PENDING', 'SYNCING')
-""")
+    """)
     suspend fun getActiveByEntityId(entityId: String): List<ChangeQueueEntity>
 
     @Query("""
     UPDATE change_queue 
     SET state = 'DONE' 
     WHERE entityId = :entityId
-""")
+    """)
     suspend fun markDoneByEntityId(entityId: String)
 
     @Query("""
@@ -141,31 +152,98 @@ interface ChangeQueueDao {
     AND entityType = 'item'
     AND operation = 'UPDATE'
     AND state IN ('PENDING', 'SYNCING')
-""")
+    """)
     suspend fun deletePendingUpdatesForEntity(entityId: String)
 
     @Query("UPDATE items SET isChecked = :checked, updatedAt = :timestamp WHERE id = :itemId")
     suspend fun updateChecked(itemId: String, checked: Boolean, timestamp: Long)
 
-    @Query("DELETE FROM change_queue WHERE id = :id")
+    @Query("""
+    DELETE FROM change_queue
+    WHERE id = :id
+""")
     suspend fun deleteById(id: String)
+
+    @Query("""
+    SELECT * FROM change_queue
+    WHERE entityId = :entityId
+    AND state IN ('PENDING', 'SYNCING')
+    ORDER BY createdAt DESC
+    LIMIT 1
+    """)
+    suspend fun getLatestPendingByEntityId(
+        entityId: String
+    ): ChangeQueueEntity?
+
+    @Query("""
+    SELECT state, COUNT(*) as count 
+    FROM change_queue 
+    GROUP BY state
+    """)
+    fun observeQueueStats(): Flow<List<QueueStateCount>>
 
     @Query("""
     SELECT * FROM change_queue 
     WHERE entityId = :entityId 
-    AND state != 'DONE'
+    AND state IN ('PENDING', 'SYNCING')
     ORDER BY createdAt DESC
     LIMIT 1
+    """)
+    suspend fun getLatestActiveByEntityId(entityId: String): ChangeQueueEntity?
+
+    @Query("""
+    UPDATE change_queue
+    SET baseVersion = :baseVersion,
+        createdAt = :createdAt
+    WHERE id = :id
+    """)
+    suspend fun updateBaseVersionAndTimestamp(
+        id: String,
+        baseVersion: Long,
+        createdAt: Long
+    )
+
+    @Query("""
+    UPDATE change_queue
+    SET baseVersion = :baseVersion,
+        createdAt = :now
+    WHERE id = :id
+    """)
+    suspend fun updateBaseVersion(
+        id: String,
+        baseVersion: Long,
+        now: Long = System.currentTimeMillis()
+    )
+
+    @Query("""
+    SELECT * FROM change_queue
+    """)
+    suspend fun getAllChanges(): List<ChangeQueueEntity>
+
+    @Query("""
+    SELECT * FROM change_queue
+    WHERE id = :id
+    LIMIT 1
+    """)
+    suspend fun getChangeById(id: String): ChangeQueueEntity?
+
+    @Query("""
+    UPDATE change_queue
+    SET nextRetryAt = NULL
+    WHERE state = 'PENDING'
 """)
-    suspend fun getLatestPendingByEntityId(entityId: String): ChangeQueueEntity?
+    suspend fun resetRetryBackoff()
 
 }
 
-
-
+data class QueueStateCount(
+    val state: String,
+    val count: Int
+)
 data class SyncStateTuple(
     val entityId: String,
     val state: String,
     val progress: Float?,
-    val createdAt: Long // 🔥 NEU
+    val createdAt: Long,
+    val retryCount: Int
 )

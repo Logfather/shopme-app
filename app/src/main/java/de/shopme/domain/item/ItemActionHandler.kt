@@ -1,11 +1,11 @@
 package de.shopme.domain.item
 
 import android.util.Log
+import de.shopme.data.mapper.EntityMapper.toEntity
 import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.data.sync.ChangeQueueDao
 import de.shopme.data.sync.ChangeQueueEntity
 import de.shopme.domain.model.ShoppingItem
-import de.shopme.data.mapper.EntityMapper.toEntity
 import de.shopme.domain.service.CategoryMapper
 import de.shopme.domain.service.QuantityMapper
 import kotlinx.coroutines.sync.Mutex
@@ -55,17 +55,9 @@ class ItemActionHandler(
 
         val entity = item.toEntity()
 
-        val existing = changeQueueDao.getPendingByEntityId(entity.id)
+        //Log.d("ITEM_HANDLER", "addItem")
 
-        if (existing.any { it.operation == "CREATE" }) {
-            Log.d("QUEUE_SKIP", "Skip duplicate CREATE for ${entity.id}")
-            return
-        }
-
-        //Log.d("ITEM_HANDLER", "addItem NEW id=${entity.id}")
-        Log.d("ITEM_HANDLER", "addItem")
-
-        roomRepository.addItem(entity)
+        roomRepository.createItem(entity)
     }
 
     // ============================================================
@@ -77,7 +69,8 @@ class ItemActionHandler(
         newChecked: Boolean
     ) {
         val lock = getLock(itemId)
-        Log.d("ITEM_HANDLER", "updateItemChecked")
+
+        //Log.d("ITEM_HANDLER", "updateItemChecked")
 
         lock.withLock {
 
@@ -87,6 +80,7 @@ class ItemActionHandler(
             val now = System.currentTimeMillis()
 
             if (current.isChecked == newChecked) {
+                //Log.d("SYNC_SKIP_DUP", "Skip identical toggle id=$itemId")
                 return
             }
 
@@ -97,9 +91,9 @@ class ItemActionHandler(
 
             val entity = updated.toEntity()
 
-            Log.d("DB_CHECK", "UPDATE item=${entity.id} checked=${entity.isChecked}")
+            //Log.d("DB_CHECK", "UPDATE item=${entity.id} checked=${entity.isChecked}")
 
-            // 🔥 FIX: kein delete!
+            // 🔥 EINZIGE Quelle
             roomRepository.updateItem(entity)
         }
     }
@@ -118,32 +112,34 @@ class ItemActionHandler(
 
             val now = System.currentTimeMillis()
 
-            Log.d("ITEM_HANDLER", "updateItem")
+            //Log.d("ITEM_HANDLER", "updateItem")
 
-            val updated = item.copy(
+            val current = roomRepository.getItemById(item.id)
+                ?: return
+
+            // 🔥 HARD IDEMPOTENCY GUARD (AUF ENTITY STATE, NICHT PARAMS)
+            if (current.name == newName &&
+                current.isChecked == true &&
+                current.deletedAt == null
+            ) {
+                //Log.d("SYNC_SKIP_DUP", "Skip identical update id=${item.id}")
+                return
+            }
+
+            val updated = current.copy(
                 name = newName,
-                isChecked = true, // 🔥 FIX: Zustand aus Reducer erzwingen
+                isChecked = true,
                 updatedAt = now
             )
 
             val entity = updated.toEntity()
 
-            Log.d(
-                "DB_CHECK",
-                "UPDATE item=${entity.id} checked=${entity.isChecked}"
-            )
+//            Log.d(
+//                "DB_CHECK",
+//                "UPDATE item=${entity.id} checked=${entity.isChecked}"
+//            )
 
             roomRepository.updateItem(entity)
-
-            changeQueueDao.deletePendingUpdatesForEntity(entity.id)
-
-            enqueue(
-                entityId = entity.id,
-                listId = entity.listId,
-                operation = "UPDATE",
-                createdAt = now,
-                baseVersion = item.updatedAt
-            )
         }
     }
 
@@ -165,17 +161,41 @@ class ItemActionHandler(
 
             val entity = updated.toEntity()
 
-            Log.d(
-                "DB_CHECK",
-                "DELETE item=${entity.id} checked=${entity.isChecked} deletedAt=${entity.deletedAt}"
-            )
+//            Log.d(
+//                "DB_CHECK",
+//                "DELETE item=${entity.id} checked=${entity.isChecked} deletedAt=${entity.deletedAt}"
+//            )
 
-            Log.d("ITEM_HANDLER", "deleteItem")
+            //Log.d("ITEM_HANDLER", "deleteItem")
 
-            // 🔥 NUR Repository
-            roomRepository.deleteItem(entity)
+            roomRepository.updateItem(entity)
         }
     }
+
+    /*
+     * TODO(NIMBLU_QUEUE_REFACTOR):
+     *
+     * Diese enqueue-Implementierung ist Legacy.
+     *
+     * Aktive Runtime-Logik wird aktuell primär über
+     * RoomShoppingRepository.enqueue() validiert.
+     *
+     * Nach Stabilisierung der Runtime-Simulation:
+     *
+     * Ziel:
+     * - zentrale QueueEngine
+     * - eine einzige Dedup-Strategie
+     * - einheitliche Burst Guards
+     * - zentralisierte Sync Trigger
+     * - gemeinsame Queue Policies
+     *
+     * NICHT entfernen bevor:
+     * - alle Runtime-Pfade validiert wurden
+     * - Multi Device Simulation stabil läuft
+     * - SyncCoordinator vollständig getestet ist
+     */
+
+
     private suspend fun enqueue(
         entityId: String,
         listId: String,
@@ -188,10 +208,10 @@ class ItemActionHandler(
 
         if (existing != null) {
 
-            Log.d(
-                "QUEUE_DEDUP",
-                "existing=${existing.operation} new=$operation id=$entityId"
-            )
+//            Log.d(
+//                "QUEUE_DEDUP",
+//                "existing=${existing.operation} new=$operation id=$entityId"
+//            )
 
             when {
 
@@ -199,7 +219,7 @@ class ItemActionHandler(
                 // CREATE + UPDATE → KEEP CREATE
                 // --------------------------------------------------
                 existing.operation == "CREATE" && operation == "UPDATE" -> {
-                    Log.d("QUEUE_DEDUP", "KEEP CREATE, skip UPDATE id=$entityId")
+                    //Log.d("QUEUE_DEDUP", "KEEP CREATE, skip UPDATE id=$entityId")
                     return
                 }
 
@@ -254,10 +274,10 @@ class ItemActionHandler(
             baseVersion = baseVersion
         )
 
-        Log.d(
-            "QUEUE_ENQUEUE",
-            "ADD op=$operation id=$entityId base=$baseVersion"
-        )
+//        Log.d(
+//            "QUEUE_ENQUEUE",
+//            "ADD op=$operation id=$entityId base=$baseVersion"
+//        )
 
         changeQueueDao.insert(entity)
     }

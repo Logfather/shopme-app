@@ -19,9 +19,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import de.shopme.domain.model.ShoppingItem
-import de.shopme.domain.model.SyncStatus
 import de.shopme.presentation.mapper.toUiState
-import de.shopme.presentation.model.SyncUiState
 import de.shopme.ui.theme.BrandBlack
 import de.shopme.ui.theme.BrandOlive
 
@@ -35,7 +33,7 @@ fun SupermarketItemRow(
     onUpdate: (String) -> Unit
 ){
 
-    var isEditing by remember(item.id, item.isChecked) {
+    var isEditing by remember(item.id) {
         mutableStateOf(!item.isChecked)
     }
 
@@ -46,6 +44,12 @@ fun SupermarketItemRow(
     LaunchedEffect(item.id, item.name) {
         if (!isEditing && textFieldValue.text != item.name) {
             textFieldValue = TextFieldValue(item.name)
+        }
+    }
+
+    LaunchedEffect(item.isChecked) {
+        if (item.isChecked) {
+            isEditing = false
         }
     }
 

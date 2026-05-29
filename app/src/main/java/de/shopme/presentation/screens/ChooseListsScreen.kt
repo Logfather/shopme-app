@@ -1,5 +1,6 @@
 package de.shopme.presentation.screens
 
+import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import de.shopme.domain.model.ShoppingList
+import de.shopme.presentation.event.ShopEvent
 import de.shopme.ui.illustration.icons.bags.HappyBagIllustration
 import de.shopme.ui.theme.BrandBlack
 import de.shopme.ui.theme.BrandGreen
@@ -162,7 +164,8 @@ fun ChooseListsScreen(
                 // 👉 Zustand 2: Auswahl vorhanden → Button erscheint
                 Button(
                     onClick = {
-                        onConfirm(selectedIds.toList())
+                        val ids = selectedIds.toList()
+                        onConfirm(ids)
                     },
                     modifier = Modifier
                         .fillMaxWidth()

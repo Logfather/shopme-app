@@ -25,7 +25,7 @@ class AccountDeletionManager(
 
     private suspend fun performDataCleanup(userId: String) {
 
-        Log.d("ACCOUNT_DELETE", "Start data cleanup")
+        //Log.d("ACCOUNT_DELETE", "Start data cleanup")
 
         // ============================================================
         // QUEUE
@@ -67,12 +67,12 @@ class AccountDeletionManager(
             listDao.deleteById(it.id)
         }
 
-        Log.d("ACCOUNT_DELETE", "Cleanup DONE")
+        //Log.d("ACCOUNT_DELETE", "Cleanup DONE")
     }
 
     suspend fun deleteAccount(userId: String) = withContext(Dispatchers.IO) {
 
-        Log.d("ACCOUNT_DELETE", "START for user=$userId")
+        //Log.d("ACCOUNT_DELETE", "START for user=$userId")
 
         // ============================================================
         // 1. STOP SYNC (CRITICAL)
@@ -82,7 +82,7 @@ class AccountDeletionManager(
         // ============================================================
         // 2. CLEAR LOCAL QUEUE
         // ============================================================
-        Log.d("ACCOUNT_DELETE", "Clearing queue")
+        //Log.d("ACCOUNT_DELETE", "Clearing queue")
         changeQueueDao.clearAll()
 
         // ============================================================
@@ -127,7 +127,7 @@ class AccountDeletionManager(
             listDao.deleteById(it.id)
         }
 
-        Log.d("ACCOUNT_DELETE", "DONE")
+        //Log.d("ACCOUNT_DELETE", "DONE")
     }
 
     suspend fun deleteAccountWithReauth(
@@ -135,7 +135,7 @@ class AccountDeletionManager(
         getIdToken: suspend () -> String?
     ) = withContext(Dispatchers.IO) {
 
-        Log.d("ACCOUNT_DELETE", "START with reauth for user=$userId")
+        //Log.d("ACCOUNT_DELETE", "START with reauth for user=$userId")
 
         // ============================================================
         // 1. STOP SYNC

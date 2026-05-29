@@ -334,9 +334,15 @@ fun ProfileScreen(
 
                 OutlinedButton(
                     onClick = {
-                        if (isValid) {
-                            onCreateProfile(firstName, lastName, email, nickName)
-                        }
+                        onCreateProfile(firstName, lastName, email, nickName)
+
+                            // 🔥 NEU: SaveChoice Flow starten
+                            onShowSaveChoice(
+                                nickName,
+                                firstName,
+                                lastName,
+                                email
+                            )
                     },
                     enabled = isValid,
                     modifier = Modifier

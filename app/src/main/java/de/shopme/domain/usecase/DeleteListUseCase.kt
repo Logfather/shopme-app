@@ -1,12 +1,12 @@
 package de.shopme.domain.usecase
 
-import de.shopme.data.datasource.firestore.FirestoreDataSource
+import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.domain.model.ListDeleteSnapshot
 
 class DeleteListUseCase(
     private val roomRepository: RoomShoppingRepository,
-    private val firestore: FirestoreDataSource
+    private val firestore: FirestoreGateway
 ) {
 
     suspend operator fun invoke(listId: String): ListDeleteSnapshot {

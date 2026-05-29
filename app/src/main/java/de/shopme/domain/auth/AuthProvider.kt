@@ -37,4 +37,6 @@ interface AuthProvider {
     fun isGoogleUser(): Boolean
 
     fun getCurrentUser(): AuthUser?
+
+    fun getUserId(): String?
 }

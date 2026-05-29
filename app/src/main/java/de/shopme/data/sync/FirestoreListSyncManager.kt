@@ -24,7 +24,7 @@ class FirestoreSyncManager(
 
                 CoroutineScope(Dispatchers.IO).launch {
 
-                    listDao.insertLists(lists)
+                    listDao.upsertLists(lists)
 
                 }
 
