@@ -1,16 +1,20 @@
 package de.shopme.runtime
 
 import android.app.Application
-import android.util.Log
 import androidx.room.Room
 import com.google.firebase.auth.FirebaseAuth
 import de.shopme.data.datasource.firestore.FirestoreDataSource
 import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.datasource.room.ShopMeDatabase
+import de.shopme.data.invite.PendingInviteStore
 import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.data.sync.ConflictResolver
+import de.shopme.data.sync.FirestoreListener
+import de.shopme.data.sync.ReplayCompletionNotifier
 import de.shopme.data.sync.SyncCoordinator
 import de.shopme.data.sync.SyncScheduler
+import de.shopme.data.sync.logging.RuntimeLog
+import de.shopme.data.sync.orchestrator.SyncRuntimeOrchestrator
 import de.shopme.domain.life.NimelisEventBus
 import de.shopme.domain.life.processor.NimelisLoggingProcessor
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +34,8 @@ class HivraRuntime(
     )
 
     val syncScheduler = SyncScheduler(application)
+
+
 
     // ------------------------------------------------------------
     // EVENT BUS
@@ -102,6 +108,15 @@ class HivraRuntime(
         )
     }
 
+    val firestoreListener =
+        FirestoreListener(
+            dataSource = firestoreGateway,
+            itemDao = itemDao,
+            listDao = listDao,
+            conflictResolver = conflictResolver,
+            appScope = runtimeScope
+        )
+
     val syncCoordinator by lazy {
 
         SyncCoordinator(
@@ -116,24 +131,59 @@ class HivraRuntime(
         )
     }
 
+    val syncRuntimeOrchestrator =
+        SyncRuntimeOrchestrator(
+            syncScheduler = syncScheduler
+        )
+
+
+
+    val replayCompletionNotifier:
+            ReplayCompletionNotifier =
+        syncRuntimeOrchestrator
+
     // ------------------------------------------------------------
     // STARTUP
     // ------------------------------------------------------------
 
     fun start() {
 
-        Log.d(
-            "HIVRA_RUNTIME",
+        RuntimeLog.runtime(
             "Starting runtime"
         )
-
         loggingProcessor.start()
 
         roomRepository.attachSyncCoordinator(syncCoordinator)
 
-        Log.d(
-            "HIVRA_RUNTIME",
+        RuntimeLog.runtime(
             "Runtime started"
         )
+
+        syncRuntimeOrchestrator.onStartup()
     }
+
+    fun startUserSync(
+        userId: String
+    ) {
+
+        RuntimeLog.runtime(
+            "Start user sync | uid=$userId"
+        )
+
+        firestoreListener.startListSync(
+            userId
+        )
+    }
+
+    fun stopUserSync() {
+
+        RuntimeLog.runtime(
+            "Stop user sync"
+        )
+
+        firestoreListener.stop()
+    }
+
+    val pendingInviteStore =
+        PendingInviteStore(application)
 }

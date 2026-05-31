@@ -2,7 +2,6 @@ package de.shopme.app
 
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
@@ -15,8 +14,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.work.Constraints
-import androidx.work.NetworkType
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -27,8 +24,9 @@ import de.shopme.core.sound.SoundPlayer
 import de.shopme.data.datasource.catalog.CatalogLoader
 import de.shopme.data.input.speech.SpeechController
 import de.shopme.data.remote.MembershipListener
-import de.shopme.data.sync.ChangeQueue
-import de.shopme.data.sync.FirestoreListener
+import de.shopme.data.sync.logging.NetworkLog
+import de.shopme.data.sync.logging.RuntimeLog
+import de.shopme.data.sync.queue.ChangeQueue
 import de.shopme.domain.account.AccountDeletionManager
 import de.shopme.domain.auth.AuthProvider
 import de.shopme.domain.catalog.CatalogIndex
@@ -43,6 +41,7 @@ import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.ui.app.HivraApp
 import de.shopme.ui.theme.HivraTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -67,11 +66,16 @@ class MainActivity : ComponentActivity() {
                     if (idToken != null) {
                         onGoogleIdTokenReceived(idToken)
                     } else {
-                        Log.e("AUTH", "ID TOKEN NULL")
+                        RuntimeLog.appStartError(
+                            "Google sign-in failed | id token null"
+                        )
                     }
 
                 } catch (e: Exception) {
-                    Log.e("AUTH", "Google sign-in failed", e)
+                    RuntimeLog.appStartError(
+                        "Google sign-in failed",
+                        e
+                    )
                 }
             }
         }
@@ -82,15 +86,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
-        val uri: Uri? = intent?.data
-
-        //Log.d("DEEPLINK", "RAW URI → $uri")
-
-        val listId = uri?.getQueryParameter("listId")
-        val inviteId = uri?.getQueryParameter("inviteId")
-
-        //Log.d("DEEPLINK", "listId=$listId inviteId=$inviteId")
         super.onCreate(savedInstanceState)
+
+        val runtime = (application as HivraApplication).runtime
 
         val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
             com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
@@ -102,15 +100,34 @@ class MainActivity : ComponentActivity() {
         googleSignInClient = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(this, gso)
         SoundPlayer.init(this)
 
+        val pendingInviteStore =
+            runtime.pendingInviteStore
+
+
         // Pending Invite speichern
         intent?.data?.let { uri ->
-            if (uri.host == "shopme-app.de" && uri.path?.contains("invite") == true) {
-                val listId = uri.getQueryParameter("listId")
-                if (listId != null) {
-                    getSharedPreferences("shopme", MODE_PRIVATE)
-                        .edit()
-                        .putString("pending_invite_list_id", listId)
-                        .apply()
+
+            if (
+                uri.host == "shopme-app.de" &&
+                uri.path?.contains("invite") == true
+            ) {
+
+                val listId =
+                    uri.getQueryParameter("listId")
+
+                val inviteId =
+                    uri.getQueryParameter("inviteId")
+
+                if (
+                    listId != null &&
+                    inviteId != null
+                ) {
+
+                    pendingInviteStore
+                        .savePendingInvite(
+                            listId = listId,
+                            inviteId = inviteId
+                        )
                 }
             }
         }
@@ -118,10 +135,6 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             val activityContext = this@MainActivity
-
-
-            val runtime = (application as HivraApplication).runtime
-            val database = runtime.database
             val firestoreDataSource = runtime.firestoreGateway
             val listDao = runtime.listDao
             val itemDao = runtime.itemDao
@@ -145,16 +158,6 @@ class MainActivity : ComponentActivity() {
 
             val authViewModel = remember { AuthViewModel(authProvider) }
 
-            val firestoreListener = remember {
-                FirestoreListener(
-                    dataSource = firestoreDataSource,
-                    itemDao = itemDao,
-                    listDao = listDao,
-                    conflictResolver = conflictResolver,
-                    appScope = runtime.runtimeScope
-                )
-            }
-
             val authUser by authViewModel.authUser.collectAsState()
 
             LaunchedEffect(authUser?.uid) {
@@ -163,16 +166,12 @@ class MainActivity : ComponentActivity() {
 
                 if (uid != null) {
 
-                    //Log.d("SYNC_UI", "Start sync for uid=$uid")
-
                     syncCoordinator.start()
-                    firestoreListener.startListSync(uid)
+                    runtime.startUserSync(uid)
 
                 } else {
 
-                    //Log.d("SYNC_UI", "Stop sync")
-
-                    firestoreListener.stop()
+                    runtime.stopUserSync()
                     syncCoordinator.stop()
                 }
             }
@@ -203,21 +202,18 @@ class MainActivity : ComponentActivity() {
                 networkMonitor
                     .observe()
                     .distinctUntilChanged()
+                    .drop(1)
                     .collect { connected ->
 
-                        Log.d(
-                            "NETWORK_MONITOR",
+                        NetworkLog.monitor(
                             "connected=$connected"
                         )
 
                         if (connected) {
 
-                            Log.d(
-                                "SYNC_REPLAY",
-                                "Reconnect detected -> enqueue replay"
-                            )
-
-                            runtime.syncScheduler.enqueueSyncReplay()
+                            runtime
+                                .syncRuntimeOrchestrator
+                                .onReconnect()
                         }
                     }
             }
@@ -247,22 +243,17 @@ class MainActivity : ComponentActivity() {
                 viewModelFactory {
                     initializer {
                         ShoppingViewModel(
-                            createListUseCase = createListUseCase,
                             deleteListUseCase = deleteListUseCase,
                             roomRepository = roomRepository,
                             quantityMapper = quantityMapper,
                             categoryMapper = categoryMapper,
-                            networkMonitor = networkMonitor,
                             authProvider = authProvider,
-                            speechItemParser = speechParser,
                             firestoreDataSource = firestoreDataSource,
-                            itemDao = itemDao,
                             listDao = listDao,
                             changeQueue = inMemoryChangeQueue,
-                            changeQueueDao = changeQueueDao,
                             authViewModel = authViewModel,
                             accountDeletionManager = accountDeletionManager,
-                            appContext = this@MainActivity.applicationContext // 🔥 DAS FEHLT
+                            appContext = this@MainActivity.applicationContext
                         )
                     }
                 }
@@ -279,15 +270,11 @@ class MainActivity : ComponentActivity() {
             shoppingViewModel = vm
 
 
-            vm.syncUserFromFirebase()
+            LaunchedEffect(Unit) {
+                vm.syncUserFromFirebase()
+            }
 
             LaunchedEffect(Unit) {
-
-                val constraints = Constraints.Builder()
-                    .setRequiredNetworkType(
-                        NetworkType.CONNECTED
-                    )
-                    .build()
 
                 vm.shareEvent.collect { link ->
 
@@ -336,15 +323,11 @@ class MainActivity : ComponentActivity() {
 
                     try {
 
-                        //Log.d("BOOT", "START AUTH FLOW")
-
                         val user = try {
 
                             val current = auth.currentUser
 
                             if (current != null) {
-
-                                //Log.d("BOOT", "TRY EXISTING USER → ${current.uid}")
 
                                 try {
 
@@ -353,9 +336,8 @@ class MainActivity : ComponentActivity() {
 
                                 } catch (e: Exception) {
 
-                                    Log.w(
-                                        "BOOT",
-                                        "USER INVALID → FORCE RECREATE",
+                                    RuntimeLog.recoveryError(
+                                        "User invalid -> force recreate",
                                         e
                                     )
 
@@ -377,9 +359,8 @@ class MainActivity : ComponentActivity() {
 
                         } catch (e: Exception) {
 
-                            Log.w(
-                                "BOOT",
-                                "USER INVALID → RECREATE",
+                            RuntimeLog.recoveryError(
+                                "User invalid -> recreate",
                                 e
                             )
 
@@ -396,13 +377,10 @@ class MainActivity : ComponentActivity() {
 
                         vm.syncUserFromFirebase()
 
-                        //Log.d("BOOT", "USER READY → ${user.uid}")
-
                     } catch (e: Exception) {
 
-                        Log.e(
-                            "BOOT",
-                            "AUTH FAILED",
+                        RuntimeLog.runtimeError(
+                            "Auth bootstrap failed",
                             e
                         )
                     }
@@ -428,58 +406,32 @@ class MainActivity : ComponentActivity() {
 
     private fun onGoogleIdTokenReceived(idToken: String) {
 
-        //Log.d("AUTH", "ID TOKEN RECEIVED: ${idToken.take(10)}...")
-
-        val beforeUid = com.google.firebase.auth.FirebaseAuth.getInstance().uid
-        //Log.d("AUTH", "UID BEFORE LINK: $beforeUid")
-
         lifecycleScope.launch {
 
             val vm = shoppingViewModel
                 ?: run {
-                    Log.e("AUTH", "ViewModel not ready → abort Google flow")
+                    RuntimeLog.runtimeError(
+                        "ViewModel not ready -> abort Google flow"
+                    )
                     return@launch
                 }
 
+            val result = vm.linkWithGoogle(idToken)
 
+            if (result.isSuccess) {
 
-            lifecycleScope.launch {
+                vm.onGoogleSignInSuccess()
 
-                val result = vm.linkWithGoogle(idToken)
+                vm.bootstrap()
 
-                if (result.isSuccess) {
+                vm.loadUserProfile()
 
-                    vm.onGoogleSignInSuccess()
+            } else {
 
-                    // 🔥 Bootstrap neu starten
-                    vm.bootstrap()
-                    vm.loadUserProfile()
-
-                } else {
-
-                    Log.e("AUTH", "Link FAILED", result.exceptionOrNull())
-                }
-            }
-
-            val afterUid = FirebaseAuth.getInstance().uid
-            //Log.d("AUTH", "UID AFTER LINK: $afterUid")
-
-            lifecycleScope.launch {
-
-                val result = vm.linkWithGoogle(idToken)
-
-                if (result.isSuccess) {
-
-                    vm.onGoogleSignInSuccess()
-
-                    // 🔥 Bootstrap neu starten mit neuer UID
-                    vm.bootstrap()
-                    vm.loadUserProfile()
-
-                } else {
-
-                    Log.e("AUTH", "Link FAILED", result.exceptionOrNull())
-                }
+                RuntimeLog.runtimeError(
+                    "Google link failed",
+                    result.exceptionOrNull()
+                )
             }
         }
     }

@@ -1,24 +1,16 @@
 package de.shopme.presentation.viewmodel
 
 import android.content.Context
-import android.content.Intent
-import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
-import de.shopme.core.network.NetworkMonitor
 import de.shopme.data.datasource.firestore.FirestoreGateway
-import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
 import de.shopme.data.mapper.EntityMapper.toDomain
-import de.shopme.data.mapper.EntityMapper.toEntity
 import de.shopme.data.repository.RoomShoppingRepository
-import de.shopme.data.sync.ChangeQueue
-import de.shopme.data.sync.ChangeQueueDao
+import de.shopme.data.sync.logging.RuntimeLog
+import de.shopme.data.sync.queue.ChangeQueue
 import de.shopme.domain.account.AccountDeletionManager
 import de.shopme.domain.auth.AuthProvider
 import de.shopme.domain.invite.InviteFlowHandler
@@ -30,8 +22,6 @@ import de.shopme.domain.model.StoreType
 import de.shopme.domain.model.SyncOverview
 import de.shopme.domain.service.CategoryMapper
 import de.shopme.domain.service.QuantityMapper
-import de.shopme.domain.service.SpeechItemParser
-import de.shopme.domain.usecase.CreateListUseCase
 import de.shopme.domain.usecase.DeleteListUseCase
 import de.shopme.presentation.action.ShoppingAction
 import de.shopme.presentation.effect.ShoppingEffectHandler
@@ -43,6 +33,7 @@ import de.shopme.presentation.state.ShoppingState
 import de.shopme.presentation.state.ShoppingViewState
 import de.shopme.presentation.state.SortingPhase
 import de.shopme.presentation.undo.UndoAction
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -53,49 +44,35 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.yield
 import java.util.UUID
 
-data class Quadruple<A, B, C, D>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D
-)
 class ShoppingViewModel(
-    //TODO: Property "createListUseCase" is never used
-    private val createListUseCase: CreateListUseCase,
     private val deleteListUseCase: DeleteListUseCase,
     private val roomRepository: RoomShoppingRepository,
-    //TODO: Constructor Parameter is never used as a property
     private val quantityMapper: QuantityMapper,
-    //TODO: Constructor Parameter is never used as a property
     private val categoryMapper: CategoryMapper,
-    //TODO: Property "networkMonitor" is never used
-    private val networkMonitor: NetworkMonitor,
     private val authProvider: AuthProvider,
-    //TODO: Property "speechItemParser" is never used
-    private val speechItemParser: SpeechItemParser,
     private val firestoreDataSource: FirestoreGateway,
-    //TODO: Property "itemDao" is never used
-    private val itemDao: ItemDao,
     private val listDao: ListDao,
     private val changeQueue: ChangeQueue,
-    private val changeQueueDao: ChangeQueueDao,
     private val authViewModel: AuthViewModel,
     private val accountDeletionManager: AccountDeletionManager,
     private val appContext: Context
 ) : ViewModel() {
 
+    private var runtimeJob: Job? = null
+
     private val itemActionHandler = ItemActionHandler(
         roomRepository,
-        changeQueueDao,
         quantityMapper,
         categoryMapper
     )
@@ -127,17 +104,8 @@ class ShoppingViewModel(
     private val _showWelcomeDialog = MutableStateFlow(true)
     val showWelcomeDialog: StateFlow<Boolean> = _showWelcomeDialog.asStateFlow()
 
-    private val _showAccountAction = MutableStateFlow(false)
-    val showAccountAction = _showAccountAction.asStateFlow()
-
     private val _shareReturnTrigger = MutableStateFlow(0)
     val shareReturnTrigger = _shareReturnTrigger.asStateFlow()
-
-    private val _profileSavedTrigger = MutableStateFlow(0)
-    val profileSavedTrigger = _profileSavedTrigger.asStateFlow()
-
-    var triggerShareAnimation by mutableStateOf(false)
-        private set
 
     // ============================================================
     // 🔥 CORE STATE & UI STATE
@@ -213,8 +181,6 @@ class ShoppingViewModel(
 
     val email: StateFlow<String?> = authViewModel.email
 
-    private var authListener: FirebaseAuth.AuthStateListener? = null
-
 // ============================================================
 // 🔥 LIST & NAVIGATION STATE
 // Zweck:
@@ -224,10 +190,6 @@ class ShoppingViewModel(
 // Stabilitätsrelevanz:
 // - Hoch → falsche IDs führen zu falschen Daten
 // ============================================================
-
-    private val _currentListId = MutableStateFlow<String?>(null)
-    val currentListId: StateFlow<String?> = _currentListId
-    private var listsObserved = false
 
     private var bufferedLists: List<ShoppingListEntity>? = null
     private var lastBootstrapUid: String? = null
@@ -243,7 +205,6 @@ class ShoppingViewModel(
 
     private var isSharingInProgress: Boolean = false
     private var pendingShareListIds: List<String>? = null
-    private var pendingInviteListId: String? = null
 
     private val _shareEvent = MutableSharedFlow<String>(
         replay = 0,
@@ -275,19 +236,9 @@ class ShoppingViewModel(
 // - Mittel → betrifft UX, nicht Kernlogik
 // ============================================================
 
-    private var pendingProfileUpdate: Quadruple<String, String?, String?, String?>? = null
+    private var pendingProfileUpdate:
+            PendingProfileUpdate? = null
 
-// ============================================================
-// 🔥 DELETE / OPERATION STATE
-// Zweck:
-// - Kontrolle kritischer Operationen (DeleteAll, Generation Tracking)
-//
-// Stabilitätsrelevanz:
-// - KRITISCH → schützt vor Race Conditions & Inkonsistenzen
-// ============================================================
-
-    private var isDeleteAllRunning = false
-    private var deleteGeneration = 0
 
 // ============================================================
 // 🔥 UNDO SYSTEM
@@ -301,18 +252,6 @@ class ShoppingViewModel(
     private var lastUndoAction: UndoAction? = null
 
 // ============================================================
-// 🔥 ACCOUNT HINT / UX STATE
-// Zweck:
-// - Steuerung von UI-Hinweisen
-//
-// Stabilitätsrelevanz:
-// - Niedrig
-// ============================================================
-
-    private var _accountHintShown = false
-    val shouldShowAccountHint = MutableStateFlow(false)
-
-// ============================================================
 // 🔥 10. BOOTSTRAP & APP LIFECYCLE
 // Zweck:
 // - Einstiegspunkt der App
@@ -324,9 +263,7 @@ class ShoppingViewModel(
 
     init {
         observeAuthUser()
-        observeItems()
-        observeEffects()
-        observeSyncOverview()
+        startRuntimeObservers()
     }
 
     fun itemsForList(listId: String): Flow<List<ShoppingItem>> {
@@ -354,24 +291,12 @@ class ShoppingViewModel(
 
         viewModelScope.launch {
 
-            Log.d("LISTS_OBSERVED",
-                "Before if condition: Observed List=${listsObserved}")
-
-            // 1. Zuerst System Start
-            if (!listsObserved) {
-                Log.d("LISTS_OBSERVED",
-                    "Inside if condition: Observed List=${listsObserved}")
-                observeLists()
-                listsObserved = true
-            }
-
-            // 2. Danach Authentication
-            updateAuthState()
-
             val uid = authProvider.currentUserId()
 
             if (lastBootstrapUid == uid) {
-                Log.d("BOOT", "Skip bootstrap → same UID")
+                RuntimeLog.runtime(
+                    "Skip bootstrap | same uid"
+                )
                 return@launch
             }
 
@@ -391,9 +316,9 @@ class ShoppingViewModel(
                     )
                 }
             }
-
-            // 🔥 Entfernt: Profile Load läuft ausschließlich über Auth Flow
-            Log.d("BOOT", "Skip LoadUserProfile → handled by Auth observer")
+            RuntimeLog.runtime(
+                "Skip profile load | handled by auth observer"
+            )
         }
     }
 
@@ -401,14 +326,12 @@ class ShoppingViewModel(
         action: ShoppingAction? = null,
         event: ShopEvent? = null
     ) {
-        Log.d(
-            "CREATE_TRACE",
-            "Dispatch action=$action event=$event screenMode=${_state.value.screenMode}"
+        RuntimeLog.reducer(
+            "Dispatch | action=$action event=$event screen=${_state.value.screenMode}"
         )
 
         val result = reduce(
             state = _state.value,
-            screenMode = _state.value.screenMode,
             action = action,
             event = event
         )
@@ -417,35 +340,40 @@ class ShoppingViewModel(
 
         viewModelScope.launch {
             result.effects.forEach {
-                Log.d("EFFECT_DEBUG", "EMIT $it")
+                RuntimeLog.effect(
+                    "Emit effect | effect=$it"
+                )
                 _effects.emit(it)
             }
         }
     }
 
     fun onEvent(event: ShopEvent) {
-        Log.d("VM_EVENT", "RECEIVED $event")
+        RuntimeLog.reducer(
+            "Receive event | event=$event"
+        )
         dispatch(event = event)
     }
 
-    private fun observeEffects() {
-        Log.d("EFFECT_OBSERVER", "START COLLECTOR vm=${this.hashCode()}")
+    private suspend fun observeEffects() {
 
-        viewModelScope.launch {
-            effects.collect { effect ->
-                Log.d(
-                    "EFFECT_DEBUG",
-                    "COLLECT vm=${this@ShoppingViewModel.hashCode()} effect=$effect"
-                )
-                handleEffect(effect)
-            }
+        RuntimeLog.runtime(
+            "Start effect collector"
+        )
+
+        effects.collect { effect ->
+
+            RuntimeLog.effect(
+                "Handle effect: $effect"
+            )
+
+            handleEffect(effect)
         }
     }
 
     private fun handleEffect(effect: UIEffect) {
-        Log.d(
-            "EFFECT_HANDLER",
-            "HANDLE vm=${this.hashCode()} effect=$effect"
+        RuntimeLog.effect(
+            "Handle effect | effect=$effect"
         )
         effectHandler.handle(effect)
     }
@@ -465,122 +393,113 @@ class ShoppingViewModel(
 // 🔥 Observe Lists (Realtime + Sorting + Delete Protection)
 // ------------------------------------------------------------
 
-    private fun observeLists() {
+    private suspend fun observeLists() {
 
-        viewModelScope.launch {
+        roomRepository.observeLists()
+            .collectLatest { lists ->
 
-            roomRepository.observeLists()
-                .collect { lists ->
+                // ============================================================
+                // 🔥 SORT BUFFER
+                // verhindert Flackern während Sorting
+                // ============================================================
 
-                    // ============================================================
-                    // 🔥 SORT BUFFER (verhindert Flackern während Sorting)
-                    // ============================================================
-                    if (_state.value.isSorting) {
-                        Log.d("SORT_DEBUG", "Buffer emission during sorting")
-                        bufferedLists = lists
-                        return@collect
-                    }
+                if (_state.value.isSorting) {
 
-                    val currentState = _state.value
-                    val isDeleting = currentState.isDeletingAll
-                    val generationAtStart = currentState.deleteGeneration
+                    RuntimeLog.runtime(
+                        "Buffer list emission during sorting"
+                    )
 
-                    val effectiveLists = bufferedLists ?: lists
-                    bufferedLists = null
+                    bufferedLists = lists
+                    return@collectLatest
+                }
 
-                    val domainLists = effectiveLists
+                val currentState = _state.value
+
+                val effectiveLists =
+                    bufferedLists ?: lists
+
+                bufferedLists = null
+
+                val domainLists =
+                    effectiveLists
                         .map { it.toDomain() }
                         .filter { it.name.isNotBlank() }
                         .sortedBy { it.name.lowercase() }
 
-                    // ============================================================
-                    // 🔥 DELETE FLOW CONTROL
-                    // ============================================================
-                    if (isDeleting) {
+                // ============================================================
+                // 🔥 DELETE FLOW CONTROL
+                // verhindert Zwischenzustände während Delete-All
+                // ============================================================
 
-                        if (domainLists.isNotEmpty()) {
-                            Log.d("LIST_BLOCK", "Skip intermediate size=${domainLists.size}")
-                            return@collect
-                        }
+                if (currentState.isDeletingAll) {
 
-                        Log.d("LIST_FLOW", "DeleteAll finished")
+                    if (domainLists.isNotEmpty()) {
 
-                        _state.update {
-                            it.copy(
-                                isDeletingAll = false,
-                                lists = emptyList(),
-                                activeListId = null
-                            )
-                        }
+                        RuntimeLog.runtime(
+                            "Skip intermediate delete emission size=${domainLists.size}"
+                        )
 
-                        _showWelcomeDialog.value = true
-                        return@collect
+                        return@collectLatest
                     }
 
-                    // ============================================================
-                    // 🔥 STALE SNAPSHOT PROTECTION
-                    // ============================================================
-                    if (generationAtStart != _state.value.deleteGeneration) {
-                        Log.d("LIST_BLOCK", "Skip stale emission (generation mismatch)")
-                        return@collect
-                    }
-
-                    // ============================================================
-                    // 🔥 EMPTY STATE GUARD (KRITISCHER FIX)
-                    // verhindert Navigation Jump bei kurzen Leerzuständen
-                    // ============================================================
-                    if (
-                        currentState.screenMode !is ShoppingScreenMode.Loading &&
-                        domainLists.isEmpty() &&
-                        currentState.activeListId != null &&
-                        !currentState.isDeletingAll &&
-                        !currentState.isSorting
-                    ) {
-                        Log.d("LIST_BLOCK", "Skip transient empty emission")
-                        return@collect
-                    }
-
-                    // ============================================================
-                    // 🔥 NORMAL FLOW
-                    // ============================================================
-
-                    Log.d(
-                        "OFFLINE_DEBUG",
-                        "observeLists emission size=${domainLists.size} screen=${currentState.screenMode}"
+                    RuntimeLog.runtime(
+                        "DeleteAll completed"
                     )
 
-                    _state.update { current ->
-
-                        val validActiveId =
-                            current.activeListId
-                                ?.takeIf { id -> domainLists.any { it.id == id } }
-
-                        val newActiveId =
-                            validActiveId
-                                ?: current.activeListId   // 🔥 KEY FIX
-                                ?: domainLists.firstOrNull()?.id
-
-                        val nextScreen =
-                            if (current.screenMode is ShoppingScreenMode.Loading)
-                                ShoppingScreenMode.MultiOverview
-                            else
-                                current.screenMode
-
-                        Log.d(
-                            "OFFLINE_DEBUG",
-                            "Updating screenMode from=${current.screenMode} to=$nextScreen"
-                        )
-
-                        current.copy(
-                            lists = domainLists,
-                            screenMode = nextScreen,
-                            activeListId = newActiveId
+                    _state.update {
+                        it.copy(
+                            isDeletingAll = false,
+                            lists = emptyList(),
+                            activeListId = null
                         )
                     }
 
-                    _showWelcomeDialog.value = domainLists.isEmpty()
+                    _showWelcomeDialog.value = true
+
+                    return@collectLatest
                 }
-        }
+
+                // ============================================================
+                // 🔥 NORMAL FLOW
+                // ============================================================
+
+                RuntimeLog.runtime(
+                    "observeLists emission size=${domainLists.size}"
+                )
+
+                _state.update { current ->
+
+                    val validActiveId =
+                        current.activeListId
+                            ?.takeIf { activeId ->
+                                domainLists.any { it.id == activeId }
+                            }
+
+                    val newActiveId =
+                        validActiveId
+                            ?: domainLists.firstOrNull()?.id
+
+                    val nextScreen =
+                        if (current.screenMode is ShoppingScreenMode.Loading) {
+                            ShoppingScreenMode.MultiOverview
+                        } else {
+                            current.screenMode
+                        }
+
+                    RuntimeLog.runtime(
+                        "Update screen=${current.screenMode} -> $nextScreen active=$newActiveId"
+                    )
+
+                    current.copy(
+                        lists = domainLists,
+                        screenMode = nextScreen,
+                        activeListId = newActiveId
+                    )
+                }
+
+                _showWelcomeDialog.value =
+                    domainLists.isEmpty()
+            }
     }
 
 // ------------------------------------------------------------
@@ -589,7 +508,9 @@ class ShoppingViewModel(
 
     fun createListFromStore(store: StoreType) {
 
-        Log.d("CREATE_TRACE", "createListFromStore CALLED store=${store.name}")
+        RuntimeLog.creation(
+            "Create store list | store=${store.name}"
+        )
 
         viewModelScope.launch {
 
@@ -608,7 +529,9 @@ class ShoppingViewModel(
 
     fun createCustomList(name: String) {
 
-        Log.d("CREATE_TRACE", "createCustomList CALLED name=$name")
+        RuntimeLog.creation(
+            "Create custom list | name=$name"
+        )
 
         viewModelScope.launch {
 
@@ -638,9 +561,9 @@ class ShoppingViewModel(
 
     fun setCurrentList(listId: String) {
 
-        Log.d("LIST_FLOW", "setCurrentList = $listId")
-
-        _currentListId.value = listId
+        RuntimeLog.list(
+            "Set current list | id=$listId"
+        )
 
         _state.update {
             it.copy(activeListId = listId)
@@ -658,12 +581,6 @@ class ShoppingViewModel(
 
             val action = UndoAction.DeleteList(snapshot)
             lastUndoAction = action
-
-            _effects.emit(
-                UIEffect.ShowUndo(
-                    message = ""
-                )
-            )
         }
     }
 
@@ -684,8 +601,7 @@ class ShoppingViewModel(
         _state.update {
             it.copy(
                 showDeleteAllConfirm = false,
-                isDeletingAll = true,
-                deleteGeneration = it.deleteGeneration + 1
+                isDeletingAll = true
             )
         }
 
@@ -706,8 +622,6 @@ class ShoppingViewModel(
     }
 
     fun onDeleteAllCompleted() {
-
-        isDeleteAllRunning = false
 
         _state.update {
             it.copy(isDeletingAll = false)
@@ -738,7 +652,9 @@ class ShoppingViewModel(
         customLists: List<String>
     ) {
 
-        Log.d("CREATE_TRACE", "ENTER createListsWithSorting stores=${stores.size} custom=${customLists.size}")
+        RuntimeLog.creation(
+            "Start multi list creation | stores=${stores.size} custom=${customLists.size}"
+        )
 
         dispatch(event = ShopEvent.List.StartSorting)
 
@@ -752,12 +668,17 @@ class ShoppingViewModel(
         try {
 
             stores.forEach {
-                Log.d("CREATE_TRACE", "CREATE STORE ${it.name}")
+                RuntimeLog.creation(
+                    "Create store list | store=${it.name}"
+                )
                 createListFromStore(it)
             }
 
             customLists.forEach {
-                Log.d("CREATE_TRACE", "CREATE CUSTOM $it")
+
+                RuntimeLog.creation(
+                    "Create custom list | name=$it"
+                )
                 createCustomList(it)
             }
 
@@ -770,7 +691,9 @@ class ShoppingViewModel(
             dispatch(event = ShopEvent.List.FinishSorting)
 
             bufferedLists?.let { lists ->
-                Log.d("SORT_DEBUG", "Apply buffered lists after sorting")
+                RuntimeLog.runtime(
+                    "Apply buffered lists after sorting"
+                )
                 bufferedLists = null
 
                 val domainLists = lists
@@ -817,27 +740,31 @@ class ShoppingViewModel(
 // 🔥 Observe Items (Realtime + Sync Status)
 // ------------------------------------------------------------
 
-    private fun observeItems() {
-        viewModelScope.launch {
-            currentListId
-                .filterNotNull()
-                .collectLatest { listId ->
+    private suspend fun observeItems() {
 
-                    roomRepository
-                        .observeItemsWithSyncStatus(listId)
-                        .collect { itemsWithStatus ->
+        state
+            .map { it.activeListId }
+            .distinctUntilChanged()
+            .filterNotNull()
+            .collectLatest { listId ->
 
-                            val domainItems = itemsWithStatus.map { (entity, statusEntity) ->
+                roomRepository
+                    .observeItemsWithSyncStatus(listId)
+                    .collect { itemsWithStatus ->
+
+                        val domainItems =
+                            itemsWithStatus.map { (entity, statusEntity) ->
+
                                 entity.toDomain().copy(
                                     syncStatus = statusEntity
                                 )
                             }
-                            _state.update {
-                                it.copy(items = domainItems)
-                            }
+
+                        _state.update {
+                            it.copy(items = domainItems)
                         }
-                }
-        }
+                    }
+            }
     }
 
 // ------------------------------------------------------------
@@ -859,7 +786,9 @@ class ShoppingViewModel(
         viewModelScope.launch {
 
             if (isSharingInProgress) {
-                Log.w("SHARE_DEBUG", "Share already in progress → skip")
+                RuntimeLog.share(
+                    "Skip share | already in progress"
+                )
                 return@launch
             }
 
@@ -901,7 +830,9 @@ class ShoppingViewModel(
                 pendingShareListIds = null
 
             } catch (e: Exception) {
-                Log.e("SHARE_DEBUG", "Failed to create invite", e)
+                RuntimeLog.share(
+                    "Create invite failed"
+                )
 
             } finally {
 
@@ -924,7 +855,9 @@ class ShoppingViewModel(
         viewModelScope.launch {
 
             if (_state.value.isJoining) {
-                Log.w("INVITE", "Already joining → skip")
+                RuntimeLog.invite(
+                    "Skip join | already joining"
+                )
                 return@launch
             }
 
@@ -960,7 +893,9 @@ class ShoppingViewModel(
 
             } catch (e: Exception) {
 
-                Log.e("INVITE", "Accept failed", e)
+                RuntimeLog.invite(
+                    "Accept invite failed"
+                )
 
                 _state.update {
                     it.copy(
@@ -1129,68 +1064,6 @@ class ShoppingViewModel(
     }
 
 // ============================================================
-// 🔥 7. UNDO SYSTEM
-// Zweck:
-// - Wiederherstellung letzter Aktionen
-//
-// Stabilitätsrelevanz:
-// - Mittel → UX, aber wichtig für Vertrauen
-// ============================================================
-
-    private fun handleUndo() {
-
-        val action = lastUndoAction ?: return
-
-        viewModelScope.launch {
-
-            when (action) {
-
-                is UndoAction.DeleteItem -> {
-                    val restored = action.item.copy(
-                        deletedAt = null,
-                        updatedAt = System.currentTimeMillis()
-                    )
-                    roomRepository.updateItem(restored.toEntity())
-                }
-
-                is UndoAction.ToggleItem -> {
-                    roomRepository.updateItem(action.item.toEntity())
-                }
-
-                is UndoAction.UpdateItem -> {
-                    val restored = action.oldItem.copy(
-                        isChecked = true,
-                        updatedAt = System.currentTimeMillis()
-                    )
-                    roomRepository.updateItem(restored.toEntity())
-                }
-
-                is UndoAction.DeleteList -> {
-
-                    val listId = action.snapshot.list.id
-
-                    roomRepository.restoreList(action.snapshot)
-
-                    setCurrentList(listId)
-
-                    _state.update {
-                        it.copy(
-                            screenMode = ShoppingScreenMode.Normal,
-                            activeListId = listId
-                        )
-                    }
-                }
-                is UndoAction.AddItem -> {
-                    // aktuell kein Undo implementiert
-                    // bewusst leer lassen
-                }
-            }
-
-            lastUndoAction = null
-        }
-    }
-
-// ============================================================
 // 🔥 2. AUTH & USER
 // Zweck:
 // - Verwaltung des Auth-Zustands
@@ -1200,19 +1073,10 @@ class ShoppingViewModel(
 // - EXTREM KRITISCH → steuert Zugriff, Sync, Ownership
 // ============================================================
 
-// ------------------------------------------------------------
-// 🔥 Auth State Sync
-// ------------------------------------------------------------
-
-    fun updateAuthState() {
-        val user = FirebaseAuth.getInstance().currentUser
-    }
 
     fun syncUserFromFirebase() {
 
         val uid = authProvider.getCurrentUserUidOrNull()
-
-        val isGoogle = authProvider.isGoogleUser()
 
         if (uid == null) {
             _state.update {
@@ -1235,13 +1099,6 @@ class ShoppingViewModel(
             ?.substringAfter(" ", "")
             ?.replaceFirstChar { it.uppercase() }
 
-        val fallbackName = email?.substringBefore("@")
-
-        val finalDisplayName = when {
-            !firstName.isNullOrBlank() -> firstName
-            !fallbackName.isNullOrBlank() -> fallbackName
-            else -> "Profil"
-        }
 
         _firstName.value = firstName
         _lastName.value = lastName
@@ -1252,13 +1109,42 @@ class ShoppingViewModel(
             val safeLastName = lastName ?: ""
             val safeEmail = email ?: ""
 
-            firestoreDataSource.upsertUserProfile(
-                uid = uid,
-                firstName = safeFirstName,
-                lastName = safeLastName,
-                email = safeEmail,
-                profileName = null
-            )
+            val existing = firestoreDataSource.getUserProfile(uid)
+
+            val existingFirst =
+                existing?.get("firstName") as? String ?: ""
+
+            val existingLast =
+                existing?.get("lastName") as? String ?: ""
+
+            val existingEmail =
+                existing?.get("email") as? String ?: ""
+
+            val changed =
+                existingFirst != safeFirstName ||
+                        existingLast != safeLastName ||
+                        existingEmail != safeEmail
+
+            if (changed) {
+
+                firestoreDataSource.upsertUserProfile(
+                    uid = uid,
+                    firstName = safeFirstName,
+                    lastName = safeLastName,
+                    email = safeEmail,
+                    profileName = null
+                )
+
+                RuntimeLog.profile(
+                    "Firestore profile updated"
+                )
+
+            } else {
+
+                RuntimeLog.profile(
+                    "Skip unchanged profile sync"
+                )
+            }
         }
     }
 
@@ -1266,21 +1152,39 @@ class ShoppingViewModel(
 
         viewModelScope.launch {
 
-            authViewModel.authUser.collect { user ->
+            authViewModel.authUser
+                .map { it?.uid }
+                .distinctUntilChanged()
+                .collect { uid ->
 
-                val uid = user?.uid
+                    if (uid != null) {
 
-                if (uid != null) {
+                        startUserProfileListener(uid)
 
-                    Log.d("AUTH", "User logged in")
+                        RuntimeLog.runtime(
+                            "User logged in"
+                        )
 
-                    dispatch(
-                        ShoppingAction.LoadUserProfile(uid)
-                    )
+                        if (runtimeJob == null || runtimeJob?.isCancelled == true) {
 
-                } else {
+                            RuntimeLog.runtime(
+                                "Restart runtime observers after login"
+                            )
 
-                    Log.d("AUTH", "User logged out")
+                            startRuntimeObservers()
+                        }
+
+                        dispatch(
+                            ShoppingAction.LoadUserProfile(uid)
+                        )
+                    } else {
+
+                        userProfileListener?.remove()
+                        userProfileListener = null
+
+                        RuntimeLog.runtime(
+                            "User logged out"
+                        )
                 }
             }
         }
@@ -1296,18 +1200,17 @@ class ShoppingViewModel(
 // - HOCH → falsche Listener = veraltete UI oder Memory Leaks
 // ============================================================
 
-    private fun observeSyncOverview() {
-        viewModelScope.launch {
-            roomRepository.observeSyncOverview()
-                .collect { overview ->
-                    _syncOverview.value = overview
+    private suspend fun observeSyncOverview() {
 
-                    Log.d(
-                        "SYNC_OVERVIEW",
-                        "pending=${overview.pending} syncing=${overview.syncing} failed=${overview.failed}"
-                    )
-                }
-        }
+        roomRepository.observeSyncOverview()
+            .collect { overview ->
+
+                _syncOverview.value = overview
+
+                RuntimeLog.sync(
+                    "pending=${overview.pending} syncing=${overview.syncing} failed=${overview.failed}"
+                )
+            }
     }
 
     private var userProfileListener: ListenerRegistration? = null
@@ -1376,7 +1279,9 @@ class ShoppingViewModel(
                 }
 
             } catch (e: Exception) {
-                Log.e("PROFILE", "Failed to save profile", e)
+                RuntimeLog.profile(
+                    "Save profile failed"
+                )
             }
         }
     }
@@ -1456,11 +1361,11 @@ class ShoppingViewModel(
                 return@launch
             }
 
-            pendingProfileUpdate = Quadruple(
-                nickName,
-                firstName,
-                lastName,
-                email
+            pendingProfileUpdate = PendingProfileUpdate(
+                nickName = nickName,
+                firstName = firstName,
+                lastName = lastName,
+                email = email
             )
         }
     }
@@ -1471,11 +1376,11 @@ class ShoppingViewModel(
         lastName: String?,
         email: String?
     ) {
-        pendingProfileUpdate = Quadruple(
-            nickName,
-            firstName,
-            lastName,
-            email
+        pendingProfileUpdate = PendingProfileUpdate(
+            nickName = nickName,
+            firstName = firstName,
+            lastName = lastName,
+            email = email
         )
 
         onEvent(ShopEvent.System.ShowSaveChoice)
@@ -1487,7 +1392,9 @@ class ShoppingViewModel(
 
     fun confirmManualSave() {
 
-        Log.d("SHARE_FLOW", "confirmManualSave CALLED")
+        RuntimeLog.profile(
+            "Confirm manual profile save"
+        )
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val data = pendingProfileUpdate ?: return
 
@@ -1495,19 +1402,19 @@ class ShoppingViewModel(
 
             firestoreDataSource.upsertUserProfile(
                 uid = uid,
-                firstName = data.second,
-                lastName = data.third,
-                email = data.fourth,
-                profileName = data.first.trim()
+                firstName = data.firstName,
+                lastName = data.lastName,
+                email = data.email,
+                profileName = data.nickName.trim()
             )
 
             // 🔥 NEU: Reducer informieren (entscheidend)
             onEvent(
                 ShopEvent.System.ConfirmManualSave(
-                    firstName = data.second,
-                    lastName = data.third,
-                    email = data.fourth,
-                    nickName = data.first.trim()
+                    firstName = data.firstName,
+                    lastName = data.lastName,
+                    email = data.email,
+                    nickName = data.nickName.trim()
                 )
             )
 
@@ -1517,11 +1424,13 @@ class ShoppingViewModel(
 
     fun confirmGoogleSave() {
 
-        Log.d("SHARE_FLOW", "confirmGoogleSave CALLED")
+        RuntimeLog.profile(
+            "Confirm google profile save"
+        )
 
         val data = pendingProfileUpdate ?: return
 
-        _nickName.value = data.first
+        _nickName.value = data.nickName
 
         // 🔥 WICHTIG: pending NICHT löschen!
         // sonst verlierst du firstName/lastName
@@ -1625,7 +1534,9 @@ class ShoppingViewModel(
             email = email
         )
 
-        Log.d("PROFILE", "Profile saved for uid=$uid")
+        RuntimeLog.profile(
+            "Profile saved locally"
+        )
     }
 
     private suspend fun ensureFirebaseUser(): String {
@@ -1681,7 +1592,10 @@ class ShoppingViewModel(
 
         } catch (e: Exception) {
 
-            Log.w("PROFILE", "User profile not accessible yet", e)
+            RuntimeLog.profile(
+                "User profile not accessible"
+            )
+
 
             dispatch(
                 ShoppingAction.UserProfileLoaded(
@@ -1707,7 +1621,9 @@ class ShoppingViewModel(
             )
 
         } catch (e: Exception) {
-            Log.e("PROFILE", "Update failed", e)
+            RuntimeLog.profile(
+                "Update profile failed"
+            )
         }
     }
 
@@ -1726,7 +1642,9 @@ class ShoppingViewModel(
 
     fun deleteAccount() {
         viewModelScope.launch {
-            Log.d("DELETE", "Trigger delete flow")
+            RuntimeLog.account(
+                "Trigger account deletion"
+            )
             _effects.emit(UIEffect.DeleteAccount)
         }
     }
@@ -1742,15 +1660,17 @@ class ShoppingViewModel(
 
             if (result.isSuccess) {
 
-                Log.d("DELETE", "Account deletion success")
+                RuntimeLog.account(
+                    "Account deletion completed"
+                )
 
-                _state.value = ShoppingState()
-
-                _showWelcomeDialog.value = true
+                clearRuntimeState()
 
             } else {
 
-                Log.e("DELETE", "Account deletion failed", result.exceptionOrNull())
+                RuntimeLog.account(
+                    "Account deletion failed"
+                )
 
                 _effects.emit(
                     UIEffect.ShowSnackbar("Löschen fehlgeschlagen")
@@ -1774,7 +1694,9 @@ class ShoppingViewModel(
         val user = FirebaseAuth.getInstance().currentUser
 
         if (user == null) {
-            Log.w("AUTH", "Unlink failed → user is null")
+            RuntimeLog.account(
+                "Unlink google failed | user null"
+            )
             return
         }
 
@@ -1800,7 +1722,9 @@ class ShoppingViewModel(
 
         } catch (e: Exception) {
 
-            Log.e("AUTH", "Unlink failed", e)
+            RuntimeLog.account(
+                "Unlink google failed"
+            )
 
             _effects.emit(
                 UIEffect.ShowSnackbar("Fehler beim Entfernen von Google")
@@ -1822,9 +1746,9 @@ class ShoppingViewModel(
 
             val pending = pendingProfileUpdate
 
-            val nickName = pending?.first ?: _nickName.value
-            val firstName = pending?.second
-            val lastName = pending?.third
+            val nickName = pending?.nickName ?: _nickName.value
+            val firstName = pending?.firstName
+            val lastName = pending?.lastName
 
             if (nickName != null) {
                 firestoreDataSource.upsertUserProfile(
@@ -1847,7 +1771,9 @@ class ShoppingViewModel(
                 val listId = listIds.firstOrNull()
 
                 if (listId != null) {
-                    Log.d("SHARE_FLOW", "Google success → dispatch StartSharing listId=$listId")
+                    RuntimeLog.share(
+                        "Google sign in success | start sharing list=$listId"
+                    )
 
                     dispatch(
                         event = ShopEvent.List.StartSharing(listId)
@@ -1865,12 +1791,6 @@ class ShoppingViewModel(
 // Stabilitätsrelevanz:
 // - Mittel → indirekter Einfluss auf UX und Ablauf
 // ============================================================
-
-    private fun emitUndo(message: String) {
-        viewModelScope.launch {
-            _effects.emit(UIEffect.ShowUndo(message))
-        }
-    }
 
     fun startGoogleSignIn() {
         viewModelScope.launch {
@@ -1934,49 +1854,67 @@ class ShoppingViewModel(
         _shareReturnTrigger.value += 1
     }
 
-    private fun startShareIntent(listId: String) {
 
-        // 🔥 GUARD MUSS VOR launch stehen
-        if (isSharingInProgress) {
-            Log.w("SHARE_FLOW", "Direct intent blocked (already handled by effect)")
-            return
-        }
+    private fun clearRuntimeState() {
 
-        viewModelScope.launch {
+        // ------------------------------------------------------------
+        // STOP RUNTIME
+        // ------------------------------------------------------------
 
-            try {
+        runtimeJob?.cancel()
+        runtimeJob = null
 
-                Log.d("SHARE_FLOW", "Start share intent for list=$listId")
+        // ------------------------------------------------------------
+        // FIRESTORE LISTENER
+        // ------------------------------------------------------------
 
-                val ownerId = authProvider.currentUserId()
+        userProfileListener?.remove()
+        userProfileListener = null
 
-                val createdByName = state.value.displayName
-                    ?: authProvider.getDisplayName()
-                    ?: "Unbekannt"
+        // ------------------------------------------------------------
+        // RUNTIME FLAGS
+        // ------------------------------------------------------------
 
-                val inviteLink = firestoreDataSource.createInviteLink(
-                    listId = listId,
-                    createdByName = createdByName,
-                    ownerId = ownerId
-                )
+        pendingAuthAction = null
+        pendingShareListIds = null
+        pendingProfileUpdate = null
+        lastUndoAction = null
 
-                Log.d("SHARE_FLOW", "Invite link created: $inviteLink")
+        shouldAnimateOnReturn = false
+        isSharingInProgress = false
 
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, inviteLink)
-                }
+        bufferedLists = null
+        lastBootstrapUid = null
 
-                val chooser = Intent.createChooser(intent, "Liste teilen").apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
+        // ------------------------------------------------------------
+        // RESET STATE
+        // ------------------------------------------------------------
 
-                appContext.startActivity(chooser)
+        _showWelcomeDialog.value = true
 
-            } catch (e: Exception) {
+        _state.value = ShoppingState()
+    }
 
-                Log.e("SHARE_FLOW", "Failed to create invite", e)
+    private fun startRuntimeObservers() {
+
+        runtimeJob?.cancel()
+
+        runtimeJob = viewModelScope.launch {
+
+            supervisorScope {
+
+                launch { observeLists() }
+
+                launch { observeItems() }
+
+                launch { observeEffects() }
+
+                launch { observeSyncOverview() }
             }
         }
+    }
+
+    fun getCurrentListId(): String? {
+        return _state.value.activeListId
     }
 }

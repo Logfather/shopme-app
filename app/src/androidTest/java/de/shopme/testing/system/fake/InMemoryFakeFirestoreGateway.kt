@@ -1,6 +1,7 @@
 package de.shopme.testing.fake
 
 import de.shopme.data.datasource.firestore.FirestoreGateway
+import de.shopme.domain.model.InviteData
 import de.shopme.domain.model.ShoppingItemEntity
 import de.shopme.domain.model.ShoppingListEntity
 import kotlinx.coroutines.flow.Flow
@@ -254,5 +255,70 @@ class InMemoryFakeFirestoreGateway : FirestoreGateway {
 
         return remoteItems[listId]
             ?.get(itemId)
+    }
+
+
+
+    override suspend fun createInvite(
+        listIds: List<String>,
+        createdByName: String,
+        ownerId: String
+    ): String {
+
+        return "fake-invite-id"
+    }
+
+    override suspend fun getInviteData(
+        inviteId: String
+    ): InviteData? {
+
+        return null
+    }
+
+    override suspend fun createInviteLink(
+        listId: String,
+        createdByName: String,
+        ownerId: String
+    ): String {
+
+        return "fake-link"
+    }
+
+    override suspend fun getListOnce(
+        listId: String
+    ): ShoppingListEntity? {
+
+        return null
+    }
+
+    override suspend fun upsertUserProfile(
+        uid: String,
+        firstName: String?,
+        lastName: String?,
+        email: String?,
+        profileName: String?
+    ) {
+        // no-op
+    }
+
+    override fun listenToUserProfile(
+        uid: String,
+        onChange: (Map<String, Any>?) -> Unit
+    ) = null
+
+    override suspend fun saveUserProfile(
+        uid: String,
+        firstName: String,
+        lastName: String,
+        email: String
+    ) {
+        // no-op
+    }
+
+    override suspend fun getUserProfile(
+        uid: String
+    ): Map<String, Any>? {
+
+        return null
     }
 }

@@ -10,4 +10,9 @@ sealed class Screen {
 
     object StoreSelection : Screen()
 
+    override fun toString(): String {
+
+        return this::class.simpleName ?: "Unknown"
+    }
+
 }

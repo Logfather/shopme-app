@@ -2,7 +2,7 @@ package de.shopme.app
 
 import android.app.Application
 import android.os.Process
-import android.util.Log
+import de.shopme.data.sync.logging.RuntimeLog
 import de.shopme.runtime.HivraRuntime
 
 class HivraApplication : Application() {
@@ -13,22 +13,19 @@ class HivraApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        Log.e(
-            "APP_START",
+        RuntimeLog.appStartError(
             "HivraApplication started | pid=${Process.myPid()}"
         )
 
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
 
-            Log.e(
-                "FATAL_CRASH",
+            RuntimeLog.fatal(
                 "Uncaught exception in thread=${thread.name}",
                 throwable
             )
         }
 
-        Log.d(
-            "APP_START",
+        RuntimeLog.appStart(
             "Global crash handler installed"
         )
 
@@ -40,8 +37,7 @@ class HivraApplication : Application() {
 
         runtime.start()
 
-        Log.d(
-            "APP_START",
+        RuntimeLog.appStart(
             "HivraRuntime started"
         )
     }

@@ -1,6 +1,5 @@
 package de.shopme.presentation.screens
 
-import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Column
@@ -110,7 +109,6 @@ fun DeleteAllListsScreen(
                 )
 
             ) {
-                Log.d("DELETE_BUTTON", "DeleteAllListsScreen - Button: Alle löschen")
                 Text("Alle löschen")
             }
 

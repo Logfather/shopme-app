@@ -41,7 +41,6 @@ fun ShareSuccessAnimation(
     var startAnim by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        //Log.d("SHARE_FLOW", "Animation START")
 
         // 🔥 kleiner Delay → garantiert Start-Frame sichtbar
         delay(50)

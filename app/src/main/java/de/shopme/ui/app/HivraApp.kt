@@ -1,7 +1,6 @@
 package de.shopme.ui.app
 
 import android.content.Intent
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -33,22 +32,19 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,13 +63,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.lifecycle.viewModelScope
 import de.shopme.R
-import de.shopme.app.MainActivity
 import de.shopme.data.input.speech.SpeechController
+import de.shopme.data.sync.logging.UILog
 import de.shopme.domain.service.CatalogService
 import de.shopme.presentation.action.ShoppingAction
-import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.navigation.Screen
 import de.shopme.presentation.screens.ChooseListsScreen
@@ -97,7 +91,6 @@ import de.shopme.ui.theme.BrandGrey
 import de.shopme.ui.theme.BrandOlive
 import de.shopme.ui.theme.BrandRed
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -142,8 +135,6 @@ fun HivraApp(
         }
         return
     }
-
-    val profileSavedTrigger by vm.profileSavedTrigger.collectAsState()
     val uiState = viewState.uiState
     val userLists = viewState.lists
     val activeList = viewState.activeList
@@ -151,92 +142,8 @@ fun HivraApp(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var showChooseLists by remember { mutableStateOf(false) }
-    val isGoogleUser by vm.isGoogleUser.collectAsState()
+    val isGoogleUser by vm.isGoogleUser.collectAsStateWithLifecycle()
 
-    LaunchedEffect(vm) {
-        vm.effects.collect { effect ->
-            when (effect) {
-
-                is UIEffect.DeleteAllLists -> {
-
-                    vm.viewModelScope.launch {
-
-                        vm.dispatch(event = ShopEvent.List.StartDeleteAll)
-
-                        val startTime = System.currentTimeMillis()
-                        val minDuration = 1200L
-
-                        try {
-                            vm.deleteAllLists()
-
-                        } finally {
-
-                            val elapsed = System.currentTimeMillis() - startTime
-                            val remaining = minDuration - elapsed
-
-                            if (remaining > 0) delay(remaining)
-
-                            vm.dispatch(event = ShopEvent.List.FinishDeleteAll)
-
-                            vm.onDeleteAllCompleted() // 🔥 bleibt erhalten
-                        }
-                    }
-                }
-
-                is UIEffect.ShowUndo -> {
-
-                    val result = snackbarHostState.showSnackbar(
-                        message = "",
-                        actionLabel = "Rückgängig",
-                        duration = SnackbarDuration.Short
-                    )
-
-                    if (result == SnackbarResult.ActionPerformed) {
-                        vm.onEvent(ShopEvent.List.UndoLastAction)
-                    }
-                }
-
-                is UIEffect.StartGoogleSignIn -> {
-                    val activity = context as MainActivity
-                    activity.startGoogleLogin()
-                }
-
-                // ============================================================
-                // 🔥 NEU: CreateLists Effect Handling
-                // ============================================================
-
-                is UIEffect.CreateLists -> {
-
-                    //Log.d("CREATE_TRACE", "Effect CreateLists RECEIVED")
-
-                    vm.dispatch(event = ShopEvent.List.StartSorting)
-
-                    vm.viewModelScope.launch {
-
-                        val startTime = System.currentTimeMillis()
-                        val minDuration = 1200L
-
-                        try {
-                            vm.createListsWithSorting(
-                                stores = effect.stores,
-                                customLists = effect.customLists
-                            )
-                        } finally {
-
-                            val elapsed = System.currentTimeMillis() - startTime
-                            val remaining = minDuration - elapsed
-
-                            if (remaining > 0) delay(remaining)
-
-                            vm.dispatch(event = ShopEvent.List.FinishSorting)
-                        }
-                    }
-                }
-
-                else -> Unit
-            }
-        }
-    }
 
     fun shareLink(link: String) {
         val intent = Intent(Intent.ACTION_SEND).apply {
@@ -249,9 +156,15 @@ fun HivraApp(
         )
     }
 
-    LaunchedEffect(Unit) {
-        vm.shareEvent.collect { link ->
-            shareLink(link)
+    LaunchedEffect(lifecycleOwner) {
+
+        lifecycleOwner.lifecycle.repeatOnLifecycle(
+            Lifecycle.State.STARTED
+        ) {
+
+            vm.shareEvent.collect { link ->
+                shareLink(link)
+            }
         }
     }
 
@@ -263,67 +176,7 @@ fun HivraApp(
         label = "welcomeBlur"
     )
 
-    val state by vm.state.collectAsState()
-
-    if (state.showProfileScreen) {
-
-        key(state.showProfileScreen) {
-
-            ProfileScreen(
-                mode = if (state.hasProfile) ProfileMode.EDIT else ProfileMode.CREATE,
-                currentName = state.displayName,
-                hasProfile = state.hasProfile,
-                firstNameValue = state.firstName,
-                lastNameValue = state.lastName,
-                emailValue = state.email,
-                isGoogleUser = isGoogleUser,
-
-                onCreateProfile = { firstName, lastName, email, nickName ->
-
-                    vm.onProfileCreated(firstName, lastName, email, nickName)
-                },
-
-                onUpdateProfile = { nickName, firstName, lastName, email ->
-                    vm.updateUserProfileUnified(
-                        nickName = nickName,
-                        firstName = firstName,
-                        lastName = lastName,
-                        email = email
-                    )
-                },
-
-                onGoogleSignIn = {
-                    vm.startGoogleSignIn()
-                },
-
-                onShowSaveChoice = { nick, first, last, mail ->
-                    vm.showSaveChoice(
-                        nickName = nick,
-                        firstName = first,
-                        lastName = last,
-                        email = mail
-                    )
-                },
-
-                onDismiss = {
-                    vm.dismissProfileScreen()
-                },
-
-                onUnlinkGoogle = {
-                    vm.unlinkGoogleAccount()
-                },
-
-                onLinkGoogle = {
-                    vm.confirmGoogleSave()
-                },
-
-                onDeleteAccount = {
-                    //Log.d("DELETE", "In if (state.showProfileScreen)" )
-                    vm.deleteAccount()
-                }
-            )
-        }
-    }
+    val state by vm.state.collectAsStateWithLifecycle()
 
     if (state.showSaveChoice) {
 
@@ -355,7 +208,6 @@ fun HivraApp(
 
                     OutlinedButton(
                         onClick = {
-                            //Log.d("SHARE_FLOW", "BUTTON CLICKED")
                             vm.confirmManualSave()
                         },
                         colors = ButtonDefaults.buttonColors(
@@ -393,29 +245,10 @@ fun HivraApp(
                     }
 
                     Spacer(Modifier.height(8.dp))
-
-                    // ---------------- ABBRECHEN ----------------
-
-//                    OutlinedButton(
-//                        onClick = {
-//                            vm.cancelProfileEditing()
-//                        },
-//                        colors = ButtonDefaults.buttonColors(
-//                            containerColor = BrandGreen,
-//                            contentColor = BrandBlack
-//                        ),
-//                        modifier = Modifier.fillMaxWidth(),
-//                        border = BorderStroke(
-//                            width = 2.dp,
-//                            color = BrandGrey
-//                        )
-//                    ) {
-//                        Text("Abbrechen")
-//                    }
                 }
             },
 
-            dismissButton = {} // 🔥 leer lassen (wir haben eigenen Abbrechen Button)
+            dismissButton = {}
         )
     }
 
@@ -475,10 +308,6 @@ fun HivraApp(
                 containerColor = Color.Transparent,
 
                 topBar = {
-                    val showAccountAction by vm.showAccountAction.collectAsState()
-                    val isAnonymous by vm.isAnonymous.collectAsState()
-                    val state by vm.state.collectAsState()
-                    val email by vm.email.collectAsState()
 
                     CenterAlignedTopAppBar(
 
@@ -490,14 +319,6 @@ fun HivraApp(
                         navigationIcon = {
 
                             var showBadge by remember { mutableStateOf(false) }
-
-                            LaunchedEffect(profileSavedTrigger) {
-                                if (profileSavedTrigger > 0) {
-                                    showBadge = true
-                                    delay(1000)
-                                    showBadge = false
-                                }
-                            }
 
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -592,7 +413,14 @@ fun HivraApp(
                         .padding(padding)
                         .fillMaxSize()
                 ) {
-                    //Log.d("UI_DEBUG", "Current Screen = ${uiState.toScreen()}")
+                    LaunchedEffect(
+                        uiState.toScreen()
+                    ) {
+
+                        UILog.navigation(
+                            uiState.toScreen().toString()
+                        )
+                    }
 
                     when (uiState.toScreen()) {
 
@@ -682,6 +510,19 @@ fun HivraApp(
             when {
 
                 state.showProfileScreen -> {
+
+                    LaunchedEffect(
+                        state.showProfileScreen
+                    ) {
+
+                        if (state.showProfileScreen) {
+
+                            UILog.overlay(
+                                "ProfileScreen"
+                            )
+                        }
+                    }
+
                     ProfileScreen(
                         mode = if (state.hasProfile) ProfileMode.EDIT else ProfileMode.CREATE,
                         currentName = state.displayName,
@@ -731,13 +572,61 @@ fun HivraApp(
                         },
 
                         onDeleteAccount = {
-                            //Log.d("DELETE", "In when { (state.showProfileScreen) }" )
                             vm.deleteAccount()
                         }
                     )
                 }
 
-                state.inviteListIds.isNotEmpty() && state.activeListId == null -> {
+                state.isJoining -> {
+
+                    LaunchedEffect(
+                        state.isJoining
+                    ) {
+
+                        if (state.isJoining) {
+
+                            UILog.overlay(
+                                "JoinOverlay"
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+
+                            LinearProgressIndicator()
+
+                            Text(
+                                text = "Einladung wird verarbeitet..."
+                            )
+                        }
+                    }
+                }
+
+                state.inviteListIds.isNotEmpty() && state.showInviteDialog -> {
+
+                    LaunchedEffect(
+                        state.inviteListIds,
+                        state.activeListId
+                    ) {
+
+                        if (
+                            state.inviteListIds.isNotEmpty() &&
+                            state.activeListId == null
+                        ) {
+
+                            UILog.overlay(
+                                "InviteScreen"
+                            )
+                        }
+                    }
 
                     InviteScreen(
                         state = state,
@@ -751,6 +640,23 @@ fun HivraApp(
                 }
 
                 showWelcomeDialog && userLists.isEmpty() -> {
+
+                    LaunchedEffect(
+                        showWelcomeDialog,
+                        userLists
+                    ) {
+
+                        if (
+                            showWelcomeDialog &&
+                            userLists.isEmpty()
+                        ) {
+
+                            UILog.overlay(
+                                "WelcomeScreen"
+                            )
+                        }
+                    }
+
                     WelcomeScreen(
                         onCreateFirstList = {
                             vm.dismissWelcomeDialog()
@@ -761,6 +667,19 @@ fun HivraApp(
             }
 
             if (showChooseLists && !state.showProfileScreen) {
+
+                LaunchedEffect(
+                    showChooseLists
+                ) {
+
+                    if (showChooseLists) {
+
+                        UILog.overlay(
+                            "ChooseListsScreen"
+                        )
+                    }
+                }
+
                 ChooseListsScreen(
                     lists = userLists,
                     onConfirm = { selectedIds ->
@@ -773,61 +692,92 @@ fun HivraApp(
                 )
             }
         }
-    }
 
-    // ============================================================
-    // 🌀 GLOBAL SORTING OVERLAY (NEU)
-    // ============================================================
-    if (state.isSorting || state.isDeletingAll || state.isSharing) {
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(BrandBlack.copy(alpha = 0.25f))
-                .pointerInput(Unit) {},
+
+        // ============================================================
+        // 🌀 GLOBAL SORTING OVERLAY (NEU)
+        // ============================================================
+        if (
+            state.isSorting ||
+            state.isDeletingAll ||
+            state.isSharing ||
+            state.showShareSuccess
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
 
-                val DEBUG_SHOW_SPINNER = true
-
-                var forceSpinner by remember { mutableStateOf(true) }
-
-                LaunchedEffect(Unit) {
-                    if (DEBUG_SHOW_SPINNER) {
-                        kotlinx.coroutines.delay(2000)
-                        forceSpinner = false
-                    }
-                }
+            LaunchedEffect(
+                state.isSorting,
+                state.isDeletingAll,
+                state.isSharing,
+                state.showShareSuccess
+            ){
 
                 when {
-                    state.isSorting || state.isDeletingAll -> {
-                        ShoppingBagAnimation(
-                            isVisible = true,
-                            isDeleting = state.isDeletingAll
+
+                    // Overlay priority:
+                    // Sorting > Delete > Sharing
+
+                    state.isSorting -> {
+
+                        UILog.overlay(
+                            "SortingOverlay"
+                        )
+                    }
+
+                    state.isDeletingAll -> {
+
+                        UILog.overlay(
+                            "DeleteOverlay"
                         )
                     }
 
                     state.isSharing -> {
-                        // 🔄 Ladezustand während Vorbereitung / Profil / Intent-Aufbau
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
 
-                    state.showShareSuccess -> {
-                        ShareSuccessAnimation(
-                            visible = true,
-                            onFinished = {
-                                vm.dispatch(event = ShopEvent.List.FinishSharing)
-                            }
+                        UILog.overlay(
+                            "SharingOverlay"
                         )
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BrandBlack.copy(alpha = 0.25f))
+                    .pointerInput(Unit) {},
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+
+                    when {
+                        state.isSorting || state.isDeletingAll -> {
+                            ShoppingBagAnimation(
+                                isVisible = true,
+                                isDeleting = state.isDeletingAll
+                            )
+                        }
+
+                        state.isSharing -> {
+                            // 🔄 Ladezustand während Vorbereitung / Profil / Intent-Aufbau
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+
+                        state.showShareSuccess -> {
+                            ShareSuccessAnimation(
+                                visible = true,
+                                onFinished = {
+                                    vm.dispatch(event = ShopEvent.List.FinishSharing)
+                                }
+                            )
+                        }
                     }
                 }
             }

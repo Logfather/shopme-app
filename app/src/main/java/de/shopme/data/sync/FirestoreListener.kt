@@ -5,6 +5,8 @@ import com.google.firebase.firestore.ListenerRegistration
 import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
+import de.shopme.data.sync.logging.RecoveryLog
+import de.shopme.data.sync.logging.SyncLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
@@ -32,14 +34,18 @@ class FirestoreListener(
 
     fun startListSync(userId: String) {
 
-        //Log.d("LIST_DEBUG", "startListSync ACTIVE (observeListsForUser) for user=$userId")
+        SyncLog.realtime(
+            "[Lists] Start sync user=$userId"
+        )
 
         appScope.launch {
 
             dataSource.observeListsForUser(userId)
                 .collectLatest { remoteLists ->
 
-                    //Log.d("LIST_SYNC", "Received ${remoteLists.size} lists from Firestore")
+                    SyncLog.realtime(
+                        "[Lists] Received count=${remoteLists.size}"
+                    )
 
                     val remoteIds = remoteLists.map { it.id }
 
@@ -75,20 +81,23 @@ class FirestoreListener(
     fun startItemSync(listId: String) {
 
         if (activeItemListeners.containsKey(listId)) {
-            //Log.d("ITEM_SYNC", "Already running for list=$listId → skip")
+            SyncLog.guard(
+                "[Realtime] Already running list=$listId"
+            )
             return
         }
 
-        //Log.d("ITEM_SYNC", "Start sync for list=$listId")
+        SyncLog.realtime(
+            "[Items] Start sync list=$listId"
+        )
 
         val job = appScope.launch {
 
             dataSource.observeItems(listId)
                 .collectLatest { remoteItems ->
 
-                    Log.d(
-                        "ITEM_SYNC",
-                        "Received ${remoteItems.size} remote items for list=$listId"
+                    SyncLog.realtime(
+                        "[Items] Received count=${remoteItems.size} list=$listId"
                     )
 
                     remoteItems.forEach { remote ->
@@ -105,9 +114,8 @@ class FirestoreListener(
 
                             if (local == null) {
 
-                                Log.d(
-                                    "ITEM_SYNC",
-                                    "APPLY REMOTE INSERT id=${remote.id}"
+                                SyncLog.apply(
+                                    "[Insert] Remote item=${remote.id}"
                                 )
 
                                 itemDao.upsert(remote)
@@ -122,9 +130,8 @@ class FirestoreListener(
 
                             if (remote.updatedAt < local.updatedAt) {
 
-                                Log.w(
-                                    "ITEM_SYNC",
-                                    "IGNORE STALE REMOTE id=${remote.id} " +
+                                SyncLog.conflict(
+                                    "[Stale] Ignore item=${remote.id} " +
                                             "remote=${remote.updatedAt} " +
                                             "local=${local.updatedAt}"
                                 )
@@ -145,9 +152,8 @@ class FirestoreListener(
                                 remote.updatedAt < latestApplied
                             ) {
 
-                                Log.w(
-                                    "ITEM_SYNC",
-                                    "IGNORE REORDERED REMOTE id=${remote.id} " +
+                                SyncLog.conflict(
+                                    "[Reordered] Ignore item=${remote.id} " +
                                             "remote=${remote.updatedAt} " +
                                             "latestApplied=$latestApplied"
                                 )
@@ -160,9 +166,8 @@ class FirestoreListener(
                             // Remote newer or equal
                             // ------------------------------------------------
 
-                            Log.d(
-                                "ITEM_SYNC",
-                                "APPLY REMOTE UPDATE id=${remote.id}"
+                            SyncLog.apply(
+                                "[Update] Remote item=${remote.id}"
                             )
 
                             itemDao.upsert(remote)
@@ -176,8 +181,7 @@ class FirestoreListener(
 
                         } catch (e: Exception) {
 
-                            Log.e(
-                                "ITEM_SYNC",
+                            RecoveryLog.processError(
                                 "Realtime apply failed id=${remote.id}",
                                 e
                             )
@@ -190,7 +194,10 @@ class FirestoreListener(
     }
 
     fun stop() {
-        //Log.d("FS_LISTENER", "Stopping all listeners")
+
+        SyncLog.lifecycle(
+            "[Realtime] Stop all listeners"
+        )
 
         try {
             registrationMap.values.forEach { registration ->
@@ -198,7 +205,11 @@ class FirestoreListener(
             }
             registrationMap.clear()
         } catch (e: Exception) {
-            Log.e("FS_LISTENER", "Failed to remove listeners", e)
+
+            RecoveryLog.processError(
+                "Failed to remove listeners",
+                e
+            )
         }
     }
 }

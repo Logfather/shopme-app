@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
-    id("org.jetbrains.kotlin.plugin.compose") // 🔥 NEU
 }
 
 android {
@@ -11,6 +10,10 @@ android {
     compileSdk = 35
     testOptions {
         unitTests.isReturnDefaultValues = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     defaultConfig {
@@ -78,6 +81,7 @@ dependencies {
 
     implementation(libs.androidx.compose.runtime.saveable)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation("androidx.compose.runtime:runtime")
 
 
     debugImplementation(libs.androidx.compose.ui.tooling)

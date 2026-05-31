@@ -7,8 +7,8 @@ import de.shopme.domain.model.ShoppingListEntity
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import de.shopme.data.sync.ChangeQueueDao
-import de.shopme.data.sync.ChangeQueueEntity
+import de.shopme.data.sync.queue.ChangeQueueDao
+import de.shopme.data.sync.queue.ChangeQueueEntity
 
 @Database(
     entities = [

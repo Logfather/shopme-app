@@ -1,12 +1,15 @@
 package de.shopme.data.sync
 
-import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
 import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
 import de.shopme.data.repository.RoomShoppingRepository
+import de.shopme.data.sync.logging.RecoveryLog
+import de.shopme.data.sync.logging.SyncLog
+import de.shopme.data.sync.queue.ChangeQueueDao
+import de.shopme.data.sync.queue.ChangeQueueEntity
 import de.shopme.domain.model.ShoppingItemEntity
 import de.shopme.domain.model.ShoppingListEntity
 import kotlinx.coroutines.CoroutineScope
@@ -52,9 +55,8 @@ class SyncCoordinator(
 
         if (syncJob?.isActive == true) {
 
-            Log.d(
-                "NIMBLU_SYNC",
-                "Sync already active -> skip trigger"
+            SyncLog.orchestrator(
+                "[Guard] Sync already active -> skip trigger"
             )
 
             return
@@ -64,9 +66,8 @@ class SyncCoordinator(
 
             try {
 
-                Log.d(
-                    "NIMBLU_SYNC",
-                    "SYNC JOB START force=$force"
+                SyncLog.orchestrator(
+                    "[Lifecycle] Sync job start force=$force"
                 )
 
                 if (
@@ -76,24 +77,31 @@ class SyncCoordinator(
                     delay(syncDebounceMs)
                 }
 
-                Log.d("NIMBLU_SYNC", "SYNC AFTER DELAY")
+                SyncLog.orchestrator(
+                    "[Lifecycle] Sync after debounce"
+                )
 
                 syncMutex.withLock {
 
-                    Log.d("NIMBLU_SYNC", "SYNC MUTEX ENTER")
+                    SyncLog.orchestrator(
+                        "[Mutex] Enter sync mutex"
+                    )
 
                     processQueueSequential(force)
 
-                    Log.d("NIMBLU_SYNC", "SYNC MUTEX EXIT")
+                    SyncLog.orchestrator(
+                        "[Mutex] Exit sync mutex"
+                    )
                 }
 
-                Log.d("NIMBLU_SYNC", "SYNC JOB END")
+                SyncLog.orchestrator(
+                    "[Lifecycle] Sync job end"
+                )
 
             } catch (e: Exception) {
 
-                Log.e(
-                    "NIMBLU_SYNC",
-                    "SYNC JOB CRASH",
+                RecoveryLog.processError(
+                    "Sync job crash",
                     e
                 )
             }
@@ -103,11 +111,8 @@ class SyncCoordinator(
     private suspend fun processQueueSequential(
         force: Boolean
     ) {
-
-
-        Log.d(
-            "NIMBLU_SYNC",
-            "processQueueSequential ENTER"
+        SyncLog.queue(
+            "[Lifecycle] processQueueSequential ENTER"
         )
 
         while (true) {
@@ -121,37 +126,32 @@ class SyncCoordinator(
                 System.currentTimeMillis() < next.nextRetryAt
             ) {
 
-                Log.d(
-                    "NIMBLU_SYNC",
-                    "Retry backoff active -> BREAK"
+                RecoveryLog.policy(
+                    "[Retry] Backoff active -> break"
                 )
 
                 break
             }
 
-            Log.d(
-                "NIMBLU_SYNC",
-                "getOldestPendingChange result=$next"
+            SyncLog.queue(
+                "[Fetch] oldestPendingChange=$next"
             )
 
             if (next == null) {
 
-                Log.d(
-                    "NIMBLU_SYNC",
-                    "No pending change -> BREAK"
+                RecoveryLog.policy(
+                    "[Retry] Backoff active -> break"
                 )
 
                 break
             }
 
-            Log.d(
-                "NIMBLU_SYNC",
-                "Processing live queue op=${next.operation} entity=${next.entityId}"
+            SyncLog.queue(
+                "[Process] op=${next.operation} entity=${next.entityId}"
             )
 
-            Log.d(
-                "NIMBLU_SYNC",
-                "BEFORE processSingleChange id=${next.id} state=${next.state} op=${next.operation}"
+            SyncLog.queue(
+                "[Before] id=${next.id} state=${next.state} op=${next.operation}"
             )
 
             processSingleChange(next)
@@ -159,15 +159,13 @@ class SyncCoordinator(
             val after =
                 changeQueueDao.getChangeById(next.id)
 
-            Log.d(
-                "NIMBLU_SYNC",
-                "AFTER processSingleChange id=${after?.id} state=${after?.state}"
+            SyncLog.queue(
+                "[After] id=${after?.id} state=${after?.state}"
             )
         }
 
-        Log.d(
-            "NIMBLU_SYNC",
-            "processQueueSequential EXIT"
+        SyncLog.queue(
+            "[Lifecycle] processQueueSequential EXIT"
         )
     }
 
@@ -175,9 +173,8 @@ class SyncCoordinator(
         change: ChangeQueueEntity
     ) {
 
-        Log.d(
-            "NIMBLU_SYNC",
-            "processSingleChange ENTER op=${change.operation}"
+        SyncLog.queue(
+            "[Single] ENTER op=${change.operation}"
         )
 
         try {
@@ -204,9 +201,8 @@ class SyncCoordinator(
             val nextRetryAt =
                 now + retryDelayMs
 
-            Log.e(
-                "NIMBLU_SYNC",
-                "SYNC RETRY scheduled retry=$retryCount delay=$retryDelayMs",
+            RecoveryLog.policyError(
+                "Retry scheduled retry=$retryCount delay=$retryDelayMs",
                 e
             )
 
@@ -222,23 +218,28 @@ class SyncCoordinator(
 
     fun start() {
 
-//        Log.d(
-//            "SYNC_GUARD",
-//            "start() called from ${Throwable().stackTrace.first()}"
-//        )
+        SyncLog.orchestrator(
+            "[Guard] start() called from ${Throwable().stackTrace.first()}"
+        )
 
         if (!isRunning.compareAndSet(false, true)) {
-            //Log.d("SYNC_LIST", "Already running → skip")
+            SyncLog.orchestrator(
+                "[Guard] Already running -> skip"
+            )
             return
         }
 
         isShuttingDown.set(false)
 
-        //Log.d("SYNC_LIST", "START CALLED")
+        SyncLog.queue(
+            "[Lifecycle] START called"
+        )
 
         appScope.launch {
 
-            //Log.d("SYNC_LIST", "LOOP STARTED")
+            SyncLog.queue(
+                "[Loop] STARTED"
+            )
 
             try {
                 while (isActive && isRunning.get() && !isShuttingDown.get()) {
@@ -255,9 +256,14 @@ class SyncCoordinator(
                 }
 
             } catch (e: Exception) {
-                Log.e("SYNC_LIST", "LOOP CRASH", e)
+                RecoveryLog.processError(
+                    "Queue loop crash",
+                    e
+                )
             } finally {
-                //Log.d("SYNC_LIST", "LOOP STOPPED")
+                SyncLog.queue(
+                    "[Loop] STOPPED"
+                )
                 isRunning.set(false)
             }
         }
@@ -265,11 +271,15 @@ class SyncCoordinator(
 
     fun stop() {
         if (!isRunning.compareAndSet(true, false)) {
-            //Log.d("SYNC_LIST", "Already stopped → skip")
+            SyncLog.orchestrator(
+                "[Guard] Already stopped -> skip"
+            )
             return
         }
 
-        //Log.d("SYNC_LIST", "STOP CALLED")
+        SyncLog.queue(
+            "[Lifecycle] STOP called"
+        )
 
         // 🔴 Shutdown Flag setzen
         isShuttingDown.set(true)
@@ -284,18 +294,21 @@ class SyncCoordinator(
     fun startSingleListSync(listId: String) {
 
         if (activeListSyncs.containsKey(listId)) {
-            //Log.d("SYNC_LIST", "Sync already running for list=$listId")
+            SyncLog.queue(
+                "[Guard] Sync already running list=$listId"
+            )
             return
         }
 
-        //Log.d("SYNC_LIST", "Start sync for list=$listId")
+        SyncLog.queue(
+            "[Lifecycle] Start sync list=$listId"
+        )
 
         val job = appScope.launch {
 
             // 🔁 LIST FLOW
             launch {
                 firestore.observeListById(listId).collect { list ->
-                    //Log.d("SYNC_DEBUG", "LIST FLOW EMIT: $listId -> $list")
                     if (list != null) {
                         listDao.upsert(list)
                     }
@@ -306,15 +319,16 @@ class SyncCoordinator(
             launch {
                 firestore.observeItems(listId).collect { remoteItems ->
 
-                    //Log.d("SYNC_DEBUG", "ITEM FLOW EMIT: $listId size=${remoteItems.size}")
+                    SyncLog.queue(
+                        "[Flow] ITEM emit list=$listId size=${remoteItems.size}"
+                    )
 
                     remoteItems.forEach { remote ->
 
                         if (remote.updatedAt <= 0L) {
-                            //Log.d(
-                            //    "SYNC_SKIP",
-                            //    "IGNORE remote id=${remote.id} updatedAt=${remote.updatedAt}"
-                            //)
+                            SyncLog.orchestrator(
+                                "[Guard] IGNORE remote id=${remote.id} updatedAt=${remote.updatedAt}"
+                            )
                             return@forEach
                         }
 
@@ -328,23 +342,26 @@ class SyncCoordinator(
                             remote.name == local.name &&
                             remote.isChecked == local.isChecked
                         ) {
-//                            Log.d(
-//                                "SYNC_SKIP_DUP",
-//                                "IDENTICAL → skip id=${remote.id}"
-//                            )
+                            SyncLog.orchestrator(
+                                "[Guard] IDENTICAL skip id=${remote.id}"
+                            )
                             return@forEach
                         }
 
                         // 🔥 DELETE hat absolute Priorität
                         if (remote.deletedAt != null) {
 
-                            //Log.d("SYNC_APPLY", "REMOTE DELETE id=${remote.id}")
+                            SyncLog.apply(
+                                "[Delete] REMOTE id=${remote.id}"
+                            )
 
                             // 🔒 zusätzliche Absicherung gegen unnötige Writes
                             if (local == null || local.deletedAt != remote.deletedAt) {
                                 itemDao.upsert(remote)
                             } else {
-                                //Log.d("SYNC_SKIP_DUP", "DELETE already applied id=${remote.id}")
+                                SyncLog.orchestrator(
+                                    "[Guard] DELETE already applied id=${remote.id}"
+                                )
                             }
 
                             return@forEach
@@ -353,28 +370,35 @@ class SyncCoordinator(
                         when {
 
                             local == null -> {
-                                //Log.d("SYNC_APPLY", "LOCAL null → insert remote id=${remote.id}")
+                                SyncLog.apply(
+                                    "[Insert] LOCAL null -> insert remote id=${remote.id}"
+                                )
                                 itemDao.upsert(remote)
                             }
 
                             remote.updatedAt > local.updatedAt -> {
-                                //Log.d("SYNC_APPLY", "REMOTE newer id=${remote.id}")
+                                SyncLog.apply(
+                                    "[Apply] REMOTE newer id=${remote.id}"
+                                )
                                 itemDao.upsert(remote)
                             }
 
                             remote.updatedAt < local.updatedAt -> {
-                                //Log.d("SYNC_RESOLVE", "LOCAL newer → keep local id=${remote.id}")
+                                SyncLog.apply(
+                                    "[Resolve] LOCAL newer -> keep local id=${remote.id}"
+                                )
                             }
 
                             else -> {
                                 if (remote != local) {
-                                    Log.w(
-                                        "SYNC_FIX",
-                                        "Same version but different content → apply remote id=${remote.id}"
+                                    SyncLog.conflict(
+                                        "[Repair] Same version but different content -> apply remote id=${remote.id}"
                                     )
                                     itemDao.upsert(remote)
                                 } else {
-                                    //Log.d("SYNC_RESOLVE", "EQUAL → no-op id=${remote.id}")
+                                    SyncLog.apply(
+                                        "[Resolve] EQUAL no-op id=${remote.id}"
+                                    )
                                 }
                             }
                         }
@@ -391,17 +415,23 @@ class SyncCoordinator(
         val job = activeListSyncs[listId]
 
         if (job != null) {
-            //Log.d("SYNC_LIST", "Stop sync for list=$listId")
+            SyncLog.queue(
+                "[Lifecycle] Stop sync list=$listId"
+            )
             job.cancel()
             activeListSyncs.remove(listId)
         } else {
-            //Log.d("SYNC_LIST", "No active sync for list=$listId")
+            SyncLog.queue(
+                "[Guard] No active sync list=$listId"
+            )
         }
     }
 
     suspend fun deleteLocalList(listId: String) {
 
-        //Log.d("SYNC_LIST", "Deleting local list=$listId")
+        SyncLog.queue(
+            "[Delete] Local list=$listId"
+        )
 
         itemDao.deleteByListId(listId)
         listDao.deleteById(listId)
@@ -411,7 +441,9 @@ class SyncCoordinator(
 
         appScope.launch {
 
-            //Log.d("SYNC_LIST", "Async delete local list=$listId")
+            SyncLog.queue(
+                "[DeleteAsync] Local list=$listId"
+            )
 
             deleteLocalList(listId)
         }
@@ -423,31 +455,19 @@ class SyncCoordinator(
         changes: List<ChangeQueueEntity>
     ) {
 
-        Log.d(
-            "NIMBLU_SYNC",
-            "processQueue entered changes=${changes.size}"
-        )
-
         if (changes.isEmpty()) {
-            //Log.d("QUEUE_IDLE", "No pending work")
             return
         }
 
         for (change in changes) {
 
-            Log.d(
-                "NIMBLU_SYNC",
-                "Processing change op=${change.operation} entity=${change.entityId}"
-            )
-
             // 🔁 Retry Backoff
             val now = System.currentTimeMillis()
 
             if (!RetryPolicy.shouldRetry(change.retryCount, change.lastAttemptAt)) {
-//                Log.d(
-//                    "RETRY_SKIP",
-//                    "Skip retry id=${change.id} retry=${change.retryCount}"
-//                )
+                RecoveryLog.policy(
+                    "[RetrySkip] id=${change.id} retry=${change.retryCount}"
+                )
                 continue
             }
 
@@ -481,9 +501,8 @@ class SyncCoordinator(
                         // 🔥 DELETE darf auch ohne Local Entity ausgeführt werden
                         if (itemNullable == null && change.operation != "DELETE") {
 
-                            Log.w(
-                                "SYNC_ITEM",
-                                "Missing local → RETRY id=${change.entityId} op=${change.operation}"
+                            RecoveryLog.policy(
+                                "[MissingLocal] RETRY id=${change.entityId} op=${change.operation}"
                             )
 
                             val newRetry = change.retryCount + 1
@@ -491,7 +510,9 @@ class SyncCoordinator(
 
                             if (newRetry >= 5) {
 
-                                Log.e("SYNC_FAIL", "FINAL FAIL id=${change.entityId}")
+                                RecoveryLog.processError(
+                                    "FINAL FAIL id=${change.entityId}"
+                                )
 
                                 changeQueueDao.updateState(change.id, "FAILED")
 
@@ -499,9 +520,8 @@ class SyncCoordinator(
 
                                 val delay = RetryPolicy.computeDelay(newRetry)
 
-                                Log.w(
-                                    "SYNC_RETRY",
-                                    "Retry id=${change.entityId} in ${delay}ms (retry=$newRetry)"
+                                RecoveryLog.policy(
+                                    "[Retry] id=${change.entityId} delay=${delay} retry=$newRetry"
                                 )
 
                                 val retryDelayMs =
@@ -544,10 +564,9 @@ class SyncCoordinator(
 
                                 if (remote != null && remote.updatedAt > itemSafe.updatedAt) {
 
-//                                    Log.d(
-//                                        "SYNC_SKIP_DUP",
-//                                        "Skip outdated update id=${itemSafe.id} remote=${remote.updatedAt} local=${itemSafe.updatedAt}"
-//                                    )
+                                    SyncLog.orchestrator(
+                                        "[Guard] Skip outdated update id=${itemSafe.id}"
+                                    )
 
                                     changeQueueDao.updateState(change.id, "DONE")
                                     continue
@@ -558,9 +577,8 @@ class SyncCoordinator(
                                 // CREATE & DELETE → nichts hier machen
                             }
                         }
-                        Log.d(
-                            "SYNC_WRITE",
-                            "EXECUTE ${change.operation} id=${item!!.id} baseVersion=${change.baseVersion}"
+                        SyncLog.apply(
+                            "[Execute] op=${change.operation} id=${item.id} baseVersion=${change.baseVersion}"
                         )
 
                         // --------------------------------------------------------
@@ -580,7 +598,9 @@ class SyncCoordinator(
                                 // 🔒 PREVENT DOUBLE CREATE
                                 val remote = firestore.getItem(targetListId, targetId)
                                 if (remote != null) {
-                                    Log.w("SYNC_SKIP_DUP", "CREATE already exists remotely id=$targetId")
+                                    SyncLog.orchestrator(
+                                        "[Guard] CREATE already exists remotely id=$targetId"
+                                    )
                                     changeQueueDao.updateState(change.id, "DONE")
                                     continue
                                 }
@@ -614,9 +634,8 @@ class SyncCoordinator(
 
                                 if (remote != null && remoteVersion != baseVersion) {
 
-                                    Log.w(
-                                        "SYNC_CONFLICT",
-                                        "Version mismatch id=$targetId base=$baseVersion remote=$remoteVersion"
+                                    SyncLog.conflict(
+                                        "[VersionMismatch] id=$targetId base=$baseVersion remote=$remoteVersion"
                                     )
 
                                     // 👉 Conflict Resolver entscheidet
@@ -630,7 +649,9 @@ class SyncCoordinator(
 
                                         ConflictStrategy.USE_REMOTE -> {
 
-                                            Log.d("SYNC_CONFLICT", "Apply REMOTE id=$targetId")
+                                            SyncLog.conflict(
+                                                "[ApplyRemote] id=$targetId"
+                                            )
 
                                             itemDao.upsert(resolved.resolvedItem!!)
                                             changeQueueDao.updateState(change.id, "DONE")
@@ -639,7 +660,9 @@ class SyncCoordinator(
 
                                         ConflictStrategy.USE_LOCAL -> {
 
-                                            Log.d("SYNC_CONFLICT", "Force LOCAL overwrite id=$targetId")
+                                            SyncLog.conflict(
+                                                "[ForceLocal] overwrite id=$targetId"
+                                            )
 
                                             val success = firestore.updateItem(targetListId, localItem)
 
@@ -655,7 +678,9 @@ class SyncCoordinator(
 
                                         ConflictStrategy.MERGE -> {
 
-                                            Log.d("SYNC_CONFLICT", "MERGE id=$targetId")
+                                            SyncLog.conflict(
+                                                "[Merge] id=$targetId"
+                                            )
 
                                             val merged = resolved.resolvedItem
                                                 ?: throw Exception("Merge produced null")
@@ -681,18 +706,16 @@ class SyncCoordinator(
 
                                 if (remote != null && remote.updatedAt == localItem.updatedAt) {
 
-                                    Log.d(
-                                        "SYNC_SKIP_DUP",
-                                        "Skip identical write id=$targetId version=${localItem.updatedAt}"
+                                    SyncLog.orchestrator(
+                                        "[Guard] Skip identical write id=$targetId"
                                     )
 
                                     changeQueueDao.updateState(change.id, "DONE")
                                     continue
                                 }
 
-                                Log.d(
-                                    "SYNC_WRITE",
-                                    "FINAL UPDATE id=${localItem.id} name=${localItem.name} updatedAt=${localItem.updatedAt}"
+                                SyncLog.apply(
+                                    "[Write] FINAL UPDATE id=${localItem.id}"
                                 )
 
                                 val success = firestore.updateItem(targetListId, localItem)
@@ -712,9 +735,8 @@ class SyncCoordinator(
                                 val targetId = change.entityId
                                 val targetListId = change.listId
 
-                                Log.d(
-                                    "SYNC_WRITE",
-                                    "FINAL DELETE id=$targetId"
+                                SyncLog.apply(
+                                    "[Write] FINAL DELETE id=$targetId"
                                 )
 
                                 val remote =
@@ -769,9 +791,8 @@ class SyncCoordinator(
 
                         if (success) {
 
-                            Log.d(
-                                "SYNC_DONE",
-                                "SUCCESS id=${change.entityId} op=${change.operation}"
+                            SyncLog.apply(
+                                "[Done] SUCCESS id=${change.entityId} op=${change.operation}"
                             )
 
                             changeQueueDao.updateState(change.id, "DONE")
@@ -865,7 +886,10 @@ class SyncCoordinator(
 
             } catch (e: Exception) {
 
-                Log.e("SYNC_ERROR", "FAILED ${change.entityType} ${change.entityId}", e)
+                RecoveryLog.processError(
+                    "FAILED ${change.entityType} ${change.entityId}",
+                    e
+                )
 
                 val newRetry = change.retryCount + 1
 
@@ -921,7 +945,9 @@ class SyncCoordinator(
         val start = System.currentTimeMillis()
 
         if (!isProcessing.compareAndSet(false, true)) {
-            Log.d("QUEUE_SKIP", "Already processing → skip")
+            SyncLog.queue(
+                "[Guard] Already processing -> skip"
+            )
             return false
         }
 
@@ -929,14 +955,20 @@ class SyncCoordinator(
 
             val changes = changeQueueDao.getPending(limit = 10)
 
-            Log.d("QUEUE_DEBUG", "FETCH dao=${changeQueueDao.hashCode()} size=${changes.size}")
+            SyncLog.queue(
+                "[Fetch] dao=${changeQueueDao.hashCode()} size=${changes.size}"
+            )
 
             changes.forEach {
-                Log.d("SYNC_DEBUG", "Queue item: ${it.operation} ${it.entityType} ${it.entityId} state=${it.state}")
+                SyncLog.queue(
+                    "[Item] ${it.operation} ${it.entityType} ${it.entityId} state=${it.state}"
+                )
             }
 
             if (changes.isEmpty()) {
-                Log.d("QUEUE_IDLE", "No pending work")
+                SyncLog.queue(
+                    "[Idle] No pending work"
+                )
                 return false
             }
 
@@ -948,9 +980,8 @@ class SyncCoordinator(
 
             val duration = System.currentTimeMillis() - start
 
-            Log.d(
-                "QUEUE_METRIC",
-                "processed=${changes.size} durationMs=$duration"
+            SyncLog.queue(
+                "[Metric] processed=${changes.size} durationMs=$duration"
             )
 
             return true

@@ -1,4 +1,4 @@
-package de.shopme.data.sync
+package de.shopme.data.sync.queue
 
 import android.util.Log
 import kotlinx.coroutines.sync.Mutex

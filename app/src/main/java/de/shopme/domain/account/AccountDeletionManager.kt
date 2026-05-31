@@ -1,10 +1,11 @@
 package de.shopme.domain.account
 
-import android.util.Log
 import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.datasource.room.ListDao
-import de.shopme.data.sync.ChangeQueueDao
 import de.shopme.data.sync.SyncCoordinator
+import de.shopme.data.sync.logging.RecoveryLog
+import de.shopme.data.sync.logging.RuntimeLog
+import de.shopme.data.sync.queue.ChangeQueueDao
 import de.shopme.domain.auth.AuthProvider
 import de.shopme.presentation.viewmodel.AuthViewModel
 import kotlinx.coroutines.Dispatchers
@@ -25,8 +26,6 @@ class AccountDeletionManager(
 
     private suspend fun performDataCleanup(userId: String) {
 
-        //Log.d("ACCOUNT_DELETE", "Start data cleanup")
-
         // ============================================================
         // QUEUE
         // ============================================================
@@ -45,7 +44,10 @@ class AccountDeletionManager(
                     try {
                         firestore.softDeleteList(list.id)
                     } catch (e: Exception) {
-                        Log.e("ACCOUNT_DELETE", "Failed deleting owned list ${list.id}", e)
+                        RecoveryLog.processError(
+                            "Failed deleting owned list ${list.id}",
+                            e
+                        )
                     }
                 }
 
@@ -54,7 +56,10 @@ class AccountDeletionManager(
                     try {
                         firestore.removeUserFromList(list.id, userId)
                     } catch (e: Exception) {
-                        Log.e("ACCOUNT_DELETE", "Failed removing membership ${list.id}", e)
+                        RecoveryLog.processError(
+                            "Failed removing membership ${list.id}",
+                            e
+                        )
                     }
                 }
             }
@@ -66,23 +71,23 @@ class AccountDeletionManager(
         lists.forEach {
             listDao.deleteById(it.id)
         }
-
-        //Log.d("ACCOUNT_DELETE", "Cleanup DONE")
     }
 
     suspend fun deleteAccount(userId: String) = withContext(Dispatchers.IO) {
 
-        //Log.d("ACCOUNT_DELETE", "START for user=$userId")
-
         // ============================================================
         // 1. STOP SYNC (CRITICAL)
         // ============================================================
+
+        RuntimeLog.account(
+            "Account deletion started"
+        )
+
         syncCoordinator.stop()
 
         // ============================================================
         // 2. CLEAR LOCAL QUEUE
         // ============================================================
-        //Log.d("ACCOUNT_DELETE", "Clearing queue")
         changeQueueDao.clearAll()
 
         // ============================================================
@@ -100,7 +105,9 @@ class AccountDeletionManager(
                     try {
                         firestore.softDeleteList(list.id)
                     } catch (e: Exception) {
-                        Log.e("ACCOUNT_DELETE", "Failed to delete owned list ${list.id}", e)
+                        RuntimeLog.account(
+                            "Account deletion failed"
+                        )
                     }
                 }
 
@@ -114,7 +121,9 @@ class AccountDeletionManager(
                             userId = userId
                         )
                     } catch (e: Exception) {
-                        Log.e("ACCOUNT_DELETE", "Failed to remove membership ${list.id}", e)
+                        RuntimeLog.account(
+                            "Account deletion failed"
+                        )
                     }
                 }
             }
@@ -126,16 +135,12 @@ class AccountDeletionManager(
         lists.forEach {
             listDao.deleteById(it.id)
         }
-
-        //Log.d("ACCOUNT_DELETE", "DONE")
     }
 
     suspend fun deleteAccountWithReauth(
         userId: String,
         getIdToken: suspend () -> String?
     ) = withContext(Dispatchers.IO) {
-
-        //Log.d("ACCOUNT_DELETE", "START with reauth for user=$userId")
 
         // ============================================================
         // 1. STOP SYNC
@@ -148,7 +153,6 @@ class AccountDeletionManager(
         val firstDelete = tryDeleteAuth()
 
         if (firstDelete.isSuccess) {
-            Log.d("ACCOUNT_DELETE", "Auth delete success (no reauth)")
             performDataCleanup(userId)
             return@withContext Result.success(Unit)
         }
@@ -159,11 +163,12 @@ class AccountDeletionManager(
             error?.message?.contains("requires recent login", ignoreCase = true) == true
 
         if (!requiresReauth) {
-            Log.e("ACCOUNT_DELETE", "Delete failed (no reauth possible)", error)
+            RecoveryLog.processError(
+                "Delete failed (no reauth possible)",
+                error
+            )
             return@withContext Result.failure(error ?: Exception("Unknown error"))
         }
-
-        Log.d("ACCOUNT_DELETE", "Reauth required")
 
         // ============================================================
         // 3. GET TOKEN FROM UI
@@ -171,7 +176,6 @@ class AccountDeletionManager(
         val token = getIdToken()
 
         if (token == null) {
-            Log.e("ACCOUNT_DELETE", "User cancelled reauth")
             return@withContext Result.failure(Exception("Reauth cancelled"))
         }
 
@@ -181,11 +185,12 @@ class AccountDeletionManager(
         val reauth = authViewModel.reauthenticateWithGoogle(token)
 
         if (reauth.isFailure) {
-            Log.e("ACCOUNT_DELETE", "Reauth failed", reauth.exceptionOrNull())
+            RecoveryLog.processError(
+                "Reauth failed",
+                reauth.exceptionOrNull()
+            )
             return@withContext reauth
         }
-
-        Log.d("ACCOUNT_DELETE", "Reauth success")
 
         // ============================================================
         // 5. RETRY DELETE
@@ -193,11 +198,12 @@ class AccountDeletionManager(
         val retryDelete = tryDeleteAuth()
 
         if (retryDelete.isFailure) {
-            Log.e("ACCOUNT_DELETE", "Retry delete failed", retryDelete.exceptionOrNull())
+            RecoveryLog.processError(
+                "Retry delete failed",
+                retryDelete.exceptionOrNull()
+            )
             return@withContext retryDelete
         }
-
-        Log.d("ACCOUNT_DELETE", "Delete success after reauth")
 
         performDataCleanup(userId)
 

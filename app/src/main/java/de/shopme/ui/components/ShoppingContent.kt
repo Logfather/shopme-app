@@ -1,18 +1,40 @@
 package de.shopme.ui.components
 
-import android.util.Log
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,13 +43,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.shopme.data.input.speech.SpeechController
+import de.shopme.data.sync.logging.SyncLog
 import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.service.CatalogService
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.state.ShoppingScreenMode
 import de.shopme.presentation.viewmodel.ShoppingViewModel
 import de.shopme.ui.components.button.ShopBuddyButton
-import de.shopme.ui.components.button.ShopBuddyButtonType
 import de.shopme.ui.theme.AppButtonDefaults
 import de.shopme.ui.theme.BrandOlive
 import de.shopme.ui.theme.CategoryColors
@@ -52,9 +74,10 @@ fun ShoppingContent(
         .filter { it.value.size > 1 }
 
     if (duplicateItems.isNotEmpty()) {
-        Log.e("DUPLICATE_DEBUG", "STATE DUPLICATES FOUND:")
         duplicateItems.forEach { (id, list) ->
-            Log.e("DUPLICATE_DEBUG", "ID=$id count=${list.size}")
+            SyncLog.guard(
+                "Duplicate item detected | itemId=$id | count=${list.size}"
+            )
         }
     }
 
@@ -188,7 +211,6 @@ fun ShoppingContent(
                 ShopBuddyButton(
                     text = "Hinzufügen",
                     onClick = {
-                        //Log.d("MY_BUTTON", "Hinzufügen clicked")
                         if (text.isNotBlank()) {
                             vm.onEvent(ShopEvent.Item.Add(text)) // ✅ WICHTIG
                             text = ""
@@ -287,8 +309,6 @@ fun ShoppingContent(
             }
 
             Spacer(Modifier.height(16.dp))
-
-            val state by vm.state.collectAsState()
 
             if (state.screenMode is ShoppingScreenMode.Normal) {
 

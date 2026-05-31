@@ -2,8 +2,11 @@ package de.shopme.presentation.effect
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import de.shopme.app.MainActivity
 import de.shopme.data.datasource.firestore.FirestoreGateway
+import de.shopme.data.sync.logging.RuntimeLog
+import de.shopme.data.sync.logging.SyncLog
+import de.shopme.data.sync.logging.UILog
 import de.shopme.domain.auth.AuthProvider
 import de.shopme.domain.item.ItemActionHandler
 import de.shopme.presentation.event.ShopEvent
@@ -23,18 +26,95 @@ class ShoppingEffectHandler(
 
     fun handle(effect: UIEffect) {
 
-        Log.d(
-            "EFFECT_HANDLER",
-            "HANDLER instance=${this.hashCode()} effect=$effect"
-        )
-
         when (effect) {
 
-            is UIEffect.AddItem -> {
-                Log.d("EFFECT_DEBUG", "AddItem effect: ${effect.name}")
+            is UIEffect.StartGoogleSignIn -> {
+
+                val activity = appContext as MainActivity
+
+                activity.startGoogleLogin()
+            }
+
+            is UIEffect.DeleteAllLists -> {
 
                 scope.launch {
-                    val listId = viewModel.currentListId.value ?: return@launch
+
+                    viewModel.dispatch(
+                        event = ShopEvent.List.StartDeleteAll
+                    )
+
+                    val startTime = System.currentTimeMillis()
+                    val minDuration = 1200L
+
+                    try {
+
+                        viewModel.deleteAllLists()
+
+                    } finally {
+
+                        val elapsed =
+                            System.currentTimeMillis() - startTime
+
+                        val remaining =
+                            minDuration - elapsed
+
+                        if (remaining > 0) {
+                            kotlinx.coroutines.delay(remaining)
+                        }
+
+                        viewModel.dispatch(
+                            event = ShopEvent.List.FinishDeleteAll
+                        )
+
+                        viewModel.onDeleteAllCompleted()
+                    }
+                }
+            }
+
+            is UIEffect.CreateLists -> {
+
+                RuntimeLog.runtime(
+                    "CreateLists effect received"
+                )
+
+                viewModel.dispatch(
+                    event = ShopEvent.List.StartSorting
+                )
+
+                scope.launch {
+
+                    val startTime = System.currentTimeMillis()
+                    val minDuration = 1200L
+
+                    try {
+
+                        viewModel.createListsWithSorting(
+                            stores = effect.stores,
+                            customLists = effect.customLists
+                        )
+
+                    } finally {
+
+                        val elapsed =
+                            System.currentTimeMillis() - startTime
+
+                        val remaining =
+                            minDuration - elapsed
+
+                        if (remaining > 0) {
+                            kotlinx.coroutines.delay(remaining)
+                        }
+
+                        viewModel.dispatch(
+                            event = ShopEvent.List.FinishSorting
+                        )
+                    }
+                }
+            }
+
+            is UIEffect.AddItem -> {
+                scope.launch {
+                    val listId = viewModel.getCurrentListId() ?: return@launch
                     itemActionHandler.addItem(effect.name, listId)
                 }
             }
@@ -98,7 +178,9 @@ class ShoppingEffectHandler(
                 scope.launch {
 
                     try {
-                        Log.d("SHARE_FLOW", "Start share for list=${effect.listId}")
+                        UILog.navigation(
+                            "Share intent launched | listId=${effect.listId}"
+                        )
 
                         val ownerId = authProvider.currentUserId()
                             ?: throw IllegalStateException("User not authenticated")
@@ -111,8 +193,6 @@ class ShoppingEffectHandler(
                             createdByName = createdByName,
                             ownerId = ownerId
                         )
-
-                        Log.d("SHARE_FLOW", "Invite created: $inviteLink")
 
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
@@ -130,13 +210,18 @@ class ShoppingEffectHandler(
                         viewModel.dispatch(event = ShopEvent.List.ShareStarted)
 
                     } catch (e: Exception) {
-                        Log.e("SHARE_FLOW", "Share failed listId=${effect.listId}", e)
+                        SyncLog.recovery(
+                            "Share flow failed",
+                            e
+                        )
                     }
                 }
             }
 
             else -> {
-                Log.w("UI_EFFECT", "Unhandled effect: $effect")
+                RuntimeLog.runtimeError(
+                    "Unhandled UIEffect: $effect"
+                )
             }
         }
     }
@@ -147,7 +232,9 @@ class ShoppingEffectHandler(
 
             try {
 
-                Log.d("SHARE_FLOW", "Start share for list=$listId")
+                UILog.navigation(
+                    "Share intent started | listId=$listId"
+                )
 
                 // 🔥 NEU: State holen
                 val state = viewModel.state.value
@@ -164,7 +251,9 @@ class ShoppingEffectHandler(
                     ownerId = ownerId
                 )
 
-                Log.d("SHARE_FLOW", "Invite created: $inviteLink")
+                UILog.navigation(
+                    "Invite link created | listId=$listId"
+                )
 
                 val intent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
@@ -179,7 +268,9 @@ class ShoppingEffectHandler(
                 appContext.startActivity(chooser)
 
             } catch (e: Exception) {
-                Log.e("SHARE_FLOW", "Share failed", e)
+                SyncLog.recovery(
+                    "Share intent failed | listId=$listId | error=${e.message}"
+                )
             }
         }
     }

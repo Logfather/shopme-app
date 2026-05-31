@@ -13,9 +13,16 @@ class SyncWorker(
 
     override suspend fun doWork(): Result {
 
+        val replayId =
+            inputData.getString("replay_id")
+
+        val replayReason =
+            inputData.getString("replay_reason")
+
+
         Log.d(
             "SYNC_WORKER",
-            "Worker started"
+            "Worker started | replayId=$replayId | reason=$replayReason"
         )
 
         return try {
@@ -27,17 +34,21 @@ class SyncWorker(
 
             Log.d(
                 "SYNC_WORKER",
-                "Sync triggered successfully"
+                "Sync success | replayId=$replayId"
             )
+
+            runtime
+                .replayCompletionNotifier
+                .onReplayCompleted()
 
             Result.success()
 
-        } catch (t: Throwable) {
+        } catch (e: Exception) {
 
             Log.e(
                 "SYNC_WORKER",
-                "Worker failed",
-                t
+                "Sync failed | replayId=$replayId",
+                e
             )
 
             Result.retry()

@@ -1,6 +1,6 @@
 package de.shopme.domain.life.processor
 
-import android.util.Log
+import de.shopme.data.sync.logging.LifeLog
 import de.shopme.domain.life.LifeEvent
 import de.shopme.domain.life.NimelisEventBus
 import kotlinx.coroutines.CoroutineScope
@@ -21,51 +21,44 @@ class NimelisLoggingProcessor(
                 when (event) {
 
                     is LifeEvent.ItemAdded -> {
-                        Log.d(
-                            "NIMELIS_LOGGING",
-                            "ItemAdded → item=${event.itemName} list=${event.listId}"
+                        LifeLog.item(
+                            "Added | item=${event.itemName} | list=${event.listId}"
                         )
                     }
 
                     is LifeEvent.ItemChecked -> {
-                        Log.d(
-                            "NIMELIS_LOGGING",
-                            "ItemChecked → item=${event.itemId} checked=${event.checked}"
+                        LifeLog.item(
+                            "Checked | item=${event.itemId} | checked=${event.checked}"
                         )
                     }
 
                     is LifeEvent.ItemDeleted -> {
-                        Log.d(
-                            "NIMELIS_LOGGING",
-                            "ItemDeleted → item=${event.itemId}"
+                        LifeLog.item(
+                            "Deleted | item=${event.itemId}"
                         )
                     }
 
                     is LifeEvent.ListCreated -> {
-                        Log.d(
-                            "NIMELIS_LOGGING",
-                            "ListCreated → list=${event.listId}"
+                        LifeLog.list(
+                            "Created | list=${event.listId}"
                         )
                     }
 
                     is LifeEvent.ListShared -> {
-                        Log.d(
-                            "NIMELIS_LOGGING",
-                            "ListShared → list=${event.listId}"
+                        LifeLog.list(
+                            "Shared | list=${event.listId}"
                         )
                     }
 
                     is LifeEvent.InviteAccepted -> {
-                        Log.d(
-                            "NIMELIS_LOGGING",
-                            "InviteAccepted → user=${event.userId}"
+                        LifeLog.invite(
+                            "Accepted | user=${event.userId}"
                         )
                     }
 
                     is LifeEvent.SyncConflictDetected -> {
-                        Log.d(
-                            "NIMELIS_LOGGING",
-                            "SyncConflictDetected → entity=${event.entityId}"
+                        LifeLog.sync(
+                            "Conflict detected | entity=${event.entityId}"
                         )
                     }
                 }

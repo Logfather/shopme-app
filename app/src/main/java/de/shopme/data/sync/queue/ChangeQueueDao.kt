@@ -1,4 +1,4 @@
-package de.shopme.data.sync
+package de.shopme.data.sync.queue
 
 import androidx.room.Dao
 import androidx.room.Insert

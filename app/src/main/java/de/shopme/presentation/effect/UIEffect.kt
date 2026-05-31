@@ -1,9 +1,7 @@
 package de.shopme.presentation.effect
 
 import de.shopme.domain.model.ShoppingItem
-import de.shopme.domain.model.ShoppingListEntity
 import de.shopme.domain.model.StoreType
-import de.shopme.presentation.undo.UndoAction
 
 sealed class UIEffect {
 
@@ -39,9 +37,9 @@ sealed class UIEffect {
 
     data class RetrySync(val itemId: String) : UIEffect()
 
-    data class ShowUndo(
-        val message: String
-    ) : UIEffect()
+//    data class ShowUndo(
+//        val message: String
+//    ) : UIEffect()
 
     data class UpdateItem(
         val item: ShoppingItem,

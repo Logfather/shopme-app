@@ -7,10 +7,8 @@ import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
 import de.shopme.data.datasource.room.ShopMeDatabase
 import de.shopme.data.repository.RoomShoppingRepository
-import de.shopme.data.sync.ChangeQueueDao
+import de.shopme.data.sync.queue.ChangeQueueDao
 import de.shopme.domain.life.NimelisEventBus
-import de.shopme.testing.system.tests.HivraSystemContextTest
-import de.shopme.testing.system.tests.HivraSystemRunnerTest
 import de.shopme.testing.system.fake.FakeFirestoreGateway
 import de.shopme.testing.system.scenario.ConcurrentItemUpdateScenario
 import kotlinx.coroutines.test.runTest

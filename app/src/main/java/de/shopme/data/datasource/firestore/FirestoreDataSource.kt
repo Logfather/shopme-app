@@ -1,13 +1,13 @@
 package de.shopme.data.datasource.firestore
 
-import android.util.Log
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
+import de.shopme.data.sync.logging.RecoveryLog
+import de.shopme.data.sync.logging.SyncLog
 import de.shopme.domain.model.InviteData
 import de.shopme.domain.model.ShoppingItemEntity
 import de.shopme.domain.model.ShoppingListEntity
@@ -58,14 +58,9 @@ class FirestoreDataSource : FirestoreGateway {
 
             val isMember = userId in sharedWith
 
-            //Log.d("MEMBERSHIP_DEBUG", "Check membership → list=$listId isMember=$isMember")
-
             isMember
 
         } catch (e: Exception) {
-
-            Log.e("MEMBERSHIP_DEBUG", "Check failed", e)
-
             false
         }
     }
@@ -92,7 +87,10 @@ class FirestoreDataSource : FirestoreGateway {
             .addSnapshotListener { snapshot, error ->
 
                 if (error != null) {
-                    Log.e("LIST_FLOW", "Listener error", error)
+                    RecoveryLog.processError(
+                        "List listener error",
+                        error
+                    )
                     return@addSnapshotListener   // 🔥 FIX
                 }
 
@@ -113,7 +111,10 @@ class FirestoreDataSource : FirestoreGateway {
                 .addSnapshotListener { snapshot, error ->
 
                     if (error != null) {
-                        Log.e("LIST_FLOW", "Owned listener error", error)
+                        RecoveryLog.processError(
+                            "Owned list listener error",
+                            error
+                        )
                         return@addSnapshotListener
                     }
 
@@ -134,7 +135,10 @@ class FirestoreDataSource : FirestoreGateway {
                 .addSnapshotListener { snapshot, error ->
 
                     if (error != null) {
-                        Log.e("LIST_FLOW", "Shared listener error", error)
+                        RecoveryLog.processError(
+                            "Shared list listener error",
+                            error
+                        )
                         return@addSnapshotListener
                     }
 
@@ -162,7 +166,10 @@ class FirestoreDataSource : FirestoreGateway {
                 .delete()
                 .await()
         } catch (e: Exception) {
-            Log.e("DELETE", "hardDeleteList FAILED", e)
+            RecoveryLog.processError(
+                "softDeleteList failed",
+                e
+            )
         }
     }
 
@@ -233,7 +240,10 @@ class FirestoreDataSource : FirestoreGateway {
             )
 
         } catch (e: Exception) {
-            Log.e("FIRESTORE", "getItem FAILED", e)
+            RecoveryLog.processError(
+                "getItem failed",
+                e
+            )
             null
         }
     }
@@ -244,6 +254,16 @@ class FirestoreDataSource : FirestoreGateway {
             val listener = itemsRef(listId)
                 .whereEqualTo("deletedAt", null)
                 .addSnapshotListener { snapshot, error ->
+
+                    if (error != null) {
+
+                        RecoveryLog.processError(
+                            "Items listener error",
+                            error
+                        )
+
+                        return@addSnapshotListener
+                    }
 
                     val items = snapshot?.documents?.mapNotNull { doc ->
 
@@ -301,7 +321,9 @@ class FirestoreDataSource : FirestoreGateway {
                 "updatedAt" to item.updatedAt
             )
 
-            //Log.d("FIRESTORE_WRITE", "CREATE id=${item.id} data=$payload")
+            SyncLog.apply(
+                "[Create] item=${item.id}"
+            )
 
             itemsRef(listId)
                 .document(item.id)
@@ -311,26 +333,16 @@ class FirestoreDataSource : FirestoreGateway {
             true
 
         } catch (e: Exception) {
-            Log.e("FIRESTORE", "addItem FAILED", e)
+            RecoveryLog.processError(
+                "addItem failed",
+                e
+            )
             false
         }
     }
 
     override suspend fun updateItem(listId: String, item: ShoppingItemEntity): Boolean {
         return try {
-
-            val payload = mapOf(
-                "name" to item.name,
-                "quantity" to item.quantity,
-                "category" to item.category,
-                "isChecked" to item.isChecked,
-                "deletedAt" to item.deletedAt,
-                "updatedAt" to item.updatedAt,
-                "createdAt" to item.createdAt, // 🔥 NEU
-                "listId" to item.listId        // 🔥 NEU
-            )
-
-            //Log.d("FIRESTORE_WRITE", "UPDATE id=${item.id} data=$payload")
 
             itemsRef(listId)
                 .document(item.id)
@@ -351,7 +363,12 @@ class FirestoreDataSource : FirestoreGateway {
             true
 
         } catch (e: Exception) {
-            Log.e("FIRESTORE", "updateItem FAILED", e)
+
+            RecoveryLog.processError(
+                "updateItem failed",
+                e
+            )
+
             false
         }
     }
@@ -359,7 +376,9 @@ class FirestoreDataSource : FirestoreGateway {
     override suspend fun deleteItem(listId: String, itemId: String): Boolean {
         return try {
 
-            //Log.d("FIRESTORE_WRITE", "HARD DELETE id=$itemId")
+            SyncLog.apply(
+                "[Delete] item=$itemId"
+            )
 
             itemsRef(listId)
                 .document(itemId)
@@ -369,7 +388,11 @@ class FirestoreDataSource : FirestoreGateway {
             true
 
         } catch (e: Exception) {
-            Log.e("FIRESTORE", "deleteItem FAILED", e)
+
+            RecoveryLog.processError(
+                "deleteItem failed",
+                e
+            )
             false
         }
     }
@@ -397,7 +420,10 @@ class FirestoreDataSource : FirestoreGateway {
             true
 
         } catch (e: Exception) {
-            Log.e("FIRESTORE", "createList FAILED", e)
+            RecoveryLog.processError(
+                "createList failed",
+                e
+            )
             false
         }
     }
@@ -429,7 +455,10 @@ class FirestoreDataSource : FirestoreGateway {
             doc.toShoppingListEntity()
 
         } catch (e: Exception) {
-            Log.e("FIRESTORE", "getListOnce FAILED", e)
+            RecoveryLog.processError(
+                "getListOnce failed",
+                e
+            )
             throw e
         }
     }
@@ -527,7 +556,10 @@ class FirestoreDataSource : FirestoreGateway {
 
         } catch (e: Exception) {
 
-            Log.e("INVITE", "Failed to load invite", e)
+            RecoveryLog.processError(
+                "Failed to load invite",
+                e
+            )
             null
         }
     }
@@ -615,7 +647,10 @@ class FirestoreDataSource : FirestoreGateway {
             .addSnapshotListener { snapshot, error ->
 
                 if (error != null) {
-                    Log.e("PROFILE", "Listener error", error)
+                    RecoveryLog.processError(
+                        "Profile listener error",
+                        error
+                    )
                     return@addSnapshotListener
                 }
 
@@ -638,16 +673,9 @@ class FirestoreDataSource : FirestoreGateway {
         return "https://shopme.app/invite/$inviteId"
     }
 
-
-    //AB HIER UNGENUTZTE FUNKTIONEN
-
-
-
-    private fun requireUid(): String =
-        FirebaseAuth.getInstance().currentUser?.uid
-            ?: throw IllegalStateException("User not authenticated")
-
-
+    // ============================================================
+    // LEGACY / UNUSED
+    // ============================================================
 
     // TODO:
     // Move to AccountDeletionService / UseCase.
@@ -685,7 +713,10 @@ class FirestoreDataSource : FirestoreGateway {
                         FieldValue.arrayRemove(uid)
                     ).await()
                 } catch (e: Exception) {
-                    Log.e("DELETE", "Failed removing user from sharedWith ${doc.id}", e)
+                    RecoveryLog.processError(
+                        "Failed removing user from sharedWith ${doc.id}",
+                        e
+                    )
                 }
             }
         }

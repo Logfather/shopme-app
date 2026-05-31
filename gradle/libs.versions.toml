@@ -2,8 +2,8 @@
 
 # Core Toolchain
 agp = "8.6.1"
-kotlin = "2.0.0"
-ksp = "2.0.0-1.0.24"
+kotlin = "1.9.24"
+ksp = "1.9.24-1.0.20"
 
 # Compose (stabile Kombination)
 compose-bom = "2024.09.00"

@@ -25,7 +25,6 @@ data class ShoppingState(
     val inviteId: String? = null,
     val showDeleteAllConfirm: Boolean = false,
     val isDeletingAll: Boolean = false,
-    val deleteGeneration: Int = 0,
     val isSorting: Boolean = false,
     val sortingPhase: SortingPhase = SortingPhase.Idle,
     val isSharing: Boolean = false,

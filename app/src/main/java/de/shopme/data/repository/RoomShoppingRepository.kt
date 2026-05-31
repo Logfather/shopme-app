@@ -1,15 +1,16 @@
 package de.shopme.data.repository
 
-import android.util.Log
 import com.google.gson.Gson
 import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
 import de.shopme.data.mapper.EntityMapper.toDomain
-import de.shopme.data.sync.ChangeQueueDao
-import de.shopme.data.sync.ChangeQueueEntity
+import de.shopme.data.sync.queue.ChangeQueueDao
+import de.shopme.data.sync.queue.ChangeQueueEntity
 import de.shopme.data.sync.SyncCoordinator
-import de.shopme.data.sync.SyncStateTuple
+import de.shopme.data.sync.queue.SyncStateTuple
+import de.shopme.data.sync.logging.RecoveryLog
+import de.shopme.data.sync.logging.SyncLog
 import de.shopme.domain.life.LifeEvent
 import de.shopme.domain.life.NimelisEventBus
 import de.shopme.domain.model.ListDeleteSnapshot
@@ -50,9 +51,8 @@ class RoomShoppingRepository(
     ) {
         this.syncCoordinator = syncCoordinator
 
-        Log.d(
-            "NIMBLU_SYNC",
-            "SyncCoordinator attached to RoomShoppingRepository"
+        SyncLog.orchestrator(
+            "[Attach] SyncCoordinator attached to RoomShoppingRepository"
         )
     }
 
@@ -179,9 +179,8 @@ class RoomShoppingRepository(
             )
         )
 
-        Log.d(
-            "NIMBLU_SYNC",
-            "Trigger sync after CREATE LIST"
+        SyncLog.orchestrator(
+            "[Trigger] Sync after CREATE LIST"
         )
 
         syncCoordinator?.triggerSync()
@@ -217,26 +216,22 @@ class RoomShoppingRepository(
 
         try {
 
-            Log.d(
-                "NIMBLU_QUEUE",
-                "createItem() entered item=${item.name}"
+            SyncLog.queue(
+                "[Create] entered item=${item.name}"
             )
 
-            Log.d(
-                "NIMBLU_QUEUE",
-                "About to upsert item=${item.id}"
+            SyncLog.queue(
+                "[Upsert] before item=${item.id}"
             )
 
             itemDao.upsert(item)
 
-            Log.d(
-                "NIMBLU_QUEUE",
-                "Upsert successful item=${item.id}"
+            SyncLog.queue(
+                "[Upsert] success item=${item.id}"
             )
 
-            Log.d(
-                "NIMBLU_QUEUE",
-                "About to enqueue item=${item.id}"
+            SyncLog.queue(
+                "[Enqueue] before item=${item.id}"
             )
 
             enqueue(
@@ -246,9 +241,8 @@ class RoomShoppingRepository(
                 baseVersion = 0L
             )
 
-            Log.d(
-                "NIMBLU_QUEUE",
-                "enqueue() finished item=${item.id}"
+            SyncLog.queue(
+                "[Enqueue] finished item=${item.id}"
             )
 
             nimelisEventBus.emit(
@@ -261,8 +255,7 @@ class RoomShoppingRepository(
 
         } catch (e: Exception) {
 
-            Log.e(
-                "NIMBLU_QUEUE",
+            RecoveryLog.processError(
                 "createItem failed",
                 e
             )
@@ -551,9 +544,8 @@ class RoomShoppingRepository(
         operation: String,
         baseVersion: Long
     ) {
-        Log.d(
-            "NIMBLU_QUEUE",
-            "enqueue guard check operation=$operation"
+        SyncLog.queue(
+            "[Guard] enqueue operation=$operation"
         )
 
         val lastSynced = itemDao.getById(entityId)
@@ -572,9 +564,8 @@ class RoomShoppingRepository(
                 now - lastRemoteWrite < 500
             ) {
 
-                Log.d(
-                    "NIMBLU_QUEUE",
-                    "BURST GUARD RETURN operation=$operation"
+                SyncLog.orchestrator(
+                    "[Guard] BURST RETURN operation=$operation"
                 )
 
                 return
@@ -591,9 +582,8 @@ class RoomShoppingRepository(
             now - last < 500
         ) {
 
-            Log.d(
-                "NIMBLU_QUEUE",
-                "WRITE DEBOUNCE RETURN operation=$operation"
+            SyncLog.orchestrator(
+                "[Debounce] RETURN operation=$operation"
             )
 
             return
@@ -652,23 +642,20 @@ class RoomShoppingRepository(
             baseVersion = baseVersion
         )
 
-        Log.d(
-            "NIMBLU_QUEUE",
-            "Insert queue entry op=$operation entity=$entityId state=${entity.state}"
+        SyncLog.queue(
+            "[Insert] op=$operation entity=$entityId state=${entity.state}"
         )
 
         changeQueueDao.insert(entity)
 
         val afterInsert = changeQueueDao.getAllChanges()
 
-        Log.d(
-            "NIMBLU_QUEUE",
-            "Queue size after insert=${afterInsert.size}"
+        SyncLog.queue(
+            "[Metric] size=${afterInsert.size}"
         )
 
-        Log.d(
-            "NIMBLU_SYNC",
-            "Trigger sync from enqueue() op=$operation entity=$entityId"
+        SyncLog.orchestrator(
+            "[Trigger] enqueue op=$operation entity=$entityId"
         )
 
         syncCoordinator?.triggerSync()

@@ -1,12 +1,10 @@
 package de.shopme.presentation.reducer
 
-import android.util.Log
-import de.shopme.domain.model.SyncStatus
 import de.shopme.presentation.action.ShoppingAction
+import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.state.ShoppingScreenMode
 import de.shopme.presentation.state.ShoppingState
-import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.state.SortingPhase
 import de.shopme.presentation.state.deduplicate
 
@@ -18,9 +16,8 @@ data class ReducerResult(
 
 fun reduce(
     state: ShoppingState,
-    screenMode: ShoppingScreenMode,
-    event: ShopEvent? = null,
-    action: ShoppingAction? = null
+    action: ShoppingAction? = null,
+    event: ShopEvent? = null
 ): ReducerResult {
 
     var newState = state
@@ -60,8 +57,7 @@ fun reduce(
 
             is ShopEvent.Item.Delete -> {
                 effects = listOf(
-                    UIEffect.DeleteItem(it.item),
-                    UIEffect.ShowUndo("Item gelöscht")
+                    UIEffect.DeleteItem(it.item)
                 )
                 state
             }
@@ -77,8 +73,7 @@ fun reduce(
                     UIEffect.UpdateItem(
                         item = updatedItem,
                         newName = it.newName
-                    ),
-                    UIEffect.ShowUndo("Item geändert (Update)")
+                    )
                 )
 
                 state
@@ -90,8 +85,25 @@ fun reduce(
             }
 
             is ShopEvent.List.Delete -> {
-                effects = listOf(UIEffect.RequestDeleteList(it.listId))
-                state
+
+                effects = listOf(
+                    UIEffect.RequestDeleteList(it.listId)
+                )
+
+                val updatedLists = state.lists.filterNot { list ->
+                    list.id == it.listId
+                }
+
+
+                state.copy(
+                    lists = updatedLists,
+                    activeListId =
+                        if (state.activeListId == it.listId) {
+                            null
+                        } else {
+                            state.activeListId
+                        }
+                )
             }
 
             is ShopEvent.List.StartSorting -> {
@@ -116,8 +128,6 @@ fun reduce(
 
             is ShopEvent.List.StartSharing -> {
 
-                Log.d("SHARE_FLOW", "Reducer → StartSharing listId=${it.listId}")
-
                 val hasProfile = state.hasProfile
 
                 val updatedState = state.copy(
@@ -128,18 +138,7 @@ fun reduce(
 
                 if (hasProfile) {
                     effects = effects + UIEffect.ShareList(it.listId)
-
-                    Log.d(
-                        "SHARE_FLOW",
-                        "Direct share (profile exists) listId=${it.listId}"
-                    )
-                } else {
-                    Log.d(
-                        "SHARE_FLOW",
-                        "Profile missing → waiting for profile flow"
-                    )
                 }
-
                 updatedState
             }
 
@@ -171,13 +170,11 @@ fun reduce(
 
             is ShopEvent.System.ConfirmGoogleSave -> {
 
-                Log.d("SHARE_FLOW", "confirmGoogleSave CALLED")
-
                 effects = effects + UIEffect.StartGoogleSignIn
 
                 state.copy(
                     showSaveChoice = false,
-                    showProfileScreen = false   // 🔥 FIX: verhindert Rücksprung
+                    showProfileScreen = false
                 )
             }
 
@@ -192,16 +189,11 @@ fun reduce(
                 )
 
                 // 🔥 WICHTIG: Share Flow fortsetzen
-                val shareListId = state.pendingShareListId
+                val shareListId = newState.pendingShareListId
 
                 if (state.profileTriggeredByShare && shareListId != null) {
 
                     effects = effects + UIEffect.ShareList(shareListId)
-
-                    Log.d(
-                        "SHARE_FLOW",
-                        "Resume share after profile save listId=$shareListId"
-                    )
                 }
 
                 state.copy(
@@ -234,8 +226,6 @@ fun reduce(
             }
 
             is ShoppingAction.FinishListCreation -> {
-
-                Log.d("CREATE_FLOW", "FinishListCreation TRIGGERED")
 
                 newState = newState.copy(
                     screenMode = ShoppingScreenMode.MultiOverview
@@ -273,16 +263,12 @@ fun reduce(
                 val hasValidProfile =
                     !profileName.isNullOrBlank() || it.exists
 
-                val shareListId = state.pendingShareListId
+                val shareListId = newState.pendingShareListId
 
                 if (state.profileTriggeredByShare && shareListId != null) {
 
                     effects = effects + UIEffect.ShareList(shareListId)
 
-                    Log.d(
-                        "SHARE_FLOW",
-                        "Resume share after GOOGLE login listId=$shareListId"
-                    )
                 }
 
                 newState = state.copy(
@@ -302,11 +288,12 @@ fun reduce(
         // SCREEN MODE HANDLING
         // ------------------------------------------------------------
 
-        when (screenMode) {
+        when (state.screenMode) {
 
             ShoppingScreenMode.Loading,
             ShoppingScreenMode.Normal,
             ShoppingScreenMode.MultiOverview -> {
+
 
                 when (it) {
 
@@ -314,10 +301,6 @@ fun reduce(
                         newState = newState.copy(
                             screenMode = ShoppingScreenMode.MultiSelect(emptyList())
                         )
-                    }
-
-                    is ShoppingAction.DeleteAllLists -> {
-                        effects = listOf(UIEffect.DeleteAllLists)
                     }
 
                     else -> Unit
@@ -330,9 +313,7 @@ fun reduce(
 
                     is ShoppingAction.ConfirmStores -> {
 
-                        Log.d("CREATE_TRACE", "Reducer ConfirmStores TRIGGERED")
-
-                        val stores = screenMode.selectedStores
+                        val stores = state.screenMode.selectedStores
 
                         effects = effects + UIEffect.CreateLists(
                             stores = stores,
@@ -346,7 +327,7 @@ fun reduce(
 
                     is ShoppingAction.ToggleStore -> {
 
-                        val current = screenMode
+                        val current = state.screenMode
 
                         val updated =
                             if (it.store in current.selectedStores)
@@ -363,10 +344,6 @@ fun reduce(
                         newState = newState.copy(
                             screenMode = ShoppingScreenMode.MultiOverview
                         )
-                    }
-
-                    is ShoppingAction.DeleteAllLists -> {
-                        effects = listOf(UIEffect.DeleteAllLists)
                     }
 
                     else -> Unit

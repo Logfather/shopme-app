@@ -1,7 +1,7 @@
 package de.shopme.data.mapper
 
 import de.shopme.domain.model.SyncStatus as DomainStatus
-import de.shopme.data.sync.SyncStatus as EntityStatus
+import de.shopme.data.sync.queue.SyncStatus as EntityStatus
 
 fun EntityStatus.toDomain(
     progress: Float?,

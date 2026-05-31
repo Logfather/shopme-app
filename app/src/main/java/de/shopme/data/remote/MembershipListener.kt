@@ -1,10 +1,11 @@
 package de.shopme.data.remote
 
-import android.util.Log
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import de.shopme.data.sync.SyncCoordinator
+import de.shopme.data.sync.logging.RecoveryLog
+import de.shopme.data.sync.logging.SyncLog
 
 class MembershipListener(
     private val firestore: FirebaseFirestore,
@@ -13,16 +14,19 @@ class MembershipListener(
 
     private var registration: ListenerRegistration? = null
     private var isStarted = false
-    private var isInitialSnapshot = true   // 🔥 CRITICAL
 
     fun start(userId: String) {
 
         if (isStarted) {
-            //Log.d("MEMBERSHIP", "Already started → skip")
+            SyncLog.guard(
+                "[Membership] Already started"
+            )
             return
         }
 
-        //Log.d("MEMBERSHIP", "Start listening for user: $userId")
+        SyncLog.lifecycle(
+            "[Membership] Start listener user=$userId"
+        )
 
         isStarted = true
 
@@ -32,7 +36,10 @@ class MembershipListener(
             .addSnapshotListener { snapshot, error ->
 
                 if (error != null) {
-                    Log.e("MEMBERSHIP", "Listener error", error)
+                    RecoveryLog.processError(
+                        "Membership listener error",
+                        error
+                    )
                     return@addSnapshotListener
                 }
 
@@ -45,19 +52,21 @@ class MembershipListener(
                     when (change.type) {
 
                         DocumentChange.Type.ADDED -> {
-                            //Log.d("MEMBERSHIP", "ADDED → start sync: $listId")
+                            SyncLog.realtime(
+                                "[Membership] Added list=$listId"
+                            )
                             syncCoordinator.startSingleListSync(listId)
                         }
 
                         DocumentChange.Type.REMOVED -> {
-                            //Log.d("MEMBERSHIP", "REMOVED → stop sync: $listId")
+                            SyncLog.realtime(
+                                "[Membership] Removed list=$listId"
+                            )
                             syncCoordinator.stopSingleListSync(listId)
                             syncCoordinator.deleteLocalListAsync(listId)
                         }
 
-                        DocumentChange.Type.MODIFIED -> {
-                            //Log.d("MEMBERSHIP", "MODIFIED: $listId")
-                        }
+                        DocumentChange.Type.MODIFIED -> Unit
                     }
                 }
             }
@@ -67,7 +76,9 @@ class MembershipListener(
 
         if (!isStarted) return
 
-        //Log.d("MEMBERSHIP", "Stopping listener")
+        SyncLog.lifecycle(
+            "[Membership] Stop listener"
+        )
 
         registration?.remove()
         registration = null

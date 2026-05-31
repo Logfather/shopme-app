@@ -1,8 +1,9 @@
 package de.shopme.auth
 
-import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import de.shopme.data.sync.logging.RecoveryLog
+import de.shopme.data.sync.logging.RuntimeLog
 import de.shopme.domain.auth.AuthProvider
 import de.shopme.domain.auth.AuthUser
 import kotlinx.coroutines.channels.awaitClose
@@ -77,6 +78,10 @@ class FirebaseAuthProvider : AuthProvider {
 
         if (auth.currentUser != null) return
 
+        RuntimeLog.auth(
+            "Anonymous sign-in required"
+        )
+
         auth.signInAnonymously().await()
 
         var attempts = 0
@@ -127,7 +132,6 @@ class FirebaseAuthProvider : AuthProvider {
             }
 
             if (alreadyLinked) {
-                //Log.d("AUTH", "Already linked → skip")
                 return Result.success(Unit)
             }
 
@@ -189,7 +193,6 @@ class FirebaseAuthProvider : AuthProvider {
             val hasGoogle = providers.contains(GoogleAuthProvider.PROVIDER_ID)
 
             if (!hasGoogle) {
-                //Log.d("AUTH", "Google not linked → nothing to unlink")
                 return Result.success(Unit)
             }
 
@@ -204,13 +207,14 @@ class FirebaseAuthProvider : AuthProvider {
 
             user.unlink(GoogleAuthProvider.PROVIDER_ID).await()
 
-            //Log.d("AUTH", "Google successfully unlinked")
-
             Result.success(Unit)
 
         } catch (e: Exception) {
 
-            Log.e("AUTH", "unlinkGoogle failed", e)
+            RecoveryLog.processError(
+                "unlinkGoogle failed",
+                e
+            )
 
             Result.failure(e)
         }
@@ -226,13 +230,14 @@ class FirebaseAuthProvider : AuthProvider {
 
             user.reauthenticate(credential).await()
 
-            //Log.d("AUTH", "Reauthentication successful")
-
             Result.success(Unit)
 
         } catch (e: Exception) {
 
-            Log.e("AUTH", "Reauthentication failed", e)
+            RecoveryLog.processError(
+                "Reauthentication failed",
+                e
+            )
 
             Result.failure(e)
         }
@@ -246,13 +251,14 @@ class FirebaseAuthProvider : AuthProvider {
 
             user.delete().await()
 
-            //Log.d("AUTH", "User deleted successfully")
-
             Result.success(Unit)
 
         } catch (e: Exception) {
 
-            Log.e("AUTH", "deleteUser failed", e)
+            RecoveryLog.processError(
+                "deleteUser failed",
+                e
+            )
 
             Result.failure(e)
         }
