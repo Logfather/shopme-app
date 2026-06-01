@@ -9,6 +9,11 @@ import kotlinx.coroutines.flow.flowOf
 
 class FakeFirestoreGateway : FirestoreGateway {
 
+    var shouldFailWrites = false
+
+    private val items =
+        mutableMapOf<String, MutableMap<String, ShoppingItemEntity>>()
+
     override suspend fun addMembership(
         userId: String,
         listId: String
@@ -54,7 +59,8 @@ class FakeFirestoreGateway : FirestoreGateway {
         listId: String,
         itemId: String
     ): ShoppingItemEntity? {
-        return null
+
+        return items[listId]?.get(itemId)
     }
 
     override fun observeItems(
@@ -69,6 +75,17 @@ class FakeFirestoreGateway : FirestoreGateway {
         item: ShoppingItemEntity
     ): Boolean {
 
+        if (shouldFailWrites) {
+            throw RuntimeException("Forced test failure")
+        }
+
+        val listItems =
+            items.getOrPut(listId) {
+                mutableMapOf()
+            }
+
+        listItems[item.id] = item
+
         return true
     }
 
@@ -76,6 +93,12 @@ class FakeFirestoreGateway : FirestoreGateway {
         listId: String,
         item: ShoppingItemEntity
     ): Boolean {
+
+        if (shouldFailWrites) {
+            throw RuntimeException("Forced test failure")
+        }
+
+        items[listId]?.set(item.id, item)
 
         return true
     }
@@ -85,6 +108,12 @@ class FakeFirestoreGateway : FirestoreGateway {
         itemId: String
     ): Boolean {
 
+        if (shouldFailWrites) {
+            throw RuntimeException("Forced test failure")
+        }
+
+        items[listId]?.remove(itemId)
+
         return true
     }
 
@@ -92,6 +121,10 @@ class FakeFirestoreGateway : FirestoreGateway {
         list: ShoppingListEntity,
         authUid: String
     ): Boolean {
+
+        if (shouldFailWrites) {
+            throw RuntimeException("Forced test failure")
+        }
 
         return true
     }

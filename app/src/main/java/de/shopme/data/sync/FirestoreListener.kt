@@ -1,6 +1,5 @@
 package de.shopme.data.sync
 
-import android.util.Log
 import com.google.firebase.firestore.ListenerRegistration
 import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.datasource.room.ItemDao

@@ -1,11 +1,10 @@
 package de.shopme.domain.invite
 
-import android.util.Log
 import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.repository.RoomShoppingRepository
+import de.shopme.data.sync.logging.RuntimeLog
 import de.shopme.domain.model.ShoppingList
 import de.shopme.presentation.state.ShoppingState
-
 
 data class InviteResult(
     val listIds: List<String>,
@@ -13,14 +12,22 @@ data class InviteResult(
     val createdAt: Long,
     val consumedAt: Long?
 )
+
 class InviteFlowHandler(
     private val firestoreDataSource: FirestoreGateway,
     private val roomRepository: RoomShoppingRepository
 ) {
 
-    suspend fun loadInvite(inviteId: String): InviteResult? {
+    suspend fun loadInvite(
+        inviteId: String
+    ): InviteResult? {
+
         return try {
-            val data = firestoreDataSource.getInviteData(inviteId) ?: return null
+
+            val data =
+                firestoreDataSource
+                    .getInviteData(inviteId)
+                    ?: return null
 
             InviteResult(
                 listIds = data.listIds,
@@ -28,15 +35,27 @@ class InviteFlowHandler(
                 createdAt = data.createdAt,
                 consumedAt = data.consumedAt
             )
+
         } catch (e: Exception) {
-            Log.e("INVITE", "Failed to load invite", e)
+
+            RuntimeLog.invite(
+                "Failed to load invite"
+            )
+
             null
         }
     }
 
-    fun isExpired(createdAt: Long): Boolean {
-        val now = System.currentTimeMillis()
-        val expiry = 24 * 60 * 60 * 1000L
+    fun isExpired(
+        createdAt: Long
+    ): Boolean {
+
+        val now =
+            System.currentTimeMillis()
+
+        val expiry =
+            24 * 60 * 60 * 1000L
+
         return (now - createdAt) > expiry
     }
 
@@ -45,10 +64,14 @@ class InviteFlowHandler(
         listIds: List<String>
     ): List<ShoppingList> {
 
-        val currentLists = state.lists
+        val currentLists =
+            state.lists
 
         return listIds.mapNotNull { id ->
-            currentLists.find { it.id == id }
+
+            currentLists.find {
+                it.id == id
+            }
         }
     }
 }

@@ -83,8 +83,6 @@ class AccountDeletionManager(
             "Account deletion started"
         )
 
-        syncCoordinator.stop()
-
         // ============================================================
         // 2. CLEAR LOCAL QUEUE
         // ============================================================
@@ -143,9 +141,14 @@ class AccountDeletionManager(
     ) = withContext(Dispatchers.IO) {
 
         // ============================================================
-        // 1. STOP SYNC
+        // 1. EVENT-DRIVEN SYNC ARCHITECTURE
         // ============================================================
-        syncCoordinator.stop()
+        // No permanent sync runtime exists anymore.
+        // Replay processing is trigger-based and short-lived.
+
+        RuntimeLog.account(
+            "Account deletion with reauth started"
+        )
 
         // ============================================================
         // 2. FIRST TRY DELETE AUTH
@@ -153,58 +156,83 @@ class AccountDeletionManager(
         val firstDelete = tryDeleteAuth()
 
         if (firstDelete.isSuccess) {
+
             performDataCleanup(userId)
+
             return@withContext Result.success(Unit)
         }
 
-        val error = firstDelete.exceptionOrNull()
+        val error =
+            firstDelete.exceptionOrNull()
 
         val requiresReauth =
-            error?.message?.contains("requires recent login", ignoreCase = true) == true
+            error
+                ?.message
+                ?.contains(
+                    "requires recent login",
+                    ignoreCase = true
+                ) == true
 
         if (!requiresReauth) {
+
             RecoveryLog.processError(
                 "Delete failed (no reauth possible)",
                 error
             )
-            return@withContext Result.failure(error ?: Exception("Unknown error"))
+
+            return@withContext Result.failure(
+                error ?: Exception("Unknown error")
+            )
         }
 
         // ============================================================
         // 3. GET TOKEN FROM UI
         // ============================================================
-        val token = getIdToken()
+        val token =
+            getIdToken()
 
         if (token == null) {
-            return@withContext Result.failure(Exception("Reauth cancelled"))
+
+            return@withContext Result.failure(
+                Exception("Reauth cancelled")
+            )
         }
 
         // ============================================================
         // 4. REAUTH
         // ============================================================
-        val reauth = authViewModel.reauthenticateWithGoogle(token)
+        val reauth =
+            authViewModel.reauthenticateWithGoogle(token)
 
         if (reauth.isFailure) {
+
             RecoveryLog.processError(
                 "Reauth failed",
                 reauth.exceptionOrNull()
             )
+
             return@withContext reauth
         }
 
         // ============================================================
         // 5. RETRY DELETE
         // ============================================================
-        val retryDelete = tryDeleteAuth()
+        val retryDelete =
+            tryDeleteAuth()
 
         if (retryDelete.isFailure) {
+
             RecoveryLog.processError(
                 "Retry delete failed",
                 retryDelete.exceptionOrNull()
             )
+
             return@withContext retryDelete
         }
 
+        // ============================================================
+        // 6. CLEANUP
+        // ============================================================
         performDataCleanup(userId)
 
         Result.success(Unit)

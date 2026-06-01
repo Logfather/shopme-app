@@ -1,7 +1,6 @@
 package de.shopme.data.sync
 
 import android.content.Context
-import android.util.Log
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
@@ -9,6 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import de.shopme.data.sync.logging.RuntimeLog
 import de.shopme.data.sync.model.ReplayRequest
 import java.util.concurrent.TimeUnit
 
@@ -26,8 +26,7 @@ class SyncScheduler(
         request: ReplayRequest
     ) {
 
-        Log.d(
-            "SYNC_SCHEDULER",
+        RuntimeLog.sync(
             "Replay enqueued | id=${request.replayId} | reason=${request.reason}"
         )
 

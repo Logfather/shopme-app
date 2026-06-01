@@ -166,13 +166,15 @@ class MainActivity : ComponentActivity() {
 
                 if (uid != null) {
 
-                    syncCoordinator.start()
                     runtime.startUserSync(uid)
+
+                    syncCoordinator.triggerSync(
+                        force = true
+                    )
 
                 } else {
 
                     runtime.stopUserSync()
-                    syncCoordinator.stop()
                 }
             }
 

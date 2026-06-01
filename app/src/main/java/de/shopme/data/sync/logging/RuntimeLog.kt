@@ -240,4 +240,55 @@ object RuntimeLog {
             message
         )
     }
+
+    fun speech(
+        message: String,
+        throwable: Throwable? = null
+    ) {
+
+        if (throwable != null) {
+
+            Log.e(
+                "SHOPME_SPEECH",
+                message,
+                throwable
+            )
+
+        } else {
+
+            Log.d(
+                "SHOPME_SPEECH",
+                message
+            )
+        }
+    }
+
+
+
+    // ------------------------------------------------------------
+    // QUEUE
+    // ------------------------------------------------------------
+
+
+    fun queue(
+        message: String,
+        throwable: Throwable? = null
+    ) {
+
+        if (throwable != null) {
+
+            Log.e(
+                "QUEUE",
+                message,
+                throwable
+            )
+
+        } else {
+
+            Log.d(
+                "QUEUE",
+                message
+            )
+        }
+    }
 }

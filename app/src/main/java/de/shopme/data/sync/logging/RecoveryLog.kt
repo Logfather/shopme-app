@@ -112,4 +112,15 @@ object RecoveryLog {
             throwable
         )
     }
+
+    fun sync(
+        message: String,
+        throwable: Throwable? = null
+    ) {
+        if (throwable != null) {
+            Log.e("SHOPME_SYNC", message, throwable)
+        } else {
+            Log.d("SHOPME_SYNC", message)
+        }
+    }
 }

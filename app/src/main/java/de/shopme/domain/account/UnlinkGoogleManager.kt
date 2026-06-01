@@ -19,7 +19,11 @@ class UnlinkGoogleManager(
                 "Google unlink started"
             )
 
-            syncCoordinator.stop()
+            // ============================================================
+            // EVENT-DRIVEN SYNC ARCHITECTURE
+            // ============================================================
+            // No permanent sync runtime exists anymore.
+            // Replay processing is trigger-based and short-lived.
 
             authProvider.unlinkGoogle()
         }
@@ -28,18 +32,24 @@ class UnlinkGoogleManager(
         getIdToken: suspend () -> String?
     ): Result<Unit> = withContext(Dispatchers.IO) {
 
-        // ============================================================
-        // 1. STOP SYNC
-        // ============================================================
-        syncCoordinator.stop()
+        RuntimeLog.account(
+            "Google unlink with reauth started"
+        )
 
         // ============================================================
-        // 2. FIRST ATTEMPT
+        // EVENT-DRIVEN SYNC ARCHITECTURE
+        // ============================================================
+        // No permanent sync runtime exists anymore.
+        // Replay processing is trigger-based and short-lived.
+
+        // ============================================================
+        // 1. FIRST ATTEMPT
         // ============================================================
         val firstAttempt =
             authProvider.unlinkGoogle()
 
         if (firstAttempt.isSuccess) {
+
             return@withContext Result.success(Unit)
         }
 
@@ -47,7 +57,7 @@ class UnlinkGoogleManager(
             firstAttempt.exceptionOrNull()
 
         // ============================================================
-        // 3. CHECK REAUTH REQUIREMENT
+        // 2. CHECK REAUTH REQUIREMENT
         // ============================================================
         val requiresReauth =
             error
@@ -70,7 +80,7 @@ class UnlinkGoogleManager(
         }
 
         // ============================================================
-        // 4. REQUEST TOKEN
+        // 3. REQUEST TOKEN
         // ============================================================
         val idToken =
             getIdToken()
@@ -83,7 +93,7 @@ class UnlinkGoogleManager(
         }
 
         // ============================================================
-        // 5. REAUTHENTICATE
+        // 4. REAUTHENTICATE
         // ============================================================
         val reauthResult =
             authProvider
@@ -102,9 +112,8 @@ class UnlinkGoogleManager(
         }
 
         // ============================================================
-        // 6. RETRY UNLINK
+        // 5. RETRY UNLINK
         // ============================================================
-
         val retryResult =
             authProvider.unlinkGoogle()
 

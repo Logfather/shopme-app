@@ -15,11 +15,9 @@ import de.shopme.domain.model.ShoppingListEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicBoolean
 
 class SyncCoordinator(
     private val changeQueueDao: ChangeQueueDao,
@@ -35,76 +33,55 @@ class SyncCoordinator(
 
     private val syncMutex = Mutex()
 
-    private var syncJob: Job? = null
-
-    private val isRunning = AtomicBoolean(false)
+//    private val isRunning = AtomicBoolean(false)
 
     private val activeListSyncs = mutableMapOf<String, Job>()
 
-    private val isProcessing = AtomicBoolean(false)
+//    private val isProcessing = AtomicBoolean(false)
 
-    private val processMutex = Mutex()
+//    private val processMutex = Mutex()
 
-    private val isShuttingDown = AtomicBoolean(false)
+//    private val isShuttingDown = AtomicBoolean(false)
 
 
 
-    fun triggerSync(
+    suspend fun triggerSync(
         force: Boolean = false
-    ) {
+    ): SyncResult {
 
-        if (syncJob?.isActive == true) {
+        return try {
 
             SyncLog.orchestrator(
-                "[Guard] Sync already active -> skip trigger"
+                "[Lifecycle] Sync start force=$force"
             )
 
-            return
-        }
+            if (!force && syncDebounceMs > 0) {
+                delay(syncDebounceMs)
+            }
 
-        syncJob = appScope.launch {
-
-            try {
-
-                SyncLog.orchestrator(
-                    "[Lifecycle] Sync job start force=$force"
-                )
-
-                if (
-                    !force &&
-                    syncDebounceMs > 0
-                ) {
-                    delay(syncDebounceMs)
-                }
+            syncMutex.withLock {
 
                 SyncLog.orchestrator(
-                    "[Lifecycle] Sync after debounce"
+                    "[Mutex] Enter sync mutex"
                 )
 
-                syncMutex.withLock {
-
-                    SyncLog.orchestrator(
-                        "[Mutex] Enter sync mutex"
-                    )
-
-                    processQueueSequential(force)
-
-                    SyncLog.orchestrator(
-                        "[Mutex] Exit sync mutex"
-                    )
-                }
+                processQueueSequential(force)
 
                 SyncLog.orchestrator(
-                    "[Lifecycle] Sync job end"
-                )
-
-            } catch (e: Exception) {
-
-                RecoveryLog.processError(
-                    "Sync job crash",
-                    e
+                    "[Mutex] Exit sync mutex"
                 )
             }
+
+            SyncResult.Success
+
+        } catch (e: Exception) {
+
+            RecoveryLog.processError(
+                "Sync job crash",
+                e
+            )
+
+            SyncResult.Failure(e)
         }
     }
 
@@ -140,7 +117,7 @@ class SyncCoordinator(
             if (next == null) {
 
                 RecoveryLog.policy(
-                    "[Retry] Backoff active -> break"
+                    "[Queue] No pending changes -> break"
                 )
 
                 break
@@ -179,10 +156,7 @@ class SyncCoordinator(
 
         try {
 
-            processMutex.withLock {
-
-                processQueue(listOf(change))
-            }
+            processQueue(listOf(change))
 
         } catch (e: Exception) {
 
@@ -216,80 +190,80 @@ class SyncCoordinator(
         }
     }
 
-    fun start() {
+//    fun start() {
+//
+//        SyncLog.orchestrator(
+//            "[Guard] start() called from ${Throwable().stackTrace.first()}"
+//        )
+//
+//        if (!isRunning.compareAndSet(false, true)) {
+//            SyncLog.orchestrator(
+//                "[Guard] Already running -> skip"
+//            )
+//            return
+//        }
+//
+//        isShuttingDown.set(false)
+//
+//        SyncLog.queue(
+//            "[Lifecycle] START called"
+//        )
+//
+//        appScope.launch {
+//
+//            SyncLog.queue(
+//                "[Loop] STARTED"
+//            )
+//
+//            try {
+//                while (isActive && isRunning.get() && !isShuttingDown.get()) {
+//
+//                    val hasWork = processQueueWithResult()
+//
+//                    val delayMs = if (hasWork) {
+//                        200L
+//                    } else {
+//                        1500L + (0..500).random()
+//                    }
+//
+//                    delay(delayMs)
+//                }
+//
+//            } catch (e: Exception) {
+//                RecoveryLog.processError(
+//                    "Queue loop crash",
+//                    e
+//                )
+//            } finally {
+//                SyncLog.queue(
+//                    "[Loop] STOPPED"
+//                )
+//                isRunning.set(false)
+//            }
+//        }
+//    }
 
-        SyncLog.orchestrator(
-            "[Guard] start() called from ${Throwable().stackTrace.first()}"
-        )
-
-        if (!isRunning.compareAndSet(false, true)) {
-            SyncLog.orchestrator(
-                "[Guard] Already running -> skip"
-            )
-            return
-        }
-
-        isShuttingDown.set(false)
-
-        SyncLog.queue(
-            "[Lifecycle] START called"
-        )
-
-        appScope.launch {
-
-            SyncLog.queue(
-                "[Loop] STARTED"
-            )
-
-            try {
-                while (isActive && isRunning.get() && !isShuttingDown.get()) {
-
-                    val hasWork = processQueueWithResult()
-
-                    val delayMs = if (hasWork) {
-                        200L
-                    } else {
-                        1500L + (0..500).random()
-                    }
-
-                    delay(delayMs)
-                }
-
-            } catch (e: Exception) {
-                RecoveryLog.processError(
-                    "Queue loop crash",
-                    e
-                )
-            } finally {
-                SyncLog.queue(
-                    "[Loop] STOPPED"
-                )
-                isRunning.set(false)
-            }
-        }
-    }
-
-    fun stop() {
-        if (!isRunning.compareAndSet(true, false)) {
-            SyncLog.orchestrator(
-                "[Guard] Already stopped -> skip"
-            )
-            return
-        }
-
-        SyncLog.queue(
-            "[Lifecycle] STOP called"
-        )
-
-        // 🔴 Shutdown Flag setzen
-        isShuttingDown.set(true)
-
-        // 🔴 Alle List Syncs hart abbrechen
-        activeListSyncs.values.forEach { job ->
-            job.cancel()
-        }
-        activeListSyncs.clear()
-    }
+//    fun stop() {
+//        if (!isRunning.compareAndSet(true, false)) {
+//            SyncLog.orchestrator(
+//                "[Guard] Already stopped -> skip"
+//            )
+//            return
+//        }
+//
+//        SyncLog.queue(
+//            "[Lifecycle] STOP called"
+//        )
+//
+//        // 🔴 Shutdown Flag setzen
+//        isShuttingDown.set(true)
+//
+//        // 🔴 Alle List Syncs hart abbrechen
+//        activeListSyncs.values.forEach { job ->
+//            job.cancel()
+//        }
+//        activeListSyncs.clear()
+//    }
 
     fun startSingleListSync(listId: String) {
 
@@ -940,59 +914,54 @@ class SyncCoordinator(
         }
     }
 
-    private suspend fun processQueueWithResult(): Boolean {
-
-        val start = System.currentTimeMillis()
-
-        if (!isProcessing.compareAndSet(false, true)) {
-            SyncLog.queue(
-                "[Guard] Already processing -> skip"
-            )
-            return false
-        }
-
-        try {
-
-            val changes = changeQueueDao.getPending(limit = 10)
-
-            SyncLog.queue(
-                "[Fetch] dao=${changeQueueDao.hashCode()} size=${changes.size}"
-            )
-
-            changes.forEach {
-                SyncLog.queue(
-                    "[Item] ${it.operation} ${it.entityType} ${it.entityId} state=${it.state}"
-                )
-            }
-
-            if (changes.isEmpty()) {
-                SyncLog.queue(
-                    "[Idle] No pending work"
-                )
-                return false
-            }
-
-            // 🔥 WICHTIG: KEIN delay VOR Verarbeitung (Race vermeiden)
-
-            for (change in changes) {
-                processSingleChange(change)
-            }
-
-            val duration = System.currentTimeMillis() - start
-
-            SyncLog.queue(
-                "[Metric] processed=${changes.size} durationMs=$duration"
-            )
-
-            return true
-
-        } finally {
-            isProcessing.set(false)
-        }
-    }
-
-    suspend fun awaitIdle() {
-
-        syncJob?.join()
-    }
+//    private suspend fun processQueueWithResult(): Boolean {
+//
+//        val start = System.currentTimeMillis()
+//
+//        if (!isProcessing.compareAndSet(false, true)) {
+//            SyncLog.queue(
+//                "[Guard] Already processing -> skip"
+//            )
+//            return false
+//        }
+//
+//        try {
+//
+//            val changes = changeQueueDao.getPending(limit = 10)
+//
+//            SyncLog.queue(
+//                "[Fetch] dao=${changeQueueDao.hashCode()} size=${changes.size}"
+//            )
+//
+//            changes.forEach {
+//                SyncLog.queue(
+//                    "[Item] ${it.operation} ${it.entityType} ${it.entityId} state=${it.state}"
+//                )
+//            }
+//
+//            if (changes.isEmpty()) {
+//                SyncLog.queue(
+//                    "[Idle] No pending work"
+//                )
+//                return false
+//            }
+//
+//            // 🔥 WICHTIG: KEIN delay VOR Verarbeitung (Race vermeiden)
+//
+//            for (change in changes) {
+//                processSingleChange(change)
+//            }
+//
+//            val duration = System.currentTimeMillis() - start
+//
+//            SyncLog.queue(
+//                "[Metric] processed=${changes.size} durationMs=$duration"
+//            )
+//
+//            return true
+//
+//        } finally {
+//            isProcessing.set(false)
+//        }
+//    }
 }

@@ -1,10 +1,11 @@
 package de.shopme.data.sync
 
 import android.content.Context
-import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import de.shopme.app.HivraApplication
+import de.shopme.data.sync.logging.RecoveryLog
+import de.shopme.data.sync.logging.RuntimeLog
 
 class SyncWorker(
     appContext: Context,
@@ -20,8 +21,7 @@ class SyncWorker(
             inputData.getString("replay_reason")
 
 
-        Log.d(
-            "SYNC_WORKER",
+        RuntimeLog.sync(
             "Worker started | replayId=$replayId | reason=$replayReason"
         )
 
@@ -32,8 +32,7 @@ class SyncWorker(
 
             runtime.syncCoordinator.triggerSync()
 
-            Log.d(
-                "SYNC_WORKER",
+            RuntimeLog.sync(
                 "Sync success | replayId=$replayId"
             )
 
@@ -45,8 +44,7 @@ class SyncWorker(
 
         } catch (e: Exception) {
 
-            Log.e(
-                "SYNC_WORKER",
+            RecoveryLog.sync(
                 "Sync failed | replayId=$replayId",
                 e
             )
