@@ -1,0 +1,177 @@
+{
+  "entries": {
+
+    "apple": {
+      "litersPerKilogram": 822
+    },
+
+    "banana": {
+      "litersPerKilogram": 790
+    },
+
+    "orange": {
+      "litersPerKilogram": 560
+    },
+
+    "pear": {
+      "litersPerKilogram": 920
+    },
+
+    "kiwi": {
+      "litersPerKilogram": 610
+    },
+
+    "tomato": {
+      "litersPerKilogram": 214
+    },
+
+    "cucumber": {
+      "litersPerKilogram": 353
+    },
+
+    "lettuce": {
+      "litersPerKilogram": 237
+    },
+
+    "carrot": {
+      "litersPerKilogram": 195
+    },
+
+    "broccoli": {
+      "litersPerKilogram": 285
+    },
+
+    "spinach": {
+      "litersPerKilogram": 292
+    },
+
+    "potato": {
+      "litersPerKilogram": 287
+    },
+
+    "rice": {
+      "litersPerKilogram": 2497
+    },
+
+    "pasta": {
+      "litersPerKilogram": 1849
+    },
+
+    "bread": {
+      "litersPerKilogram": 1608
+    },
+
+    "oats": {
+      "litersPerKilogram": 1788
+    },
+
+    "milk": {
+      "litersPerKilogram": 1021
+    },
+
+    "cheese": {
+      "litersPerKilogram": 5060
+    },
+
+    "butter": {
+      "litersPerKilogram": 5553
+    },
+
+    "egg": {
+      "litersPerKilogram": 3265
+    },
+
+    "tofu": {
+      "litersPerKilogram": 2144
+    },
+
+    "soy": {
+      "litersPerKilogram": 2145
+    },
+
+    "lentils": {
+      "litersPerKilogram": 4055
+    },
+
+    "chickpeas": {
+      "litersPerKilogram": 4177
+    },
+
+    "almond": {
+      "litersPerKilogram": 16194
+    },
+
+    "walnut": {
+      "litersPerKilogram": 9040
+    },
+
+    "cashew": {
+      "litersPerKilogram": 14500
+    },
+
+    "olive oil": {
+      "litersPerKilogram": 14500
+    },
+
+    "chicken breast": {
+      "litersPerKilogram": 4325
+    },
+
+    "pork": {
+      "litersPerKilogram": 5988
+    },
+
+    "beef": {
+      "litersPerKilogram": 15415
+    },
+
+    "salmon": {
+      "litersPerKilogram": 4950
+    },
+
+    "shrimp": {
+      "litersPerKilogram": 3360
+    },
+
+    "coffee": {
+      "litersPerKilogram": 18900
+    },
+
+    "tea": {
+      "litersPerKilogram": 8860
+    },
+
+    "dark chocolate": {
+      "litersPerKilogram": 17196
+    },
+
+    "milk chocolate": {
+      "litersPerKilogram": 17200
+    },
+
+    "pizza margherita": {
+      "litersPerKilogram": 1840
+    },
+
+    "cheeseburger": {
+      "litersPerKilogram": 7800
+    },
+
+    "pad thai": {
+      "litersPerKilogram": 3100
+    },
+
+    "greek salad": {
+      "litersPerKilogram": 760
+    },
+
+    "caesar salad": {
+      "litersPerKilogram": 1300
+    },
+
+    "quince": {
+      "liters_per_kg": 850
+    }
+
+  }
+}

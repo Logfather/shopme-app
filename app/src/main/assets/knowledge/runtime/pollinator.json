@@ -1,0 +1,34 @@
+{
+  "entries": {
+    "apple": {
+      "score": 95.0
+    },
+    "bread": {
+      "score": 0.0
+    },
+    "broccoli": {
+      "score": 35.0
+    },
+    "carrot": {
+      "score": 22.0
+    },
+    "coffee": {
+      "score": 82.0
+    },
+    "lentils": {
+      "score": 45.0
+    },
+    "pizza margherita": {
+      "score": 12.0
+    },
+    "potato": {
+      "score": 8.0
+    },
+    "rice": {
+      "score": 0.0
+    },
+    "tomato": {
+      "score": 90.0
+    }
+  }
+}

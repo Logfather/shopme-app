@@ -6,10 +6,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import de.shopme.data.datasource.room.ShopMeDatabase
 import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.data.sync.ConflictResolver
+import de.shopme.data.sync.RemoteApplyCoordinator
 import de.shopme.data.sync.SyncCoordinator
+import de.shopme.data.sync.telemetry.SyncTelemetryCollector
 import de.shopme.domain.life.NimelisEventBus
 import de.shopme.testing.fake.InMemoryFakeFirestoreGateway
 import de.shopme.testing.system.scenarios.OfflineReplayScenario
+import de.shopme.testing.system.tests.sync.TestRuntimeDiagnostics
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -77,6 +80,17 @@ class OfflineReplayTest {
                 nimelisEventBus = eventBusB
             )
 
+        val telemetry = SyncTelemetryCollector()
+
+        val remoteApplyCoordinatorA =
+            RemoteApplyCoordinator(
+                itemDao = databaseA.itemDao(),
+                changeQueueDao = databaseA.changeQueueDao(),
+                remoteApplyStateDao =
+                    databaseA.remoteApplyStateDao(),
+                telemetry = telemetry
+            )
+
         val syncCoordinatorA =
             SyncCoordinator(
                 changeQueueDao = databaseA.changeQueueDao(),
@@ -86,9 +100,27 @@ class OfflineReplayTest {
                 appScope = this,
                 firebaseAuth = null,
                 conflictResolver = ConflictResolver(),
-                roomRepository = repositoryA
+                roomRepository = repositoryA,
+                remoteApplyCoordinator = remoteApplyCoordinatorA,
+                telemetry = telemetry,
+
+                diagnosticsProvider =
+                    TestRuntimeDiagnostics.provider(
+                        telemetry
+                    ),
+
+                diagnosticsLogger =
+                    TestRuntimeDiagnostics.logger()
             )
 
+        val remoteApplyCoordinatorB =
+            RemoteApplyCoordinator(
+                itemDao = databaseB.itemDao(),
+                changeQueueDao = databaseB.changeQueueDao(),
+                remoteApplyStateDao =
+                    databaseB.remoteApplyStateDao(),
+                telemetry = telemetry
+            )
         val syncCoordinatorB =
             SyncCoordinator(
                 changeQueueDao = databaseB.changeQueueDao(),
@@ -98,7 +130,17 @@ class OfflineReplayTest {
                 appScope = this,
                 firebaseAuth = null,
                 conflictResolver = ConflictResolver(),
-                roomRepository = repositoryB
+                roomRepository = repositoryB,
+                remoteApplyCoordinator = remoteApplyCoordinatorB,
+                telemetry = telemetry,
+
+                diagnosticsProvider =
+                    TestRuntimeDiagnostics.provider(
+                        telemetry
+                    ),
+
+                diagnosticsLogger =
+                    TestRuntimeDiagnostics.logger()
             )
 
         repositoryA.attachSyncCoordinator(syncCoordinatorA)

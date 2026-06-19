@@ -5,11 +5,14 @@ import androidx.test.core.app.ApplicationProvider
 import de.shopme.data.datasource.room.ShopMeDatabase
 import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.data.sync.ConflictResolver
+import de.shopme.data.sync.RemoteApplyCoordinator
 import de.shopme.data.sync.SyncCoordinator
 import de.shopme.data.sync.SyncResult
+import de.shopme.data.sync.telemetry.SyncTelemetryCollector
 import de.shopme.domain.life.NimelisEventBus
 import de.shopme.testing.system.fake.FakeFirestoreGateway
 import de.shopme.testing.system.scenario.EventDrivenReplayScenario
+import de.shopme.testing.system.tests.sync.TestRuntimeDiagnostics
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -66,6 +69,17 @@ class EventDrivenReplayRuntimeTest {
                 nimelisEventBus = eventBus
             )
 
+        val telemetry = SyncTelemetryCollector()
+
+        val remoteApplyCoordinatorB =
+            RemoteApplyCoordinator(
+                itemDao = database.itemDao(),
+                changeQueueDao = database.changeQueueDao(),
+                remoteApplyStateDao =
+                    database.remoteApplyStateDao(),
+                telemetry = telemetry
+            )
+
         coordinator =
             SyncCoordinator(
                 changeQueueDao = database.changeQueueDao(),
@@ -76,7 +90,16 @@ class EventDrivenReplayRuntimeTest {
                 firebaseAuth = null,
                 conflictResolver = ConflictResolver(),
                 roomRepository = repository,
-                syncDebounceMs = 0
+                remoteApplyCoordinator = remoteApplyCoordinatorB,
+                telemetry = telemetry,
+
+                diagnosticsProvider =
+                    TestRuntimeDiagnostics.provider(
+                        telemetry
+                    ),
+
+                diagnosticsLogger =
+                    TestRuntimeDiagnostics.logger()
             )
 
         scenario =

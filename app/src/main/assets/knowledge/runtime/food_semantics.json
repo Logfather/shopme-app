@@ -1,0 +1,92 @@
+{
+  "entries": {
+    "bakery": {
+      "category": "UNKNOWN",
+      "tags": [
+        null,
+        "PROCESSED"
+      ]
+    },
+    "beverage": {
+      "category": "BEVERAGE",
+      "tags": [
+        "BEVERAGE"
+      ]
+    },
+    "condiment": {
+      "category": "UNKNOWN",
+      "tags": [
+        null,
+        "PROCESSED"
+      ]
+    },
+    "dairy": {
+      "category": "DAIRY",
+      "tags": [
+        "DAIRY",
+        null
+      ]
+    },
+    "egg_product": {
+      "category": "UNKNOWN",
+      "tags": [
+        null
+      ]
+    },
+    "fish": {
+      "category": "UNKNOWN",
+      "tags": [
+        "FISH",
+        null
+      ]
+    },
+    "fruit": {
+      "category": "FRUIT",
+      "tags": [
+        "FRUIT",
+        "PLANT_BASED"
+      ]
+    },
+    "grain": {
+      "category": "GRAIN",
+      "tags": [
+        "GRAIN",
+        "PLANT_BASED"
+      ]
+    },
+    "legume": {
+      "category": "UNKNOWN",
+      "tags": [
+        null,
+        "PLANT_BASED"
+      ]
+    },
+    "meat": {
+      "category": "UNKNOWN",
+      "tags": [
+        "MEAT",
+        null
+      ]
+    },
+    "sauce": {
+      "category": "UNKNOWN",
+      "tags": [
+        null,
+        "PROCESSED"
+      ]
+    },
+    "seafood": {
+      "category": "UNKNOWN",
+      "tags": [
+        null
+      ]
+    },
+    "vegetable": {
+      "category": "VEGETABLE",
+      "tags": [
+        "VEGETABLE",
+        "PLANT_BASED"
+      ]
+    }
+  }
+}

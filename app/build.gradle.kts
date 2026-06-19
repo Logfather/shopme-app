@@ -8,9 +8,6 @@ plugins {
 android {
     namespace = "de.shopme"
     compileSdk = 35
-    testOptions {
-        unitTests.isReturnDefaultValues = true
-    }
 
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
@@ -60,6 +57,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    packaging {
+        resources {
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/LICENSE-notice.md"
+        }
+    }
 }
 
 kotlin {
@@ -81,7 +85,7 @@ dependencies {
 
     implementation(libs.androidx.compose.runtime.saveable)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation("androidx.compose.runtime:runtime")
+    implementation(libs.androidx.monitor)
 
 
     debugImplementation(libs.androidx.compose.ui.tooling)
@@ -120,6 +124,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("io.mockk:mockk:1.13.5")
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.0")
+    androidTestImplementation("io.mockk:mockk-android:1.13.5")
     implementation("androidx.compose.animation:animation")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
@@ -129,4 +134,9 @@ dependencies {
     // WORKER
     implementation("androidx.work:work-runtime-ktx:2.10.1")
     implementation("androidx.work:work-runtime-ktx:2.10.1")
+
+    //OPEN FOOD FACTS INTEGRATION
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation(kotlin("test"))
 }

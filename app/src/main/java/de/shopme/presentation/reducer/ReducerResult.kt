@@ -1,5 +1,6 @@
 package de.shopme.presentation.reducer
 
+import de.shopme.data.sync.logging.RuntimeLog
 import de.shopme.presentation.action.ShoppingAction
 import de.shopme.presentation.effect.UIEffect
 import de.shopme.presentation.event.ShopEvent
@@ -33,6 +34,19 @@ fun reduce(
 
             is ShopEvent.Item.Add -> {
                 effects = listOf(UIEffect.AddItem(it.name))
+                state
+            }
+
+            is ShopEvent.Speech.AddItemFromSpeech -> {
+
+                RuntimeLog.reducer(
+                    "Speech event received: ${it.text}"
+                )
+
+                effects = listOf(
+                    UIEffect.ProcessSpeech(it.text)
+                )
+
                 state
             }
 

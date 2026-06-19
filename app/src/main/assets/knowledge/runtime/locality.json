@@ -1,0 +1,16 @@
+{
+  "entries": {
+    "apple": "REGIONAL",
+    "bread": "REGIONAL",
+    "broccoli": "REGIONAL",
+    "butter": "NATIONWIDE",
+    "carrot": "REGIONAL",
+    "coffee": "OVERSEAS",
+    "egg": "REGIONAL",
+    "milk": "REGIONAL",
+    "pizza margherita": "NATIONWIDE",
+    "potato": "REGIONAL",
+    "rice": "OVERSEAS",
+    "tea": "OVERSEAS"
+  }
+}

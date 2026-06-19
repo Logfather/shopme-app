@@ -15,6 +15,10 @@ class MultiDeviceSyncScenario {
         deviceB: MultiDeviceContextTest
     ) {
 
+        suspend fun awaitIdle() {
+            delay(500)
+        }
+
         Log.d(
             "HIVRA_TEST",
             "==============================================="

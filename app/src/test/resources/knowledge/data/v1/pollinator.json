@@ -1,0 +1,39 @@
+{
+  "entries": {
+
+    "apple": { "score": 95 },
+    "pear": { "score": 94 },
+    "cherry": { "score": 98 },
+    "plum": { "score": 93 },
+
+    "tomato": { "score": 90 },
+    "cucumber": { "score": 88 },
+    "pumpkin": { "score": 96 },
+    "zucchini": { "score": 95 },
+
+    "broccoli": { "score": 35 },
+    "carrot": { "score": 22 },
+    "potato": { "score": 8 },
+
+    "almond": { "score": 100 },
+    "sunflower seeds": { "score": 98 },
+
+    "lentils": { "score": 45 },
+    "peas": { "score": 55 },
+    "beans": { "score": 52 },
+
+    "oats": { "score": 5 },
+    "rice": { "score": 0 },
+    "bread": { "score": 0 },
+
+    "coffee": { "score": 82 },
+
+    "olive oil": { "score": 76 },
+
+    "pizza margherita": { "score": 12 },
+    "cheeseburger": { "score": 4 },
+    "greek salad": { "score": 72 },
+    "pad thai": { "score": 34 },
+    "quince": { "score": 0.98 }
+  }
+}

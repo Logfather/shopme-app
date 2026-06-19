@@ -1,37 +1,24 @@
 package de.shopme.ui.app
 
 import android.content.Intent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -41,7 +28,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -64,24 +49,29 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import de.shopme.R
+import de.shopme.app.services.AppServices
 import de.shopme.data.input.speech.SpeechController
 import de.shopme.data.sync.logging.UILog
+import de.shopme.domain.nutrition.pipeline.ProductionNutritionPipeline
+import de.shopme.domain.nutrition.service.NutritionInsightService
 import de.shopme.domain.service.CatalogService
 import de.shopme.presentation.action.ShoppingAction
+import de.shopme.presentation.developer.foodintelligence.FoodIntelligenceScreen
+import de.shopme.presentation.developer.report.BuildReportScreen
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.navigation.Screen
 import de.shopme.presentation.screens.ChooseListsScreen
 import de.shopme.presentation.screens.InviteScreen
 import de.shopme.presentation.screens.ProfileMode
 import de.shopme.presentation.screens.ProfileScreen
+import de.shopme.presentation.screens.ShoppingScreen
 import de.shopme.presentation.screens.WelcomeScreen
 import de.shopme.presentation.shopping.components.MultiOverviewScreen
 import de.shopme.presentation.shopping.components.StoreSelectionDialog
 import de.shopme.presentation.state.ShoppingScreenMode
 import de.shopme.presentation.viewmodel.ShoppingViewModel
+import de.shopme.ui.app.topbar.HivraTopBar
 import de.shopme.ui.components.CartoonLoader
-import de.shopme.ui.components.ShoppingContent
-import de.shopme.ui.icons.CheckFlagIcon
 import de.shopme.ui.illustration.animations.ShareSuccessAnimation
 import de.shopme.ui.illustration.animations.ShoppingBagAnimation
 import de.shopme.ui.navigation.toScreen
@@ -96,10 +86,21 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HivraApp(
+
     vm: ShoppingViewModel,
+
+    appServices: AppServices,
+
     speechController: SpeechController,
-    catalogService: CatalogService
+
+    catalogService: CatalogService,
+
+    productionNutritionPipeline: ProductionNutritionPipeline,
+
+    nutritionInsightService: NutritionInsightService
+
 ) {
+
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -309,101 +310,88 @@ fun HivraApp(
 
                 topBar = {
 
-                    CenterAlignedTopAppBar(
+                    var showFoodIntelligence by remember {
 
-                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                            containerColor = BrandGreen,
-                            titleContentColor = BrandBlack
-                        ),
+                        mutableStateOf(false)
 
-                        navigationIcon = {
+                    }
 
-                            var showBadge by remember { mutableStateOf(false) }
+                    var showBuildReport by remember {
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clickable {
-                                        vm.onEvent(ShopEvent.System.OpenProfileScreen)
-                                    }
-                                    .padding(start = 8.dp)
-                            ) {
+                        mutableStateOf(false)
 
-                                Icon(Icons.Default.AccountCircle, null)
+                    }
 
-                                Spacer(Modifier.width(6.dp))
+                    HivraTopBar(
 
-                                Text(
-                                    text = if (!state.hasProfile) {
-                                        "Profil erstellen"
-                                    } else {
-                                        state.displayName ?: ""
-                                    },
-                                    color = BrandBlack,
-                                    maxLines = 1
-                                )
+                        hasProfile = state.hasProfile,
 
-                                Spacer(Modifier.width(6.dp))
+                        displayName = state.displayName,
 
-                                AnimatedVisibility(
-                                    visible = showBadge,
-                                    enter = fadeIn(),
-                                    exit = fadeOut()
-                                ) {
+                        hasLists = userLists.isNotEmpty(),
 
-                                    val scale by animateFloatAsState(
-                                        targetValue = if (showBadge) 1.2f else 1f,
-                                        animationSpec = tween(200)
-                                    )
+                        onProfile = {
 
-                                    Icon(
-                                        imageVector = CheckFlagIcon,
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .scale(scale),
-                                        tint = BrandBlack
-                                    )
-                                }
-                            }
+                            vm.onEvent(
+                                ShopEvent.System.OpenProfileScreen
+                            )
+
                         },
 
-                        title = {
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                //HivraNetworkIcon(
-                                //    modifier = Modifier.size(28.dp)
-                                //)
-                            }
+                        onFoodIntelligence = {
+
+                            showFoodIntelligence = true
+
                         },
 
-                        actions = {
-                            if (userLists.isNotEmpty()) {
+                        onBuildReport = {
 
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .clickable { showChooseLists = true }
-                                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                                ) {
+                            showBuildReport = true
 
-                                    Text(
-                                        text = "Teilen",
-                                        color = BrandBlack,
-                                        maxLines = 1
-                                    )
+                        },
 
-                                    Spacer(Modifier.width(6.dp))
+                        onShare = {
 
-                                    Icon(Icons.Default.Share,
-                                        contentDescription = "Listen teilen",
-                                        tint = BrandBlack)
-                                }
-                            }
+                            showChooseLists = true
+
                         }
+
                     )
+
+                    when {
+
+                        showFoodIntelligence -> {
+
+                            FoodIntelligenceScreen(
+                                onClose = {
+
+                                    showFoodIntelligence = false
+
+                                }
+                            )
+
+                        }
+
+                        showBuildReport -> {
+
+                            BuildReportScreen(
+                                onClose = {
+
+                                    showBuildReport = false
+
+                                }
+                            )
+
+                        }
+
+                        else -> {
+
+                            // Shop
+
+                        }
+
+                    }
+
                 }
 
             ) { padding ->
@@ -439,11 +427,19 @@ fun HivraApp(
                         }
 
                         Screen.Items -> {
-                            ShoppingContent(
+
+                            ShoppingScreen(
+
                                 vm = vm,
+
+                                services = appServices,
+
                                 speechController = speechController,
+
                                 catalogService = catalogService
+
                             )
+
                         }
 
                         Screen.StoreSelection -> {

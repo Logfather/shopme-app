@@ -1,0 +1,103 @@
+{
+  "entries": {
+    "apple": {
+      "parent": "fruit"
+    },
+    "barley": {
+      "parent": "grain"
+    },
+    "beef": {
+      "parent": "meat"
+    },
+    "beer": {
+      "parent": "beverage"
+    },
+    "bread": {
+      "parent": "bakery"
+    },
+    "broccoli": {
+      "parent": "vegetable"
+    },
+    "butter": {
+      "parent": "dairy"
+    },
+    "carrot": {
+      "parent": "vegetable"
+    },
+    "cod": {
+      "parent": "fish"
+    },
+    "coffee": {
+      "parent": "beverage"
+    },
+    "croissant": {
+      "parent": "bakery"
+    },
+    "egg": {
+      "parent": "egg_product"
+    },
+    "feta": {
+      "parent": "dairy"
+    },
+    "gouda": {
+      "parent": "dairy"
+    },
+    "herring": {
+      "parent": "fish"
+    },
+    "hummus": {
+      "parent": "condiment"
+    },
+    "lentils": {
+      "parent": "legume"
+    },
+    "lobster": {
+      "parent": "seafood"
+    },
+    "milk": {
+      "parent": "dairy"
+    },
+    "mozzarella": {
+      "parent": "dairy"
+    },
+    "parmesan": {
+      "parent": "dairy"
+    },
+    "pesto": {
+      "parent": "sauce"
+    },
+    "pork": {
+      "parent": "meat"
+    },
+    "potato": {
+      "parent": "vegetable"
+    },
+    "quark": {
+      "parent": "dairy"
+    },
+    "rice": {
+      "parent": "grain"
+    },
+    "salmon": {
+      "parent": "fish"
+    },
+    "spinach": {
+      "parent": "vegetable"
+    },
+    "tea": {
+      "parent": "beverage"
+    },
+    "tomato": {
+      "parent": "vegetable"
+    },
+    "tuna": {
+      "parent": "fish"
+    },
+    "water": {
+      "parent": "beverage"
+    },
+    "wine": {
+      "parent": "beverage"
+    }
+  }
+}

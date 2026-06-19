@@ -1,0 +1,148 @@
+{
+  "entries": {
+    "plant_based": {
+      "category": null,
+      "tags": [
+        "PLANT_BASED"
+      ]
+    },
+    "animal_based": {
+      "category": null,
+      "tags": [
+        "ANIMAL_BASED"
+      ]
+    },
+    "prepared_food": {
+      "category": null,
+      "tags": [
+        "PROCESSED"
+      ]
+    },
+    "fruit": {
+      "category": "FRUIT",
+      "tags": [
+        "FRUIT",
+        "PLANT_BASED"
+      ]
+    },
+    "vegetable": {
+      "category": "VEGETABLE",
+      "tags": [
+        "VEGETABLE",
+        "PLANT_BASED"
+      ]
+    },
+    "legume": {
+      "category": "LEGUME",
+      "tags": [
+        "LEGUME",
+        "PLANT_BASED",
+        "HIGH_FIBER"
+      ]
+    },
+    "grain": {
+      "category": "GRAIN",
+      "tags": [
+        "GRAIN",
+        "PLANT_BASED"
+      ]
+    },
+    "nut": {
+      "category": "NUT",
+      "tags": [
+        "NUT",
+        "PLANT_BASED"
+      ]
+    },
+    "seed": {
+      "category": "SEED",
+      "tags": [
+        "SEED",
+        "PLANT_BASED"
+      ]
+    },
+    "mushroom": {
+      "category": "MUSHROOM",
+      "tags": [
+        "MUSHROOM",
+        "PLANT_BASED"
+      ]
+    },
+    "oil": {
+      "category": "OIL",
+      "tags": [
+        "OIL",
+        "PLANT_BASED"
+      ]
+    },
+    "dairy": {
+      "category": "DAIRY",
+      "tags": [
+        "DAIRY",
+        "ANIMAL_BASED"
+      ]
+    },
+    "egg_product": {
+      "category": "EGG",
+      "tags": [
+        "EGG",
+        "ANIMAL_BASED"
+      ]
+    },
+    "fish": {
+      "category": "FISH",
+      "tags": [
+        "FISH",
+        "ANIMAL_BASED"
+      ]
+    },
+    "seafood": {
+      "category": "SEAFOOD",
+      "tags": [
+        "SEAFOOD",
+        "ANIMAL_BASED"
+      ]
+    },
+    "meat": {
+      "category": "MEAT",
+      "tags": [
+        "MEAT",
+        "ANIMAL_BASED"
+      ]
+    },
+    "condiment": {
+      "category": "CONDIMENT",
+      "tags": [
+        "CONDIMENT",
+        "PROCESSED"
+      ]
+    },
+    "sauce": {
+      "category": "SAUCE",
+      "tags": [
+        "SAUCE",
+        "PROCESSED"
+      ]
+    },
+    "bakery": {
+      "category": "BAKERY",
+      "tags": [
+        "BAKERY",
+        "PROCESSED"
+      ]
+    },
+    "dessert": {
+      "category": "DESSERT",
+      "tags": [
+        "DESSERT",
+        "PROCESSED"
+      ]
+    },
+    "beverage": {
+      "category": "BEVERAGE",
+      "tags": [
+        "BEVERAGE"
+      ]
+    }
+  }
+}

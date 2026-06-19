@@ -1,0 +1,28 @@
+{
+  "entries": {
+    "beef": [
+      "HALAL",
+      "KOSHER"
+    ],
+    "egg": [
+      "VEGETARIAN",
+      "HALAL",
+      "KOSHER"
+    ],
+    "milk": [
+      "VEGETARIAN",
+      "HALAL",
+      "KOSHER"
+    ],
+    "salmon": [
+      "PESCETARIAN",
+      "HALAL"
+    ],
+    "tomato": [
+      "VEGAN",
+      "VEGETARIAN",
+      "HALAL",
+      "KOSHER"
+    ]
+  }
+}

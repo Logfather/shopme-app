@@ -6,6 +6,7 @@ import de.shopme.data.datasource.room.ItemDao
 import de.shopme.data.datasource.room.ListDao
 import de.shopme.data.sync.logging.RecoveryLog
 import de.shopme.data.sync.logging.SyncLog
+import de.shopme.data.sync.runtime.SyncBootstrapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
@@ -18,26 +19,34 @@ class FirestoreListener(
     private val conflictResolver: ConflictResolver,
     private val appScope: CoroutineScope
 ) {
-    private var initialLoadCompleted = false   // 🔥 HIERHIN
 
-    private val activeItemListeners = mutableMapOf<String, Job>()
 
-    private val activeItemSyncs = mutableSetOf<String>()
+    lateinit var bootstrapper: SyncBootstrapper
 
-    private val activeListSyncs = mutableSetOf<String>()
+    private var initialLoadCompleted = false
 
-    private val registrationMap = mutableMapOf<String, ListenerRegistration>()
+    private val activeMembershipJob =
+        mutableListOf<Job>()
 
-    private val latestAppliedRemoteVersion =
-        mutableMapOf<String, Long>()
+    private val activeItemListeners =
+        mutableMapOf<String, Job>()
 
-    fun startListSync(userId: String) {
+    private val registrationMap =
+        mutableMapOf<String, ListenerRegistration>()
+
+    // ------------------------------------------------------------
+    // MEMBERSHIP / LIST DISCOVERY
+    // ------------------------------------------------------------
+
+    fun startListSync(
+        userId: String
+    ) {
 
         SyncLog.realtime(
-            "[Lists] Start sync user=$userId"
+            "[Lists] Start membership sync user=$userId"
         )
 
-        appScope.launch {
+        val job = appScope.launch {
 
             dataSource.observeListsForUser(userId)
                 .collectLatest { remoteLists ->
@@ -46,48 +55,87 @@ class FirestoreListener(
                         "[Lists] Received count=${remoteLists.size}"
                     )
 
-                    val remoteIds = remoteLists.map { it.id }
+                    val remoteIds =
+                        remoteLists.map { it.id }
+
+                    // --------------------------------------------------------
+                    // DELETE SYNC
+                    // ONLY AFTER INITIAL LOAD
+                    // --------------------------------------------------------
 
                     if (initialLoadCompleted) {
 
-                        // 🔥 DELETE SYNC NUR NACH INITIAL LOAD
                         if (remoteIds.isEmpty()) {
+
                             listDao.clearAll()
+
                         } else {
-                            listDao.deleteAllExcept(remoteIds)
+
+                            listDao.deleteAllExcept(
+                                remoteIds
+                            )
                         }
                     }
 
-                    // 🔥 UPSERT IMMER
+                    // --------------------------------------------------------
+                    // UPSERT LISTS
+                    // --------------------------------------------------------
+
                     remoteLists.forEach { list ->
 
                         listDao.upsert(list)
 
-                        if (!activeItemSyncs.contains(list.id)) {
-                            activeItemSyncs.add(list.id)
-                            startItemSync(list.id)
-                        }
+                        // ----------------------------------------------------
+                        // IMPORTANT:
+                        // NO DIRECT REALTIME ATTACH HERE
+                        // ----------------------------------------------------
+
+                        bootstrapper
+                            .activateList(list.id)
                     }
 
-                    // 🔥 MARK INITIAL LOAD DONE
-                    if (!initialLoadCompleted && remoteLists.isNotEmpty()) {
+                    // --------------------------------------------------------
+                    // INITIAL LOAD COMPLETED
+                    // --------------------------------------------------------
+
+                    if (
+                        !initialLoadCompleted &&
+                        remoteLists.isNotEmpty()
+                    ) {
+
                         initialLoadCompleted = true
+
+                        SyncLog.realtime(
+                            "[Lists] Initial load completed"
+                        )
                     }
                 }
         }
+
+        activeMembershipJob.add(job)
     }
 
-    fun startItemSync(listId: String) {
+    // ------------------------------------------------------------
+    // REALTIME ITEM LISTENER
+    // ------------------------------------------------------------
 
-        if (activeItemListeners.containsKey(listId)) {
+    fun startItemSync(
+        listId: String
+    ) {
+
+        if (
+            activeItemListeners.containsKey(listId)
+        ) {
+
             SyncLog.guard(
                 "[Realtime] Already running list=$listId"
             )
+
             return
         }
 
         SyncLog.realtime(
-            "[Items] Start sync list=$listId"
+            "[Items] Start realtime list=$listId"
         )
 
         val job = appScope.launch {
@@ -103,80 +151,13 @@ class FirestoreListener(
 
                         try {
 
-                            val local =
-                                itemDao.getById(remote.id)
-
                             // ------------------------------------------------
-                            // CASE 1
-                            // Local item missing
+                            // CENTRALIZED APPLY ENGINE
                             // ------------------------------------------------
 
-                            if (local == null) {
-
-                                SyncLog.apply(
-                                    "[Insert] Remote item=${remote.id}"
-                                )
-
-                                itemDao.upsert(remote)
-
-                                return@forEach
-                            }
-
-                            // ------------------------------------------------
-                            // CASE 2
-                            // Remote event is stale compared to local Room
-                            // ------------------------------------------------
-
-                            if (remote.updatedAt < local.updatedAt) {
-
-                                SyncLog.conflict(
-                                    "[Stale] Ignore item=${remote.id} " +
-                                            "remote=${remote.updatedAt} " +
-                                            "local=${local.updatedAt}"
-                                )
-
-                                return@forEach
-                            }
-
-                            // ------------------------------------------------
-                            // CASE 3
-                            // Remote event already superseded historically
-                            // ------------------------------------------------
-
-                            val latestApplied =
-                                latestAppliedRemoteVersion[remote.id]
-
-                            if (
-                                latestApplied != null &&
-                                remote.updatedAt < latestApplied
-                            ) {
-
-                                SyncLog.conflict(
-                                    "[Reordered] Ignore item=${remote.id} " +
-                                            "remote=${remote.updatedAt} " +
-                                            "latestApplied=$latestApplied"
-                                )
-
-                                return@forEach
-                            }
-
-                            // ------------------------------------------------
-                            // CASE 4
-                            // Remote newer or equal
-                            // ------------------------------------------------
-
-                            SyncLog.apply(
-                                "[Update] Remote item=${remote.id}"
-                            )
-
-                            itemDao.upsert(remote)
-
-                            // ------------------------------------------------
-                            // TRACK LAST APPLIED REMOTE VERSION
-                            // ------------------------------------------------
-
-                            latestAppliedRemoteVersion[remote.id] =
-                                remote.updatedAt
+                            bootstrapper
+                                .syncCoordinator
+                                .applyRealtimeItem(remote)
 
                         } catch (e: Exception) {
 
@@ -192,6 +173,25 @@ class FirestoreListener(
         activeItemListeners[listId] = job
     }
 
+    fun stopItemSync(
+        listId: String
+    ) {
+
+        SyncLog.realtime(
+            "[Items] Stop realtime list=$listId"
+        )
+
+        activeItemListeners[listId]
+            ?.cancel()
+
+        activeItemListeners
+            .remove(listId)
+    }
+
+    // ------------------------------------------------------------
+    // STOP ALL
+    // ------------------------------------------------------------
+
     fun stop() {
 
         SyncLog.lifecycle(
@@ -199,10 +199,25 @@ class FirestoreListener(
         )
 
         try {
+
+            activeMembershipJob.forEach {
+                it.cancel()
+            }
+
+            activeMembershipJob.clear()
+
+            activeItemListeners.values.forEach {
+                it.cancel()
+            }
+
+            activeItemListeners.clear()
+
             registrationMap.values.forEach { registration ->
                 registration.remove()
             }
+
             registrationMap.clear()
+
         } catch (e: Exception) {
 
             RecoveryLog.processError(

@@ -1,0 +1,23 @@
+{
+  "entries": {
+    "apple": "A",
+    "beer": "D",
+    "bread": "C",
+    "broccoli": "A",
+    "carrot": "A",
+    "coffee": "A",
+    "lentils": "A",
+    "milk": "B",
+    "mozzarella": "B",
+    "muesli": "B",
+    "pasta": "B",
+    "rice": "B",
+    "salmon": "B",
+    "skyr": "A",
+    "spinach": "A",
+    "tea": "A",
+    "tofu": "B",
+    "tomato": "A",
+    "water": "A"
+  }
+}

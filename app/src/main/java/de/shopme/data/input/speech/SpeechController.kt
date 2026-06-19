@@ -1,12 +1,15 @@
 package de.shopme.data.input.speech
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import de.shopme.data.sync.logging.RuntimeLog
@@ -32,6 +35,12 @@ class SpeechController(
     val isListening: StateFlow<Boolean> =
         _isListening.asStateFlow()
 
+    private val _speechModeEnabled =
+        MutableStateFlow(false)
+
+    val speechModeEnabled =
+        _speechModeEnabled.asStateFlow()
+
     private var resultListener:
             ((String) -> Unit)? = null
 
@@ -41,27 +50,49 @@ class SpeechController(
         resultListener = listener
     }
 
-    private fun emitNewWords(
-        text: String
-    ) {
+    private fun restartListening() {
+
+        if (!_speechModeEnabled.value) {
+            return
+        }
+
+        Handler(context.mainLooper)
+            .postDelayed(
+                {
+
+                    try {
+
+                        if (!_speechModeEnabled.value) {
+                            return@postDelayed
+                        }
+
+                        recognizer.cancel()
+
+                        startInternal()
+
+                    } catch (e: Exception) {
+
+                        RuntimeLog.speech(
+                            "Restart failed",
+                            e
+                        )
+                    }
+
+                },
+                500
+            )
+    }
+
+    private fun emitNewWords(text: String) {
 
         val normalized =
-            text.lowercase()
-                .replace(",", " ")
-                .replace(" und ", " ")
-                .trim()
+            text.lowercase().trim()
 
-        val catalogItem =
-            catalogService.resolveSpeech(normalized)
+        if (!emittedWords.contains(normalized)) {
 
-        val result =
-            catalogItem?.normalized ?: normalized
+            emittedWords.add(normalized)
 
-        if (!emittedWords.contains(result)) {
-
-            emittedWords.add(result)
-
-            resultListener?.invoke(result)
+            resultListener?.invoke(normalized)
         }
     }
 
@@ -95,78 +126,54 @@ class SpeechController(
                     error: Int
                 ) {
 
+                    RuntimeLog.runtime(
+                        "Speech onError=$error"
+                    )
+
                     RuntimeLog.speech(
                         "Speech error: $error"
                     )
 
                     when (error) {
 
-                        SpeechRecognizer.ERROR_NO_MATCH,
-                        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
+                        SpeechRecognizer.ERROR_NO_MATCH -> {
+                            if (_speechModeEnabled.value) {
+                                restartListening()
+                            }
+                        }
 
-                            _isListening.value = false
+                        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
+                            if (_speechModeEnabled.value) {
+                                restartListening()
+                            }
                         }
 
                         SpeechRecognizer.ERROR_CLIENT -> {
-                            // ignore – happens during fast restarts
-                        }
-
-                        else -> stop()
-                    }
-                }
-
-                private fun splitSpeechIntoCatalogWords(
-                    text: String
-                ): List<String> {
-
-                    val words =
-                        text.lowercase()
-                            .split(" ")
-
-                    val result =
-                        mutableListOf<String>()
-
-                    words.forEach { word ->
-
-                        catalogService
-                            .resolveSpeech(word)
-                            ?.let {
-
-                                result.add(it.itemname)
-
-                                return@forEach
-                            }
-
-                        for (i in 3 until word.length) {
-
-                            val left =
-                                word.substring(0, i)
-
-                            val right =
-                                word.substring(i)
-
-                            val leftItem =
-                                catalogService.resolveSpeech(left)
-
-                            val rightItem =
-                                catalogService.resolveSpeech(right)
-
-                            if (
-                                leftItem != null &&
-                                rightItem != null
-                            ) {
-
-                                result.add(leftItem.itemname)
-                                result.add(rightItem.itemname)
-
-                                return@forEach
+                            if (_speechModeEnabled.value) {
+                                restartListening()
                             }
                         }
 
-                        result.add(word)
-                    }
+                        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
 
-                    return result
+                            RuntimeLog.speech(
+                                "Permission error ignored for now"
+                            )
+
+                            if (_speechModeEnabled.value) {
+                                restartListening()
+                            }
+                        }
+
+                        else -> {
+
+                            RuntimeLog.speech(
+                                "Fatal speech error: $error"
+                            )
+
+                            stop()
+                        }
+                    }
                 }
 
                 override fun onResults(
@@ -185,6 +192,18 @@ class SpeechController(
                         bestCandidate
                             ?: matches.firstOrNull()
 
+                    RuntimeLog.speech(
+                        "Matches=$matches"
+                    )
+
+                    RuntimeLog.speech(
+                        "BestCandidate=$bestCandidate"
+                    )
+
+                    RuntimeLog.speech(
+                        "FinalText=$finalText"
+                    )
+
                     finalText?.let { spoken ->
 
                         val normalized =
@@ -196,31 +215,13 @@ class SpeechController(
                                 .trim()
 
                         emitNewWords(normalized)
+                        RuntimeLog.speech(
+                            "emitNewWords input=$normalized"
+                        )
                     }
 
-                    if (_isListening.value) {
-
-                        Handler(context.mainLooper)
-                            .postDelayed(
-                                {
-
-                                    try {
-
-                                        recognizer.cancel()
-
-                                        startInternal()
-
-                                    } catch (e: Exception) {
-
-                                        RuntimeLog.speech(
-                                            "Restart failed",
-                                            e
-                                        )
-                                    }
-
-                                },
-                                500
-                            )
+                    if (_speechModeEnabled.value) {
+                        restartListening()
                     }
                 }
 
@@ -228,17 +229,9 @@ class SpeechController(
                     partialResults: Bundle?
                 ) {
 
-                    val matches =
-                        partialResults
-                            ?.getStringArrayList(
-                                SpeechRecognizer.RESULTS_RECOGNITION
-                            )
+                    //TODO: für spätere Liveanzeige nutzen
+                    // intentionally ignored
 
-                    val text =
-                        matches?.firstOrNull()
-                            ?: return
-
-                    emitNewWords(text)
                 }
 
                 override fun onRmsChanged(
@@ -262,14 +255,30 @@ class SpeechController(
 
     fun start() {
 
+        RuntimeLog.runtime(
+            "Speech start requested"
+        )
+
+        emittedWords.clear()
+
+        _speechModeEnabled.value = true
+
         if (_isListening.value) return
 
         _isListening.value = true
+
+        RuntimeLog.runtime(
+            "Listening=true"
+        )
 
         startInternal()
     }
 
     private fun startInternal() {
+
+        RuntimeLog.runtime(
+            "Speech startInternal"
+        )
 
         val intent =
             Intent(
@@ -297,29 +306,37 @@ class SpeechController(
                 )
             }
 
+        RuntimeLog.runtime(
+            "SpeechRecognizer.startListening"
+        )
+
+        RuntimeLog.speech(
+            "Permission granted=${
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.RECORD_AUDIO
+                ) == PackageManager.PERMISSION_GRANTED
+            }"
+        )
+
         recognizer.startListening(intent)
     }
 
     fun stop() {
 
+        _speechModeEnabled.value = false
+
+        RuntimeLog.runtime(
+            "STOP CALLED"
+        )
+
         _isListening.value = false
 
+        RuntimeLog.runtime(
+            "Listening=false"
+        )
+
         recognizer.stopListening()
-    }
-
-    private fun restartIfNeeded() {
-
-        if (!_isListening.value) return
-
-        Handler(context.mainLooper)
-            .postDelayed(
-                {
-                    if (_isListening.value) {
-                        start()
-                    }
-                },
-                500
-            )
     }
 
     override fun onDestroy(

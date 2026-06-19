@@ -1,9 +1,10 @@
 package de.shopme.domain.service
 
+import de.shopme.data.sync.logging.RuntimeLog
 import de.shopme.domain.catalog.CatalogIndex
 import de.shopme.domain.catalog.CatalogItem
-import de.shopme.domain.catalog.PhoneticEncoder
 import de.shopme.domain.catalog.CatalogMatchScorer
+import de.shopme.domain.catalog.PhoneticEncoder
 
 class CatalogService(
     private val catalogIndex: CatalogIndex
@@ -63,5 +64,20 @@ class CatalogService(
         }
 
         return best
+    }
+
+    fun resolveExactSpeech(
+        query: String
+    ): CatalogItem? {
+
+        val q = query.lowercase().trim()
+
+        val result = catalogIndex.normalize(q)
+
+        RuntimeLog.speech(
+            "resolveExactSpeech query=$q result=${result?.itemname}"
+        )
+
+        return result
     }
 }

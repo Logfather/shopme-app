@@ -1,0 +1,184 @@
+{
+  "entries": {
+    "apple": {
+      "calories": 52.0,
+      "protein": 0.3,
+      "fat": 0.2,
+      "saturatedFat": 0.0,
+      "carbohydrates": 14.0,
+      "sugar": 0.0,
+      "fiber": 2.4,
+      "salt": 0.0
+    },
+    "beef": {
+      "calories": 250.0,
+      "protein": 26.0,
+      "fat": 15.0,
+      "saturatedFat": 0.0,
+      "carbohydrates": 0.0,
+      "sugar": 0.0,
+      "fiber": 0.0,
+      "salt": 0.0
+    },
+    "bread": {
+      "calories": 265.0,
+      "protein": 9.0,
+      "fat": 3.2,
+      "saturatedFat": 0.0,
+      "carbohydrates": 49.0,
+      "sugar": 0.0,
+      "fiber": 2.7,
+      "salt": 0.0
+    },
+    "broccoli": {
+      "calories": 34.0,
+      "protein": 2.8,
+      "fat": 0.4,
+      "saturatedFat": 0.0,
+      "carbohydrates": 7.0,
+      "sugar": 0.0,
+      "fiber": 2.6,
+      "salt": 0.0
+    },
+    "carrot": {
+      "calories": 41.0,
+      "protein": 0.9,
+      "fat": 0.2,
+      "saturatedFat": 0.0,
+      "carbohydrates": 10.0,
+      "sugar": 0.0,
+      "fiber": 2.8,
+      "salt": 0.0
+    },
+    "coffee": {
+      "calories": 1.0,
+      "protein": 0.1,
+      "fat": 0.0,
+      "saturatedFat": 0.0,
+      "carbohydrates": 0.0,
+      "sugar": 0.0,
+      "fiber": 0.0,
+      "salt": 0.0
+    },
+    "egg": {
+      "calories": 143.0,
+      "protein": 13.0,
+      "fat": 10.0,
+      "saturatedFat": 0.0,
+      "carbohydrates": 1.1,
+      "sugar": 0.0,
+      "fiber": 0.0,
+      "salt": 0.0
+    },
+    "milk": {
+      "calories": 64.0,
+      "protein": 3.3,
+      "fat": 3.6,
+      "saturatedFat": 0.0,
+      "carbohydrates": 4.8,
+      "sugar": 0.0,
+      "fiber": 0.0,
+      "salt": 0.0
+    },
+    "pasta": {
+      "calories": 131.0,
+      "protein": 5.0,
+      "fat": 1.1,
+      "saturatedFat": 0.0,
+      "carbohydrates": 25.0,
+      "sugar": 0.0,
+      "fiber": 1.8,
+      "salt": 0.0
+    },
+    "potato": {
+      "calories": 77.0,
+      "protein": 2.0,
+      "fat": 0.1,
+      "saturatedFat": 0.0,
+      "carbohydrates": 17.0,
+      "sugar": 0.0,
+      "fiber": 2.2,
+      "salt": 0.0
+    },
+    "rice": {
+      "calories": 130.0,
+      "protein": 2.7,
+      "fat": 0.3,
+      "saturatedFat": 0.0,
+      "carbohydrates": 28.0,
+      "sugar": 0.0,
+      "fiber": 0.4,
+      "salt": 0.0
+    },
+    "salmon": {
+      "calories": 208.0,
+      "protein": 20.0,
+      "fat": 13.0,
+      "saturatedFat": 0.0,
+      "carbohydrates": 0.0,
+      "sugar": 0.0,
+      "fiber": 0.0,
+      "salt": 0.0
+    },
+    "spinach": {
+      "calories": 23.0,
+      "protein": 2.9,
+      "fat": 0.4,
+      "saturatedFat": 0.0,
+      "carbohydrates": 3.6,
+      "sugar": 0.0,
+      "fiber": 2.2,
+      "salt": 0.0
+    },
+    "tea": {
+      "calories": 1.0,
+      "protein": 0.0,
+      "fat": 0.0,
+      "saturatedFat": 0.0,
+      "carbohydrates": 0.0,
+      "sugar": 0.0,
+      "fiber": 0.0,
+      "salt": 0.0
+    },
+    "tofu": {
+      "calories": 76.0,
+      "protein": 8.0,
+      "fat": 4.8,
+      "saturatedFat": 0.0,
+      "carbohydrates": 1.9,
+      "sugar": 0.0,
+      "fiber": 0.3,
+      "salt": 0.0
+    },
+    "tomato": {
+      "calories": 18.0,
+      "protein": 0.9,
+      "fat": 0.2,
+      "saturatedFat": 0.0,
+      "carbohydrates": 3.9,
+      "sugar": 0.0,
+      "fiber": 1.2,
+      "salt": 0.0
+    },
+    "tuna": {
+      "calories": 132.0,
+      "protein": 29.0,
+      "fat": 1.0,
+      "saturatedFat": 0.0,
+      "carbohydrates": 0.0,
+      "sugar": 0.0,
+      "fiber": 0.0,
+      "salt": 0.0
+    },
+    "water": {
+      "calories": 0.0,
+      "protein": 0.0,
+      "fat": 0.0,
+      "saturatedFat": 0.0,
+      "carbohydrates": 0.0,
+      "sugar": 0.0,
+      "fiber": 0.0,
+      "salt": 0.0
+    }
+  }
+}

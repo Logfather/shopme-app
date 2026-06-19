@@ -9,10 +9,12 @@ import java.util.UUID
 
 class MultiDeviceDeleteScenario {
 
+
     suspend fun run(
         deviceA: MultiDeviceContextTest,
         deviceB: MultiDeviceContextTest
     ) {
+
 
         Log.d(
             "HIVRA_TEST",

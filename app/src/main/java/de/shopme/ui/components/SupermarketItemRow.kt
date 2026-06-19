@@ -1,14 +1,28 @@
 package de.shopme.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.*
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -19,6 +33,13 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import de.shopme.domain.model.ShoppingItem
+import de.shopme.domain.nutrition.pipeline.ProductionNutritionPipeline
+import de.shopme.domain.nutrition.provider.FakeNutriScoreProvider
+import de.shopme.domain.nutrition.service.NutritionInsightService
+import de.shopme.domain.service.CatalogService
+import de.shopme.presentation.components.foodintelligence.FoodIntelligenceOverview
+import de.shopme.presentation.components.foodintelligence.FoodIntelligenceSection
+import de.shopme.presentation.components.foodintelligence.InfoChip
 import de.shopme.presentation.mapper.toUiState
 import de.shopme.ui.theme.BrandBlack
 import de.shopme.ui.theme.BrandOlive
@@ -30,7 +51,10 @@ fun SupermarketItemRow(
     onToggle: (Boolean) -> Unit,
     onDelete: () -> Unit,
     onRetry: (String) -> Unit,
-    onUpdate: (String) -> Unit
+    onUpdate: (String) -> Unit,
+    catalogService: CatalogService,
+    productionNutritionPipeline: ProductionNutritionPipeline,
+    nutritionInsightService: NutritionInsightService
 ){
 
     var isEditing by remember(item.id) {
@@ -39,6 +63,10 @@ fun SupermarketItemRow(
 
     var textFieldValue by rememberSaveable(item.id, stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(item.name))
+    }
+
+    var showNutritionDialog by remember {
+        mutableStateOf(false)
     }
 
     LaunchedEffect(item.id, item.name) {
@@ -62,6 +90,24 @@ fun SupermarketItemRow(
     }
 
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    val catalogItem = remember(item.name) {
+        catalogService.resolveExactSpeech(item.name)
+    }
+
+    val nutriScore = remember(catalogItem) {
+        FakeNutriScoreProvider.getScore(
+            catalogItem?.nutritionReference
+        )
+    }
+
+    var showFoodIntelligence by remember {
+        mutableStateOf(false)
+    }
+
+    var selectedSection by remember {
+        mutableStateOf<FoodIntelligenceSection?>(null)
+    }
 
     Row(
         modifier = Modifier
@@ -89,7 +135,7 @@ fun SupermarketItemRow(
                 onToggle(checked)
 
                 if (!checked) {
-                    isEditing = true   // nur öffnen wenn unchecked
+                    isEditing = true
                 }
             }
         )
@@ -140,7 +186,94 @@ fun SupermarketItemRow(
                 modifier = Modifier.weight(1f)
             )
 
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(12.dp))
+
+            catalogItem?.nutritionReference?.let { nutritionReference ->
+
+                nutriScore?.let {
+
+                    NutriScoreBadge(
+
+                        score = nutriScore,
+
+                        onClick = {
+
+                            showNutritionDialog = true
+
+                        }
+
+                    )
+
+                    if (showNutritionDialog) {
+
+                        NutritionDetailDialog(
+
+                            productName = catalogItem.itemname,
+
+                            nutritionReference = nutritionReference,
+
+                            productionNutritionPipeline =
+                                productionNutritionPipeline,
+
+                            nutritionInsightService =
+                                nutritionInsightService,
+
+                            onDismiss = {
+
+                                showNutritionDialog = false
+
+                            }
+
+                        )
+                    }
+                }
+            }
+
+
+
+            InfoChip(
+
+                onClick = {
+
+                    showFoodIntelligence = true
+
+                }
+
+            )
+
+            if (showFoodIntelligence) {
+
+                AlertDialog(
+
+                    onDismissRequest = {
+
+                        showFoodIntelligence = false
+
+                    },
+
+                    confirmButton = {},
+
+                    text = {
+
+                        FoodIntelligenceOverview(
+
+                            itemName = item.name,
+
+                            onDismiss = {
+
+                                showFoodIntelligence = false
+
+                            }
+
+                        )
+
+                    }
+
+                )
+
+            }
+
+            Spacer(Modifier.width(12.dp))
 
             TextButton(
                 onClick = { onDelete() }

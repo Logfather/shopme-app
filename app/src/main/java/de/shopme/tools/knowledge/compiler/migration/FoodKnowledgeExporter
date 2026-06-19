@@ -1,0 +1,97 @@
+package de.shopme.tools.knowledge.compiler.migration
+
+import com.google.gson.GsonBuilder
+import de.shopme.domain.catalog.CatalogItem
+import java.io.File
+
+class FoodKnowledgeExporter {
+
+    private val gson =
+
+        GsonBuilder()
+
+            .setPrettyPrinting()
+
+            .create()
+
+    fun export(
+
+        catalog: List<CatalogItem>,
+
+        output: File
+
+    ) {
+
+        val foods =
+
+            catalog
+
+                .sortedBy {
+
+                    it.itemname.lowercase()
+
+                }
+
+                .map {
+
+                    it.toFoodKnowledgeEntry()
+
+                }
+
+        output.writeText(
+
+            gson.toJson(
+
+                foods
+
+            )
+
+        )
+
+    }
+
+}
+
+private fun CatalogItem.toFoodKnowledgeEntry() =
+
+    FoodDefinitionEntry(
+
+        reference = normalized,
+
+        displayName = itemname,
+
+        aliases = buildList {
+
+            add(plural)
+
+            addAll(colloquial)
+
+            addAll(phonetic_tokens)
+
+            addAll(autocomplete_tokens)
+
+        }
+            .filter {
+
+                it.isNotBlank()
+
+            }
+            .distinct()
+            .sorted(),
+
+        category = category,
+
+        tags = emptyList(),
+
+        production =
+
+            listOf(production)
+                .filter {
+
+                    it.isNotBlank()
+
+                },
+
+        dimensions = null
+
+    )

@@ -1,0 +1,110 @@
+{
+  "entries": {
+    "apple": [],
+    "banane": [],
+    "barley": [],
+    "beef": [],
+    "beer": [],
+    "bread": [
+      "FLOUR",
+      "WATER",
+      "SALT",
+      "YEAST"
+    ],
+    "breadroll": [],
+    "broccoli": [],
+    "butter": [],
+    "carrot": [],
+    "coca_cola": [],
+    "cod": [],
+    "coffee": [],
+    "croissant": [
+      "FLOUR",
+      "BUTTER",
+      "MILK",
+      "SUGAR",
+      "YEAST"
+    ],
+    "egg": [],
+    "feta": [],
+    "gouda": [],
+    "herring": [],
+    "hummus": [
+      "CHICKPEAS",
+      "SESAME",
+      "OLIVE_OIL",
+      "GARLIC",
+      "LEMON"
+    ],
+    "kefir": [],
+    "lasagna": [
+      "FLOUR",
+      "EGG"
+    ],
+    "lentils": [],
+    "lobster": [],
+    "mayonnaise": [
+      "EGG",
+      "OIL",
+      "VINEGAR",
+      "MUSTARD"
+    ],
+    "milk": [],
+    "mozzarella": [],
+    "muesli": [
+      "OATS",
+      "NUTS",
+      "SEEDS"
+    ],
+    "nutella": [],
+    "oliveoil": [],
+    "parmesan": [],
+    "pasta": [
+      "FLOUR",
+      "WATER",
+      "EGG"
+    ],
+    "peanutbutter": [],
+    "pesto": [
+      "BASIL",
+      "OLIVE_OIL",
+      "PARMESAN",
+      "PINE_NUTS",
+      "GARLIC"
+    ],
+    "pizza": [],
+    "pizza margherita": [
+      "FLOUR",
+      "WATER",
+      "SALT",
+      "YEAST",
+      "TOMATO",
+      "MOZZARELLA",
+      "OLIVE_OIL",
+      "BASIL"
+    ],
+    "pork": [],
+    "potato": [],
+    "quark": [],
+    "remoulade": [
+      "EGG",
+      "OIL",
+      "PICKLE",
+      "MUSTARD"
+    ],
+    "rice": [],
+    "salmon": [],
+    "skyr": [],
+    "soymilk": [],
+    "spinach": [],
+    "sunfloweroil": [],
+    "tea": [],
+    "tempeh": [],
+    "tofu": [],
+    "tomato": [],
+    "tuna": [],
+    "vollmilch": [],
+    "water": [],
+    "wine": []
+  }
+}

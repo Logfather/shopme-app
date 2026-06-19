@@ -11,6 +11,8 @@ class FakeFirestoreGateway : FirestoreGateway {
 
     var shouldFailWrites = false
 
+    var addItemCallCount = 0
+
     private val items =
         mutableMapOf<String, MutableMap<String, ShoppingItemEntity>>()
 
@@ -74,6 +76,8 @@ class FakeFirestoreGateway : FirestoreGateway {
         listId: String,
         item: ShoppingItemEntity
     ): Boolean {
+
+        addItemCallCount++
 
         if (shouldFailWrites) {
             throw RuntimeException("Forced test failure")

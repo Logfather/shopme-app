@@ -16,14 +16,13 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import de.shopme.auth.FirebaseAuthProvider
 import de.shopme.core.json.loadJsonMap
 import de.shopme.core.network.NetworkMonitor
 import de.shopme.core.sound.SoundPlayer
 import de.shopme.data.datasource.catalog.CatalogLoader
 import de.shopme.data.input.speech.SpeechController
-import de.shopme.data.remote.MembershipListener
+import de.shopme.data.input.speech.SpeechItemParser
 import de.shopme.data.sync.logging.NetworkLog
 import de.shopme.data.sync.logging.RuntimeLog
 import de.shopme.data.sync.queue.ChangeQueue
@@ -33,8 +32,6 @@ import de.shopme.domain.catalog.CatalogIndex
 import de.shopme.domain.service.CatalogService
 import de.shopme.domain.service.CategoryMapper
 import de.shopme.domain.service.QuantityMapper
-import de.shopme.domain.service.SpeechItemParser
-import de.shopme.domain.usecase.CreateListUseCase
 import de.shopme.domain.usecase.DeleteListUseCase
 import de.shopme.presentation.viewmodel.AuthViewModel
 import de.shopme.presentation.viewmodel.ShoppingViewModel
@@ -90,6 +87,14 @@ class MainActivity : ComponentActivity() {
 
         val runtime = (application as HivraApplication).runtime
 
+        val productionNutritionPipeline = runtime.productionNutritionPipeline
+
+        val nutritionInsightService =
+            runtime.nutritionInsightService
+
+        val pendingInviteStore =
+            runtime.pendingInviteStore
+
         val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
             com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
         )
@@ -99,9 +104,6 @@ class MainActivity : ComponentActivity() {
 
         googleSignInClient = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(this, gso)
         SoundPlayer.init(this)
-
-        val pendingInviteStore =
-            runtime.pendingInviteStore
 
 
         // Pending Invite speichern
@@ -145,16 +147,32 @@ class MainActivity : ComponentActivity() {
 
 
             val catalogService = remember {
+
                 val loader = CatalogLoader(activityContext)
+
                 val items = loader.load()
+
                 val index = CatalogIndex(items)
+
                 CatalogService(index)
+
             }
 
-            val speechParser = remember {
-                SpeechItemParser(catalogService)
-            }
+            LaunchedEffect(Unit) {
 
+                listOf(
+                    "Milch",
+                    "Butter",
+                    "Banane",
+                    "Nutella",
+                    "Coca Cola"
+                ).forEach { name ->
+
+                    val item =
+                        catalogService.resolveExactSpeech(name)
+
+                }
+            }
 
             val authViewModel = remember { AuthViewModel(authProvider) }
 
@@ -168,21 +186,10 @@ class MainActivity : ComponentActivity() {
 
                     runtime.startUserSync(uid)
 
-                    syncCoordinator.triggerSync(
-                        force = true
-                    )
-
                 } else {
 
                     runtime.stopUserSync()
                 }
-            }
-
-            val membershipListener = remember {
-                MembershipListener(
-                    firestore = FirebaseFirestore.getInstance(),
-                    syncCoordinator = syncCoordinator
-                )
             }
 
             val quantityMapper = remember {
@@ -222,17 +229,12 @@ class MainActivity : ComponentActivity() {
 
             val factory = remember {
 
-                val createListUseCase = CreateListUseCase(roomRepository)
                 val deleteListUseCase =
                     DeleteListUseCase(roomRepository, firestoreDataSource)
-
                 val syncCoordinatorRef = syncCoordinator
-
                 val inMemoryChangeQueue = ChangeQueue()
-
+                val speechItemParser = SpeechItemParser(catalogService)
                 val authViewModelRef = authViewModel
-                val conflictResolverRef = conflictResolver
-
                 val accountDeletionManager = AccountDeletionManager(
                     syncCoordinator = syncCoordinatorRef,
                     listDao = listDao,
@@ -255,7 +257,8 @@ class MainActivity : ComponentActivity() {
                             changeQueue = inMemoryChangeQueue,
                             authViewModel = authViewModel,
                             accountDeletionManager = accountDeletionManager,
-                            appContext = this@MainActivity.applicationContext
+                            appContext = this@MainActivity.applicationContext,
+                            speechItemParser = speechItemParser
                         )
                     }
                 }
@@ -325,21 +328,41 @@ class MainActivity : ComponentActivity() {
 
                     try {
 
-                        val user = try {
+                        val user = run {
 
-                            val current = auth.currentUser
+                            val current =
+                                auth.currentUser
 
-                            if (current != null) {
+                            if (current == null) {
+
+                                RuntimeLog.runtime(
+                                    "No Firebase user -> creating anonymous user"
+                                )
+
+                                val result =
+                                    auth.signInAnonymously().await()
+
+                                result.user
+                                    ?: throw IllegalStateException(
+                                        "User null after anonymous sign-in"
+                                    )
+
+                            } else {
 
                                 try {
 
                                     current.getIdToken(true).await()
+
+                                    RuntimeLog.runtime(
+                                        "Firebase user validated uid=${current.uid}"
+                                    )
+
                                     current
 
                                 } catch (e: Exception) {
 
                                     RuntimeLog.recoveryError(
-                                        "User invalid -> force recreate",
+                                        "User token validation failed -> recreate",
                                         e
                                     )
 
@@ -353,29 +376,12 @@ class MainActivity : ComponentActivity() {
                                             "User null after recreate"
                                         )
                                 }
-
-                            } else {
-
-                                throw Exception("No user")
                             }
-
-                        } catch (e: Exception) {
-
-                            RuntimeLog.recoveryError(
-                                "User invalid -> recreate",
-                                e
-                            )
-
-                            auth.signOut()
-
-                            val result =
-                                auth.signInAnonymously().await()
-
-                            result.user
-                                ?: throw IllegalStateException(
-                                    "User null after recreate"
-                                )
                         }
+
+                        RuntimeLog.runtime(
+                            "Auth bootstrap complete uid=${user.uid}"
+                        )
 
                         vm.syncUserFromFirebase()
 
@@ -396,11 +402,24 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-            HivraTheme() {
+            HivraTheme {
+
                 HivraApp(
+
                     vm = vm,
+
+                    appServices = runtime.appServices,
+
                     speechController = speechController,
-                    catalogService = catalogService
+
+                    catalogService = catalogService,
+
+                    productionNutritionPipeline =
+                        productionNutritionPipeline,
+
+                    nutritionInsightService =
+                        nutritionInsightService
+
                 )
             }
         }

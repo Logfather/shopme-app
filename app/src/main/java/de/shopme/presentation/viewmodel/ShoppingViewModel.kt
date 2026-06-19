@@ -7,6 +7,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
 import de.shopme.data.datasource.firestore.FirestoreGateway
 import de.shopme.data.datasource.room.ListDao
+import de.shopme.data.input.speech.SpeechItemParser
 import de.shopme.data.mapper.EntityMapper.toDomain
 import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.data.sync.logging.RuntimeLog
@@ -66,7 +67,8 @@ class ShoppingViewModel(
     private val changeQueue: ChangeQueue,
     private val authViewModel: AuthViewModel,
     private val accountDeletionManager: AccountDeletionManager,
-    private val appContext: Context
+    private val appContext: Context,
+    private val speechItemParser: SpeechItemParser
 ) : ViewModel() {
 
     private var runtimeJob: Job? = null
@@ -89,7 +91,8 @@ class ShoppingViewModel(
         scope = viewModelScope,
         itemActionHandler = itemActionHandler,
         firestoreGateway = firestoreDataSource,
-        appContext = appContext // ✅ statt applicationContext
+        appContext = appContext,
+        speechItemParser = speechItemParser
     )
 
     // ============================================================

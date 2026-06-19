@@ -1,0 +1,35 @@
+{
+  "entries": {
+    "hummus": {
+      "ingredients": [
+        "chickpeas",
+        "tahini",
+        "olive_oil",
+        "lemon"
+      ]
+    },
+    "mayonnaise": {
+      "ingredients": [
+        "egg",
+        "oil",
+        "mustard"
+      ]
+    },
+    "pesto": {
+      "ingredients": [
+        "basil",
+        "olive_oil",
+        "parmesan",
+        "pine_nuts"
+      ]
+    },
+    "remoulade": {
+      "ingredients": [
+        "egg",
+        "mustard",
+        "oil",
+        "pickle"
+      ]
+    }
+  }
+}

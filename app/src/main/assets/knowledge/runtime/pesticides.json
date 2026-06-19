@@ -1,0 +1,31 @@
+{
+  "entries": {
+    "apple": {
+      "score": 0.7
+    },
+    "broccoli": {
+      "score": 0.3
+    },
+    "carrot": {
+      "score": 0.25
+    },
+    "lentils": {
+      "score": 0.15
+    },
+    "potato": {
+      "score": 0.5
+    },
+    "rice": {
+      "score": 0.35
+    },
+    "spinach": {
+      "score": 0.75
+    },
+    "tofu": {
+      "score": 0.1
+    },
+    "tomato": {
+      "score": 0.45
+    }
+  }
+}

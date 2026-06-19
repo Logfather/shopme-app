@@ -1,0 +1,49 @@
+{
+  "entries": {
+    "apple": {
+      "kilometers": 35.0
+    },
+    "beef": {
+      "kilometers": 180.0
+    },
+    "bread": {
+      "kilometers": 25.0
+    },
+    "broccoli": {
+      "kilometers": 35.0
+    },
+    "carrot": {
+      "kilometers": 25.0
+    },
+    "coffee": {
+      "kilometers": 9600.0
+    },
+    "egg": {
+      "kilometers": 50.0
+    },
+    "milk": {
+      "kilometers": 45.0
+    },
+    "pizza margherita": {
+      "kilometers": 45.0
+    },
+    "pork": {
+      "kilometers": 160.0
+    },
+    "potato": {
+      "kilometers": 18.0
+    },
+    "rice": {
+      "kilometers": 8900.0
+    },
+    "salmon": {
+      "kilometers": 3200.0
+    },
+    "tea": {
+      "kilometers": 7400.0
+    },
+    "tomato": {
+      "kilometers": 28.0
+    }
+  }
+}

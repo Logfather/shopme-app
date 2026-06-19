@@ -1,0 +1,64 @@
+{
+  "entries": {
+    "apple": {
+      "kilogramsPerKilogram": 0.3
+    },
+    "beef": {
+      "kilogramsPerKilogram": 27.0
+    },
+    "bread": {
+      "kilogramsPerKilogram": 0.9
+    },
+    "broccoli": {
+      "kilogramsPerKilogram": 0.5
+    },
+    "carrot": {
+      "kilogramsPerKilogram": 0.3
+    },
+    "coffee": {
+      "kilogramsPerKilogram": 17.0
+    },
+    "egg": {
+      "kilogramsPerKilogram": 4.5
+    },
+    "lentils": {
+      "kilogramsPerKilogram": 0.9
+    },
+    "milk": {
+      "kilogramsPerKilogram": 3.2
+    },
+    "parmesan": {
+      "kilogramsPerKilogram": 10.8
+    },
+    "pasta": {
+      "kilogramsPerKilogram": 1.1
+    },
+    "pork": {
+      "kilogramsPerKilogram": 7.0
+    },
+    "rice": {
+      "kilogramsPerKilogram": 2.7
+    },
+    "salmon": {
+      "kilogramsPerKilogram": 5.0
+    },
+    "spinach": {
+      "kilogramsPerKilogram": 0.4
+    },
+    "tea": {
+      "kilogramsPerKilogram": 2.0
+    },
+    "tofu": {
+      "kilogramsPerKilogram": 2.0
+    },
+    "tomato": {
+      "kilogramsPerKilogram": 1.1
+    },
+    "tuna": {
+      "kilogramsPerKilogram": 6.1
+    },
+    "water": {
+      "kilogramsPerKilogram": 0.005
+    }
+  }
+}

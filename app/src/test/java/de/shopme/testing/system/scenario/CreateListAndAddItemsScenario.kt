@@ -4,8 +4,8 @@ import android.util.Log
 import de.shopme.domain.life.LifeEvent
 import de.shopme.domain.model.ShoppingItemEntity
 import de.shopme.domain.model.ShoppingListEntity
-import de.shopme.testing.system.HivraSystemScenario
-import de.shopme.testing.system.HivraSystemTestContext
+import de.shopme.testing.system.scenario.HivraSystemScenario
+import de.shopme.testing.system.test.HivraSystemTestContext
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.UUID

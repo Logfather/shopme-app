@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import de.shopme.app.MainActivity
 import de.shopme.data.datasource.firestore.FirestoreGateway
+import de.shopme.data.input.speech.SpeechItemParser
 import de.shopme.data.sync.logging.RuntimeLog
 import de.shopme.data.sync.logging.SyncLog
 import de.shopme.data.sync.logging.UILog
@@ -21,7 +22,8 @@ class ShoppingEffectHandler(
     private val scope: CoroutineScope,
     private val itemActionHandler: ItemActionHandler,
     private val firestoreGateway: FirestoreGateway,
-    private val appContext: Context
+    private val appContext: Context,
+    private val speechItemParser: SpeechItemParser
 ) {
 
     fun handle(effect: UIEffect) {
@@ -33,6 +35,36 @@ class ShoppingEffectHandler(
                 val activity = appContext as MainActivity
 
                 activity.startGoogleLogin()
+            }
+
+            is UIEffect.ProcessSpeech -> {
+
+                RuntimeLog.runtime(
+                    "ProcessSpeech: ${effect.text}"
+                )
+
+                scope.launch {
+
+                    val listId =
+                        viewModel.getCurrentListId()
+                            ?: return@launch
+
+                    val items =
+                        speechItemParser.parseSpeech(
+                            effect.text
+                        )
+
+                    items.forEach { parsed ->
+
+                        repeat(parsed.quantity) {
+
+                            itemActionHandler.addItem(
+                                parsed.name,
+                                listId
+                            )
+                        }
+                    }
+                }
             }
 
             is UIEffect.DeleteAllLists -> {
@@ -118,6 +150,8 @@ class ShoppingEffectHandler(
                     itemActionHandler.addItem(effect.name, listId)
                 }
             }
+
+
 
             is UIEffect.UpdateItem -> {
                 scope.launch {

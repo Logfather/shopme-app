@@ -5,11 +5,10 @@ import androidx.compose.ui.graphics.Color
 // Brand
 val BrandGreen = Color(0xFF809C13)
 val BrandOlive = Color(0xFF939176)
-
 val BrandBlack = Color.Black
-
 val BrandWhite = Color.White
 val BrandRed = Color(0xFF0000)
+val BrandCreme = Color(0xFFF2F0EF)
 
 val BrandGrey = Color(0xFF575D5E)
 
@@ -31,3 +30,22 @@ val CategoryColors: Map<String, Color> = mapOf(
     "Kaffee & Tee" to Color(0xFF76541C),
     "Sonstiges" to Color(0xFFA0A0B0)
 )
+
+object NutriScoreColors {
+
+    val A = Color(0xFF1B8F3A)
+    val B = Color(0xFF7CB342)
+    val C = Color(0xFFFBC02D)
+    val D = Color(0xFFF57C00)
+    val E = Color(0xFFD32F2F)
+
+    fun fromScore(score: String): Color =
+        when (score.uppercase()) {
+            "A" -> A
+            "B" -> B
+            "C" -> C
+            "D" -> D
+            "E" -> E
+            else -> Color.Gray
+        }
+}

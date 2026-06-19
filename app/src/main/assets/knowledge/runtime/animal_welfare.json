@@ -1,0 +1,25 @@
+{
+  "entries": {
+    "beef": {
+      "score": 0.2
+    },
+    "egg": {
+      "score": 0.6
+    },
+    "lentils": {
+      "score": 1.0
+    },
+    "milk": {
+      "score": 0.55
+    },
+    "parmesan": {
+      "score": 0.3
+    },
+    "pork": {
+      "score": 0.25
+    },
+    "tofu": {
+      "score": 1.0
+    }
+  }
+}

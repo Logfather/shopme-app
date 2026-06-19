@@ -37,9 +37,9 @@ sealed class UIEffect {
 
     data class RetrySync(val itemId: String) : UIEffect()
 
-//    data class ShowUndo(
-//        val message: String
-//    ) : UIEffect()
+    data class ProcessSpeech(
+        val text: String
+    ) : UIEffect()
 
     data class UpdateItem(
         val item: ShoppingItem,

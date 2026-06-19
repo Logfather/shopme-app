@@ -8,5 +8,6 @@ data class CatalogItem(
     val plural: String,
     val colloquial: List<String>,
     val phonetic_tokens: List<String>,
-    val autocomplete_tokens: List<String>
+    val autocomplete_tokens: List<String>,
+    val nutritionReference: String? = null
 )

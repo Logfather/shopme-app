@@ -1,0 +1,63 @@
+{
+  "entries": {
+
+    "apple": { "kilometers": 35 },
+
+    "pear": { "kilometers": 40 },
+
+    "tomato": { "kilometers": 28 },
+
+    "cucumber": { "kilometers": 30 },
+
+    "carrot": { "kilometers": 25 },
+
+    "potato": { "kilometers": 18 },
+
+    "lettuce": { "kilometers": 22 },
+
+    "broccoli": { "kilometers": 35 },
+
+    "milk": { "kilometers": 45 },
+
+    "cheese": { "kilometers": 80 },
+
+    "egg": { "kilometers": 50 },
+
+    "bread": { "kilometers": 25 },
+
+    "oats": { "kilometers": 120 },
+
+    "rice": { "kilometers": 8900 },
+
+    "banana": { "kilometers": 8700 },
+
+    "orange": { "kilometers": 2300 },
+
+    "kiwi": { "kilometers": 18200 },
+
+    "coffee": { "kilometers": 9600 },
+
+    "tea": { "kilometers": 7400 },
+
+    "dark chocolate": { "kilometers": 7800 },
+
+    "olive oil": { "kilometers": 2100 },
+
+    "beef": { "kilometers": 180 },
+
+    "pork": { "kilometers": 160 },
+
+    "chicken breast": { "kilometers": 140 },
+
+    "salmon": { "kilometers": 3200 },
+
+    "pizza margherita": { "kilometers": 45 },
+
+    "greek salad": { "kilometers": 1800 },
+
+    "cheeseburger": { "kilometers": 140 },
+
+    "pad thai": { "kilometers": 9200 }
+
+  }
+}

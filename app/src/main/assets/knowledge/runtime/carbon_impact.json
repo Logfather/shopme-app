@@ -1,0 +1,24 @@
+{
+  "entries": {
+    "apple": "LOW",
+    "beef": "VERY_HIGH",
+    "bread": "LOW",
+    "broccoli": "LOW",
+    "carrot": "LOW",
+    "coffee": "VERY_HIGH",
+    "egg": "MEDIUM",
+    "lentils": "LOW",
+    "milk": "MEDIUM",
+    "parmesan": "HIGH",
+    "pasta": "MEDIUM",
+    "pork": "HIGH",
+    "rice": "MEDIUM",
+    "salmon": "HIGH",
+    "spinach": "LOW",
+    "tea": "MEDIUM",
+    "tofu": "MEDIUM",
+    "tomato": "MEDIUM",
+    "tuna": "HIGH",
+    "water": "LOW"
+  }
+}

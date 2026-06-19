@@ -1,0 +1,25 @@
+{
+  "entries": {
+    "apple": [
+      "RAW"
+    ],
+    "bread": [
+      "BAKED"
+    ],
+    "broccoli": [
+      "RAW"
+    ],
+    "coffee": [
+      "DRIED"
+    ],
+    "milk": [
+      "RAW"
+    ],
+    "tea": [
+      "DRIED"
+    ],
+    "tomato": [
+      "RAW"
+    ]
+  }
+}

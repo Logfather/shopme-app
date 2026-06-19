@@ -10,5 +10,6 @@ data class ShoppingItem(
     val deletedAt: Long?,
     val createdAt: Long,
     val updatedAt: Long,
-    val syncStatus: SyncStatus = SyncStatus.Synced
+    val syncStatus: SyncStatus = SyncStatus.Synced,
+    val nutriScore: String? = null
 )

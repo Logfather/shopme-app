@@ -1,0 +1,28 @@
+{
+  "entries": {
+    "apple": {
+      "score": 0.2
+    },
+    "beef": {
+      "score": 0.05
+    },
+    "coffee": {
+      "score": 0.95
+    },
+    "pork": {
+      "score": 0.05
+    },
+    "potato": {
+      "score": 0.1
+    },
+    "rice": {
+      "score": 0.4
+    },
+    "tea": {
+      "score": 0.75
+    },
+    "tomato": {
+      "score": 0.2
+    }
+  }
+}

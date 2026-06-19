@@ -1,0 +1,97 @@
+{
+  "entries": {
+    "barley": [
+      "GLUTEN"
+    ],
+    "beer": [
+      "GLUTEN"
+    ],
+    "bread": [
+      "GLUTEN"
+    ],
+    "butter": [
+      "MILK"
+    ],
+    "cod": [
+      "FISH"
+    ],
+    "croissant": [
+      "GLUTEN",
+      "MILK"
+    ],
+    "egg": [
+      "EGG"
+    ],
+    "feta": [
+      "MILK"
+    ],
+    "gouda": [
+      "MILK"
+    ],
+    "herring": [
+      "FISH"
+    ],
+    "hummus": [
+      "SESAME"
+    ],
+    "kefir": [
+      "MILK"
+    ],
+    "lasagna": [
+      "GLUTEN",
+      "EGG"
+    ],
+    "lobster": [
+      "CRUSTACEAN"
+    ],
+    "mayonnaise": [
+      "EGG",
+      "MUSTARD"
+    ],
+    "milk": [
+      "MILK"
+    ],
+    "mozzarella": [
+      "MILK"
+    ],
+    "muesli": [
+      "GLUTEN",
+      "TREE_NUT"
+    ],
+    "parmesan": [
+      "MILK"
+    ],
+    "pasta": [
+      "GLUTEN"
+    ],
+    "pesto": [
+      "MILK",
+      "TREE_NUT"
+    ],
+    "quark": [
+      "MILK"
+    ],
+    "remoulade": [
+      "EGG",
+      "MUSTARD"
+    ],
+    "salmon": [
+      "FISH"
+    ],
+    "skyr": [
+      "MILK"
+    ],
+    "tempeh": [
+      "SOY"
+    ],
+    "tofu": [
+      "SOY"
+    ],
+    "tuna": [
+      "FISH"
+    ],
+    "wine": [
+      "SULPHITES"
+    ]
+  }
+}

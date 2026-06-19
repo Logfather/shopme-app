@@ -1,0 +1,89 @@
+{
+  "entries": {
+    "apple": [
+      9,
+      10,
+      11
+    ],
+    "banane": [],
+    "barley": [],
+    "beef": [],
+    "beer": [],
+    "bread": [],
+    "breadroll": [],
+    "broccoli": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "butter": [],
+    "carrot": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "coca_cola": [],
+    "cod": [],
+    "coffee": [],
+    "croissant": [],
+    "egg": [],
+    "feta": [],
+    "gouda": [],
+    "herring": [],
+    "hummus": [],
+    "kefir": [],
+    "lasagna": [],
+    "lentils": [],
+    "lobster": [],
+    "mayonnaise": [],
+    "milk": [],
+    "mozzarella": [],
+    "muesli": [],
+    "nutella": [],
+    "oliveoil": [],
+    "parmesan": [],
+    "pasta": [],
+    "peanutbutter": [],
+    "pesto": [],
+    "pizza": [],
+    "pizza margherita": [],
+    "pork": [],
+    "potato": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "quark": [],
+    "remoulade": [],
+    "rice": [],
+    "salmon": [],
+    "skyr": [],
+    "soymilk": [],
+    "spinach": [
+      4,
+      5,
+      9,
+      10
+    ],
+    "sunfloweroil": [],
+    "tea": [],
+    "tempeh": [],
+    "tofu": [],
+    "tomato": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "tuna": [],
+    "vollmilch": [],
+    "water": [],
+    "wine": []
+  }
+}

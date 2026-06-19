@@ -1,0 +1,64 @@
+{
+  "entries": {
+    "apple": {
+      "litersPerKilogram": 822.0
+    },
+    "beef": {
+      "litersPerKilogram": 15415.0
+    },
+    "bread": {
+      "litersPerKilogram": 1608.0
+    },
+    "broccoli": {
+      "litersPerKilogram": 285.0
+    },
+    "butter": {
+      "litersPerKilogram": 5553.0
+    },
+    "carrot": {
+      "litersPerKilogram": 195.0
+    },
+    "coffee": {
+      "litersPerKilogram": 18900.0
+    },
+    "egg": {
+      "litersPerKilogram": 3265.0
+    },
+    "lentils": {
+      "litersPerKilogram": 4055.0
+    },
+    "milk": {
+      "litersPerKilogram": 1021.0
+    },
+    "pasta": {
+      "litersPerKilogram": 1849.0
+    },
+    "pizza margherita": {
+      "litersPerKilogram": 1840.0
+    },
+    "pork": {
+      "litersPerKilogram": 5988.0
+    },
+    "potato": {
+      "litersPerKilogram": 287.0
+    },
+    "rice": {
+      "litersPerKilogram": 2497.0
+    },
+    "salmon": {
+      "litersPerKilogram": 4950.0
+    },
+    "spinach": {
+      "litersPerKilogram": 292.0
+    },
+    "tea": {
+      "litersPerKilogram": 8860.0
+    },
+    "tofu": {
+      "litersPerKilogram": 2144.0
+    },
+    "tomato": {
+      "litersPerKilogram": 214.0
+    }
+  }
+}

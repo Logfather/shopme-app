@@ -1,0 +1,64 @@
+{
+  "entries": {
+    "apple": {
+      "score": 82.0
+    },
+    "beef": {
+      "score": 12.0
+    },
+    "bread": {
+      "score": 58.0
+    },
+    "broccoli": {
+      "score": 92.0
+    },
+    "butter": {
+      "score": 28.0
+    },
+    "carrot": {
+      "score": 89.0
+    },
+    "coffee": {
+      "score": 42.0
+    },
+    "egg": {
+      "score": 44.0
+    },
+    "lentils": {
+      "score": 96.0
+    },
+    "milk": {
+      "score": 48.0
+    },
+    "pasta": {
+      "score": 60.0
+    },
+    "pizza margherita": {
+      "score": 50.0
+    },
+    "pork": {
+      "score": 24.0
+    },
+    "potato": {
+      "score": 70.0
+    },
+    "rice": {
+      "score": 52.0
+    },
+    "salmon": {
+      "score": 40.0
+    },
+    "spinach": {
+      "score": 91.0
+    },
+    "tea": {
+      "score": 74.0
+    },
+    "tofu": {
+      "score": 84.0
+    },
+    "tomato": {
+      "score": 88.0
+    }
+  }
+}

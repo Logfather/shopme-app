@@ -15,6 +15,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import de.shopme.R
 import de.shopme.domain.model.ShoppingItem
+import de.shopme.domain.nutrition.pipeline.ProductionNutritionPipeline
+import de.shopme.domain.nutrition.service.NutritionInsightService
+import de.shopme.domain.service.CatalogService
 import de.shopme.platform.nimblu.state.EmptyState
 import de.shopme.ui.components.SupermarketItemRow
 
@@ -23,7 +26,10 @@ import de.shopme.ui.components.SupermarketItemRow
 fun ShoppingScreen(
     items: List<ShoppingItem>,
     onAddItem: (String) -> Unit,
-    onToggleItem: (ShoppingItem) -> Unit
+    onToggleItem: (ShoppingItem) -> Unit,
+    catalogService: CatalogService,
+    productionNutritionPipeline: ProductionNutritionPipeline,
+    nutritionInsightService: NutritionInsightService
 ) {
 
     var input by remember { mutableStateOf("") }
@@ -67,7 +73,9 @@ fun ShoppingScreen(
                 ) { item ->
 
                     SupermarketItemRow(
+
                         item = item,
+
                         categoryColor = Color.Gray,
 
                         onToggle = {
@@ -84,7 +92,16 @@ fun ShoppingScreen(
 
                         onUpdate = {
                             // TODO später sauber integrieren
-                        }
+                        },
+
+                        catalogService = catalogService,
+
+                        productionNutritionPipeline =
+                            productionNutritionPipeline,
+
+                        nutritionInsightService =
+                            nutritionInsightService
+
                     )
                 }
             }

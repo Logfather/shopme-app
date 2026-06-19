@@ -6,10 +6,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import de.shopme.data.datasource.room.ShopMeDatabase
 import de.shopme.data.repository.RoomShoppingRepository
 import de.shopme.data.sync.ConflictResolver
+import de.shopme.data.sync.RemoteApplyCoordinator
 import de.shopme.data.sync.SyncCoordinator
+import de.shopme.data.sync.telemetry.SyncTelemetryCollector
 import de.shopme.domain.life.NimelisEventBus
 import de.shopme.testing.fake.InMemoryFakeFirestoreGateway
 import de.shopme.testing.system.scenario.MultiDeviceDeleteScenario
+import de.shopme.testing.system.tests.sync.TestRuntimeDiagnostics
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -77,12 +80,16 @@ class MultiDeviceDeleteTest {
                 nimelisEventBus = eventBusB
             )
 
-//        val testScope =
-//            CoroutineScope(
-//                SupervisorJob() + Dispatchers.IO
-//            )
+        val telemetry = SyncTelemetryCollector()
 
-        val testScope = this
+        val remoteApplyCoordinatorA =
+            RemoteApplyCoordinator(
+            itemDao = databaseA.itemDao(),
+            changeQueueDao = databaseA.changeQueueDao(),
+            remoteApplyStateDao =
+                databaseA.remoteApplyStateDao(),
+                telemetry = telemetry
+        )
 
         val syncCoordinatorA =
             SyncCoordinator(
@@ -90,10 +97,29 @@ class MultiDeviceDeleteTest {
                 itemDao = databaseA.itemDao(),
                 listDao = databaseA.listDao(),
                 firestore = sharedGateway,
-                appScope = testScope,
+                appScope = this,
                 firebaseAuth = null,
                 conflictResolver = ConflictResolver(),
-                roomRepository = repositoryA
+                roomRepository = repositoryA,
+                remoteApplyCoordinator = remoteApplyCoordinatorA,
+                telemetry = telemetry,
+
+                diagnosticsProvider =
+                    TestRuntimeDiagnostics.provider(
+                        telemetry
+                    ),
+
+                diagnosticsLogger =
+                    TestRuntimeDiagnostics.logger()
+            )
+
+        val remoteApplyCoordinatorB =
+            RemoteApplyCoordinator(
+                itemDao = databaseB.itemDao(),
+                changeQueueDao = databaseB.changeQueueDao(),
+                remoteApplyStateDao =
+                    databaseB.remoteApplyStateDao(),
+                telemetry = telemetry
             )
 
         val syncCoordinatorB =
@@ -102,10 +128,20 @@ class MultiDeviceDeleteTest {
                 itemDao = databaseB.itemDao(),
                 listDao = databaseB.listDao(),
                 firestore = sharedGateway,
-                appScope = testScope,
+                appScope = this,
                 firebaseAuth = null,
                 conflictResolver = ConflictResolver(),
-                roomRepository = repositoryB
+                roomRepository = repositoryB,
+                remoteApplyCoordinator = remoteApplyCoordinatorB,
+                telemetry = telemetry,
+
+                diagnosticsProvider =
+                    TestRuntimeDiagnostics.provider(
+                        telemetry
+                    ),
+
+                diagnosticsLogger =
+                    TestRuntimeDiagnostics.logger()
             )
 
         repositoryA.attachSyncCoordinator(syncCoordinatorA)
