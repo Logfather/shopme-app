@@ -2,29 +2,34 @@ package de.shopme.tools.knowledge.compiler.passes
 
 import de.shopme.tools.knowledge.compiler.CompilerContext
 import de.shopme.tools.knowledge.compiler.FoodKnowledgeCompilerPass
+import de.shopme.tools.knowledge.foods.FoodLookup
 import de.shopme.tools.knowledge.pollinator.PollinatorResolver
 
 class PollinatorCompilerPass(
 
-    private val resolver: PollinatorResolver
+    private val resolver: PollinatorResolver,
 
-) : FoodKnowledgeCompilerPass {
+    private val foodLookup: FoodLookup
+
+): FoodKnowledgeCompilerPass {
 
     override fun process(
         context: CompilerContext
     ) {
 
-        val result =
+        context.pollinator =
 
-            resolver.resolve(
+            foodLookup.pollinator(
 
-                context.nutritionReference
+                context.normalizedName
 
             )
+                ?: resolver.resolve(
 
-        context.pollinator =
-            result
+                    context.nutritionReference
+                        ?: context.normalizedName
 
+                )
     }
 
 }

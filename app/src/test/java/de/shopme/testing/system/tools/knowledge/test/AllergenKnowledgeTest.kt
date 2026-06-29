@@ -25,7 +25,7 @@ class AllergenKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/allergens.json"
+                        "knowledge.runtime/allergens.json"
 
                     )
 
@@ -90,7 +90,7 @@ class AllergenKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/allergens.json"
+                        "knowledge.runtime/allergens.json"
 
                     )
 

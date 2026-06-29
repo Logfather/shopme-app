@@ -23,10 +23,8 @@ class NutritionKnowledgeTest {
 
                 checkNotNull(
 
-                    javaClass.classLoader.getResourceAsStream(
-
-                        "knowledge/data/v1/nutrition_facts.json"
-
+                    javaClass.classLoader!!.getResourceAsStream(
+                        "knowledge.runtime/nutrition_facts.json"
                     )
 
                 ).bufferedReader().use {
@@ -89,10 +87,8 @@ class NutritionKnowledgeTest {
 
                 checkNotNull(
 
-                    javaClass.classLoader.getResourceAsStream(
-
-                        "knowledge/data/v1/nutrition_facts.json"
-
+                    javaClass.classLoader!!.getResourceAsStream(
+                        "knowledge.runtime/nutrition_facts.json"
                     )
 
                 ).bufferedReader().use {

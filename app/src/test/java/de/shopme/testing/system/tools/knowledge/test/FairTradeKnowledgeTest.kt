@@ -25,7 +25,7 @@ class FairTradeKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/fair_trade.json"
+                        "knowledge.runtime/fair_trade.json"
 
                     )
 
@@ -92,7 +92,7 @@ class FairTradeKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/fair_trade.json"
+                        "knowledge.runtime/fair_trade.json"
 
                     )
 

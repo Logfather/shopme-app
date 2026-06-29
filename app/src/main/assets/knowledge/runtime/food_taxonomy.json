@@ -1,101 +1,405 @@
 {
   "entries": {
+    "fruit": {
+      "parent": "plant_based"
+    },
+
+    "vegetable": {
+      "parent": "plant_based"
+    },
+
+    "legume": {
+      "parent": "plant_based"
+    },
+
+    "nut": {
+      "parent": "plant_based"
+    },
+
+    "seed": {
+      "parent": "plant_based"
+    },
+
+    "grain": {
+      "parent": "plant_based"
+    },
+
+    "mushroom": {
+      "parent": "plant_based"
+    },
+
+    "oil": {
+      "parent": "plant_based"
+    },
+
+    "dairy": {
+      "parent": "animal_based"
+    },
+
+    "egg_product": {
+      "parent": "animal_based"
+    },
+
+    "fish": {
+      "parent": "animal_based"
+    },
+
+    "seafood": {
+      "parent": "animal_based"
+    },
+
+    "meat": {
+      "parent": "animal_based"
+    },
+
+    "condiment": {
+      "parent": "prepared_food"
+    },
+
+    "sauce": {
+      "parent": "prepared_food"
+    },
+
+    "bakery": {
+      "parent": "prepared_food"
+    },
+
+    "dessert": {
+      "parent": "prepared_food"
+    },
+
+    "beverage": {
+      "parent": "prepared_food"
+    },
+
     "apple": {
       "parent": "fruit"
     },
-    "barley": {
-      "parent": "grain"
+
+    "banana": {
+      "parent": "fruit"
     },
-    "beef": {
-      "parent": "meat"
-    },
-    "beer": {
-      "parent": "beverage"
-    },
-    "bread": {
-      "parent": "bakery"
-    },
-    "broccoli": {
-      "parent": "vegetable"
-    },
-    "butter": {
-      "parent": "dairy"
-    },
-    "carrot": {
-      "parent": "vegetable"
-    },
-    "cod": {
-      "parent": "fish"
-    },
-    "coffee": {
-      "parent": "beverage"
-    },
-    "croissant": {
-      "parent": "bakery"
-    },
-    "egg": {
-      "parent": "egg_product"
-    },
-    "feta": {
-      "parent": "dairy"
-    },
-    "gouda": {
-      "parent": "dairy"
-    },
-    "herring": {
-      "parent": "fish"
-    },
-    "hummus": {
-      "parent": "condiment"
-    },
-    "lentils": {
-      "parent": "legume"
-    },
-    "lobster": {
-      "parent": "seafood"
-    },
-    "milk": {
-      "parent": "dairy"
-    },
-    "mozzarella": {
-      "parent": "dairy"
-    },
-    "parmesan": {
-      "parent": "dairy"
-    },
-    "pesto": {
-      "parent": "sauce"
-    },
-    "pork": {
-      "parent": "meat"
-    },
-    "potato": {
-      "parent": "vegetable"
-    },
-    "quark": {
-      "parent": "dairy"
-    },
-    "rice": {
-      "parent": "grain"
-    },
-    "salmon": {
-      "parent": "fish"
-    },
-    "spinach": {
-      "parent": "vegetable"
-    },
-    "tea": {
-      "parent": "beverage"
-    },
+
     "tomato": {
       "parent": "vegetable"
     },
+
+    "carrot": {
+      "parent": "vegetable"
+    },
+
+    "broccoli": {
+      "parent": "vegetable"
+    },
+
+    "spinach": {
+      "parent": "vegetable"
+    },
+
+    "potato": {
+      "parent": "vegetable"
+    },
+
+    "rice": {
+      "parent": "grain"
+    },
+
+    "wheat": {
+      "parent": "grain"
+    },
+
+    "oats": {
+      "parent": "grain"
+    },
+
+    "barley": {
+      "parent": "grain"
+    },
+
+    "rye": {
+      "parent": "grain"
+    },
+
+    "spelt": {
+      "parent": "grain"
+    },
+
+    "lentils": {
+      "parent": "legume"
+    },
+
+    "kidney_beans": {
+      "parent": "legume"
+    },
+
+    "white_beans": {
+      "parent": "legume"
+    },
+
+    "black_beans": {
+      "parent": "legume"
+    },
+
+    "peas": {
+      "parent": "legume"
+    },
+
+    "chickpeas": {
+      "parent": "legume"
+    },
+
+    "almond": {
+      "parent": "nut"
+    },
+
+    "hazelnut": {
+      "parent": "nut"
+    },
+
+    "walnut": {
+      "parent": "nut"
+    },
+
+    "cashew": {
+      "parent": "nut"
+    },
+
+    "pistachio": {
+      "parent": "nut"
+    },
+
+    "pecan": {
+      "parent": "nut"
+    },
+
+    "macadamia": {
+      "parent": "nut"
+    },
+
+    "brazil_nut": {
+      "parent": "nut"
+    },
+
+    "pine_nuts": {
+      "parent": "nut"
+    },
+
+    "sesame": {
+      "parent": "seed"
+    },
+
+    "chia_seeds": {
+      "parent": "seed"
+    },
+
+    "flaxseed": {
+      "parent": "seed"
+    },
+
+    "pumpkin_seeds": {
+      "parent": "seed"
+    },
+
+    "sunflower_seeds": {
+      "parent": "seed"
+    },
+
+    "olive_oil": {
+      "parent": "oil"
+    },
+
+    "sunflower_oil": {
+      "parent": "oil"
+    },
+
+    "rapeseed_oil": {
+      "parent": "oil"
+    },
+
+    "coconut_oil": {
+      "parent": "oil"
+    },
+
+    "avocado_oil": {
+      "parent": "oil"
+    },
+
+    "milk": {
+      "parent": "dairy"
+    },
+
+    "cheese": {
+      "parent": "dairy"
+    },
+
+    "mozzarella": {
+      "parent": "dairy"
+    },
+
+    "cheddar": {
+      "parent": "dairy"
+    },
+
+    "gouda": {
+      "parent": "dairy"
+    },
+
+    "parmesan": {
+      "parent": "dairy"
+    },
+
+    "feta": {
+      "parent": "dairy"
+    },
+
+    "cream_cheese": {
+      "parent": "dairy"
+    },
+
+    "butter": {
+      "parent": "dairy"
+    },
+
+    "yogurt": {
+      "parent": "dairy"
+    },
+
+    "quark": {
+      "parent": "dairy"
+    },
+
+    "egg": {
+      "parent": "egg_product"
+    },
+
+    "salmon": {
+      "parent": "fish"
+    },
+
     "tuna": {
       "parent": "fish"
     },
+
+    "cod": {
+      "parent": "fish"
+    },
+
+    "herring": {
+      "parent": "fish"
+    },
+
+    "anchovy": {
+      "parent": "fish"
+    },
+
+    "shrimp": {
+      "parent": "seafood"
+    },
+
+    "crab": {
+      "parent": "seafood"
+    },
+
+    "lobster": {
+      "parent": "seafood"
+    },
+
+    "mussel": {
+      "parent": "seafood"
+    },
+
+    "oyster": {
+      "parent": "seafood"
+    },
+
+    "beef": {
+      "parent": "meat"
+    },
+
+    "pork": {
+      "parent": "meat"
+    },
+
+    "lamb": {
+      "parent": "meat"
+    },
+
+    "chicken_breast": {
+      "parent": "meat"
+    },
+
+    "turkey": {
+      "parent": "meat"
+    },
+
+    "soy_sauce": {
+      "parent": "sauce"
+    },
+
+    "fish_sauce": {
+      "parent": "sauce"
+    },
+
+    "oyster_sauce": {
+      "parent": "sauce"
+    },
+
+    "pesto": {
+      "parent": "sauce"
+    },
+
+    "hummus": {
+      "parent": "condiment"
+    },
+
+    "bread": {
+      "parent": "bakery"
+    },
+
+    "toast": {
+      "parent": "bakery"
+    },
+
+    "bagel": {
+      "parent": "bakery"
+    },
+
+    "croissant": {
+      "parent": "bakery"
+    },
+
+    "cake": {
+      "parent": "dessert"
+    },
+
+    "cookie": {
+      "parent": "dessert"
+    },
+
+    "cheesecake": {
+      "parent": "dessert"
+    },
+
+    "ice_cream": {
+      "parent": "dessert"
+    },
+
+    "coffee": {
+      "parent": "beverage"
+    },
+
+    "tea": {
+      "parent": "beverage"
+    },
+
     "water": {
       "parent": "beverage"
     },
+
+    "beer": {
+      "parent": "beverage"
+    },
+
     "wine": {
       "parent": "beverage"
     }

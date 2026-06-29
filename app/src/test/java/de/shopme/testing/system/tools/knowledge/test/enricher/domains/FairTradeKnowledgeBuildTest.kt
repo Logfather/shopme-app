@@ -6,6 +6,7 @@ import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.FairTradeKnowledgeWriter
 import de.shopme.tools.knowledge.fairtrade.DefaultFairTradeResolver
 import de.shopme.tools.knowledge.fairtrade.StringFairTradeLoader
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import org.junit.Test
 
@@ -24,7 +25,7 @@ class FairTradeKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/fair_trade.json"
+                        "knowledge/runtime/fair_trade.json"
 
                     )
 
@@ -40,7 +41,8 @@ class FairTradeKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class FairTradeKnowledgeBuildTest :
 
                     FairTradeCompilerPass(
 
-                        fairTradeResolver
+                        fairTradeResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

@@ -22,6 +22,8 @@ class FoodKnowledgeAssembler :
 
             nutritionReference = context.nutritionReference,
 
+            carbonReference = context.carbonReference,
+
             glycemicIndex = context.glycemicIndex,
 
             production = context.production,
@@ -35,6 +37,10 @@ class FoodKnowledgeAssembler :
             carbonFootprint = context.carbonFootprint,
 
             ingredients = context.ingredients.toSet(),
+
+            ingredientGraph = context.ingredientGraph,
+
+            recipeGraph = context.recipeGraph,
 
             recipes = context.recipes.toSet(),
 

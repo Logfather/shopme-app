@@ -2,13 +2,14 @@ package de.shopme.tools.knowledge.compiler.passes
 
 import de.shopme.tools.knowledge.compiler.CompilerContext
 import de.shopme.tools.knowledge.compiler.FoodKnowledgeCompilerPass
+import de.shopme.tools.knowledge.foods.FoodLookup
 import de.shopme.tools.knowledge.packaging.PackagingResolver
 
 class PackagingCompilerPass(
 
-    private val resolver:
+    private val resolver: PackagingResolver,
 
-    PackagingResolver
+    private val foodLookup: FoodLookup
 
 ) : FoodKnowledgeCompilerPass {
 
@@ -16,17 +17,18 @@ class PackagingCompilerPass(
         context: CompilerContext
     ) {
 
-        val result =
+        context.packaging =
 
-            resolver.resolve(
+            foodLookup.packaging(
 
-                context.nutritionReference
+                context.normalizedName
 
             )
+                ?: resolver.resolve(
 
-        context.packaging =
-            result
+                    context.nutritionReference
+                        ?: context.normalizedName
 
+                )
     }
-
 }

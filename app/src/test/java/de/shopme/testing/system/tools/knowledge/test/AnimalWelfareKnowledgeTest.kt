@@ -25,7 +25,7 @@ class AnimalWelfareKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/animal_welfare.json"
+                        "knowledge.runtime/animal_welfare.json"
 
                     )
 
@@ -90,7 +90,7 @@ class AnimalWelfareKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/animal_welfare.json"
+                        "knowledge.runtime/animal_welfare.json"
 
                     )
 

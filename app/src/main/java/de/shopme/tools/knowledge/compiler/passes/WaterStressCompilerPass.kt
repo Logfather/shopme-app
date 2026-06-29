@@ -2,30 +2,33 @@ package de.shopme.tools.knowledge.compiler.passes
 
 import de.shopme.tools.knowledge.compiler.CompilerContext
 import de.shopme.tools.knowledge.compiler.FoodKnowledgeCompilerPass
+import de.shopme.tools.knowledge.foods.FoodLookup
 import de.shopme.tools.knowledge.waterstress.WaterStressResolver
 
 class WaterStressCompilerPass(
 
-    private val resolver:
+    private val resolver: WaterStressResolver,
 
-    WaterStressResolver
+    private val foodLookup: FoodLookup
 
 ) : FoodKnowledgeCompilerPass {
 
     override fun process(
-
         context: CompilerContext
-
     ) {
 
         context.waterStress =
 
-            resolver.resolve(
+            foodLookup.waterStress(
 
-                context.nutritionReference
+                context.normalizedName
 
             )
+                ?: resolver.resolve(
 
+                    context.nutritionReference
+                        ?: context.normalizedName
+
+                )
     }
-
 }

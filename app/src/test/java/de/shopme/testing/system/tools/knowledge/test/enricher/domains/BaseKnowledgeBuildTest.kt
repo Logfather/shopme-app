@@ -17,7 +17,7 @@ abstract class BaseKnowledgeBuildTest {
 
                 ResourceKnowledgeLoader.load(
 
-                    "knowledge/data/v1/nutrition_alias.json"
+                    "knowledge/runtime/nutrition_alias.json"
 
                 )
 

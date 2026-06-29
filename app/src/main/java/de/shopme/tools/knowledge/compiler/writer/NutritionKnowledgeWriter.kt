@@ -27,9 +27,18 @@ class NutritionKnowledgeWriter :
 
     fun knowledge(): NutritionFactsKnowledge {
 
+        val deduplicatedEntries =
+            entries
+                .filterKeys { key ->
+
+                    key.isNotBlank()
+
+                }
+                .toSortedMap()
+
         return NutritionFactsKnowledge(
 
-            entries = entries.toSortedMap()
+            entries = deduplicatedEntries
 
         )
 
@@ -37,11 +46,14 @@ class NutritionKnowledgeWriter :
 
     override fun finish() {
 
+        val knowledge =
+            knowledge()
+
         NutritionKnowledgeJsonWriter()
 
             .write(
 
-                knowledge(),
+                knowledge,
 
                 File(
 
@@ -51,6 +63,14 @@ class NutritionKnowledgeWriter :
 
             )
 
+        println()
+        println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        println("🧠 NUTRITION KNOWLEDGE")
+        println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        println("📊 Entries : ${knowledge.entries.size}")
+        println("📄 Output  : build/generated/nutrition.json")
+        println("🏁 FINISHED")
+        println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        println()
     }
-
 }

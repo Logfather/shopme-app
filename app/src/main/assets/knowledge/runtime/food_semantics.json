@@ -1,43 +1,21 @@
 {
   "entries": {
-    "bakery": {
-      "category": "UNKNOWN",
+    "plant_based": {
+      "category": null,
       "tags": [
-        null,
+        "PLANT_BASED"
+      ]
+    },
+    "animal_based": {
+      "category": null,
+      "tags": [
+        "ANIMAL_BASED"
+      ]
+    },
+    "prepared_food": {
+      "category": null,
+      "tags": [
         "PROCESSED"
-      ]
-    },
-    "beverage": {
-      "category": "BEVERAGE",
-      "tags": [
-        "BEVERAGE"
-      ]
-    },
-    "condiment": {
-      "category": "UNKNOWN",
-      "tags": [
-        null,
-        "PROCESSED"
-      ]
-    },
-    "dairy": {
-      "category": "DAIRY",
-      "tags": [
-        "DAIRY",
-        null
-      ]
-    },
-    "egg_product": {
-      "category": "UNKNOWN",
-      "tags": [
-        null
-      ]
-    },
-    "fish": {
-      "category": "UNKNOWN",
-      "tags": [
-        "FISH",
-        null
       ]
     },
     "fruit": {
@@ -47,6 +25,21 @@
         "PLANT_BASED"
       ]
     },
+    "vegetable": {
+      "category": "VEGETABLE",
+      "tags": [
+        "VEGETABLE",
+        "PLANT_BASED"
+      ]
+    },
+    "legume": {
+      "category": "LEGUME",
+      "tags": [
+        "LEGUME",
+        "PLANT_BASED",
+        "HIGH_FIBER"
+      ]
+    },
     "grain": {
       "category": "GRAIN",
       "tags": [
@@ -54,38 +47,101 @@
         "PLANT_BASED"
       ]
     },
-    "legume": {
-      "category": "UNKNOWN",
+    "nut": {
+      "category": "NUT",
       "tags": [
-        null,
+        "NUT",
         "PLANT_BASED"
       ]
     },
-    "meat": {
-      "category": "UNKNOWN",
+    "seed": {
+      "category": "SEED",
       "tags": [
-        "MEAT",
-        null
+        "SEED",
+        "PLANT_BASED"
       ]
     },
-    "sauce": {
-      "category": "UNKNOWN",
+    "mushroom": {
+      "category": "MUSHROOM",
       "tags": [
-        null,
-        "PROCESSED"
+        "MUSHROOM",
+        "PLANT_BASED"
+      ]
+    },
+    "oil": {
+      "category": "OIL",
+      "tags": [
+        "OIL",
+        "PLANT_BASED"
+      ]
+    },
+    "dairy": {
+      "category": "DAIRY",
+      "tags": [
+        "DAIRY",
+        "ANIMAL_BASED"
+      ]
+    },
+    "egg_product": {
+      "category": "EGG",
+      "tags": [
+        "EGG",
+        "ANIMAL_BASED"
+      ]
+    },
+    "fish": {
+      "category": "FISH",
+      "tags": [
+        "FISH",
+        "ANIMAL_BASED"
       ]
     },
     "seafood": {
-      "category": "UNKNOWN",
+      "category": "SEAFOOD",
       "tags": [
-        null
+        "SEAFOOD",
+        "ANIMAL_BASED"
       ]
     },
-    "vegetable": {
-      "category": "VEGETABLE",
+    "meat": {
+      "category": "MEAT",
       "tags": [
-        "VEGETABLE",
-        "PLANT_BASED"
+        "MEAT",
+        "ANIMAL_BASED"
+      ]
+    },
+    "condiment": {
+      "category": "CONDIMENT",
+      "tags": [
+        "CONDIMENT",
+        "PROCESSED"
+      ]
+    },
+    "sauce": {
+      "category": "SAUCE",
+      "tags": [
+        "SAUCE",
+        "PROCESSED"
+      ]
+    },
+    "bakery": {
+      "category": "BAKERY",
+      "tags": [
+        "BAKERY",
+        "PROCESSED"
+      ]
+    },
+    "dessert": {
+      "category": "DESSERT",
+      "tags": [
+        "DESSERT",
+        "PROCESSED"
+      ]
+    },
+    "beverage": {
+      "category": "BEVERAGE",
+      "tags": [
+        "BEVERAGE"
       ]
     }
   }

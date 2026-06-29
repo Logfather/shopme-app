@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.NutriScoreCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.NutriScoreKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import de.shopme.tools.knowledge.nutriscore.DefaultNutriScoreResolver
 import de.shopme.tools.knowledge.nutriscore.StringNutriScoreLoader
@@ -24,7 +25,7 @@ class NutriScoreKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/nutri_score.json"
+                        "knowledge/runtime/nutri_score.json"
 
                     )
 
@@ -40,7 +41,8 @@ class NutriScoreKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class NutriScoreKnowledgeBuildTest :
 
                     NutriScoreCompilerPass(
 
-                        resolver
+                        resolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

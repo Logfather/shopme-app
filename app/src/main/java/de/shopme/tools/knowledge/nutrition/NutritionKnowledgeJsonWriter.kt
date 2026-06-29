@@ -21,13 +21,27 @@ class NutritionKnowledgeJsonWriter {
 
     ) {
 
-        output.parentFile.mkdirs()
+        output
+            .parentFile
+            ?.mkdirs()
+
+        val sortedKnowledge =
+
+            NutritionFactsKnowledge(
+
+                entries =
+
+                    knowledge
+                        .entries
+                        .toSortedMap()
+
+            )
 
         output.writeText(
 
             gson.toJson(
 
-                knowledge
+                sortedKnowledge
 
             )
 

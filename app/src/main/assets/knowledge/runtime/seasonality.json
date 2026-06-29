@@ -1,89 +1,56 @@
 {
-  "entries": {
-    "apple": [
-      9,
-      10,
-      11
-    ],
-    "banane": [],
-    "barley": [],
-    "beef": [],
-    "beer": [],
-    "bread": [],
-    "breadroll": [],
-    "broccoli": [
-      6,
-      7,
-      8,
-      9,
-      10
-    ],
-    "butter": [],
-    "carrot": [
-      6,
-      7,
-      8,
-      9,
-      10
-    ],
-    "coca_cola": [],
-    "cod": [],
-    "coffee": [],
-    "croissant": [],
-    "egg": [],
-    "feta": [],
-    "gouda": [],
-    "herring": [],
-    "hummus": [],
-    "kefir": [],
-    "lasagna": [],
-    "lentils": [],
-    "lobster": [],
-    "mayonnaise": [],
-    "milk": [],
-    "mozzarella": [],
-    "muesli": [],
-    "nutella": [],
-    "oliveoil": [],
-    "parmesan": [],
-    "pasta": [],
-    "peanutbutter": [],
-    "pesto": [],
-    "pizza": [],
-    "pizza margherita": [],
-    "pork": [],
-    "potato": [
-      6,
-      7,
-      8,
-      9,
-      10
-    ],
-    "quark": [],
-    "remoulade": [],
-    "rice": [],
-    "salmon": [],
-    "skyr": [],
-    "soymilk": [],
-    "spinach": [
-      4,
-      5,
-      9,
-      10
-    ],
-    "sunfloweroil": [],
-    "tea": [],
-    "tempeh": [],
-    "tofu": [],
-    "tomato": [
-      6,
-      7,
-      8,
-      9
-    ],
-    "tuna": [],
-    "vollmilch": [],
-    "water": [],
-    "wine": []
-  }
+ "entries": {
+  "apple": [9, 10, 11],
+  "pear": [8, 9, 10],
+  "strawberry": [5, 6, 7],
+  "raspberry": [6, 7, 8],
+  "blueberry": [7, 8, 9],
+  "cherry": [6, 7],
+  "plum": [8, 9],
+  "grape": [9, 10],
+  "apricot": [7, 8],
+  "peach": [7, 8, 9],
+
+  "tomato": [6, 7, 8, 9],
+  "cucumber": [6, 7, 8, 9],
+  "pepper": [7, 8, 9],
+  "zucchini": [6, 7, 8, 9],
+  "eggplant": [7, 8, 9],
+  "broccoli": [6, 7, 8, 9, 10],
+  "cauliflower": [6, 7, 8, 9, 10],
+  "spinach": [4, 5, 9, 10],
+  "lettuce": [5, 6, 7, 8, 9],
+  "carrot": [6, 7, 8, 9, 10],
+  "onion": [7, 8, 9, 10],
+  "garlic": [7, 8, 9],
+  "potato": [6, 7, 8, 9, 10],
+
+  "asparagus": [4, 5, 6],
+  "green_asparagus": [4, 5, 6],
+  "white_asparagus": [4, 5, 6],
+
+  "pumpkin": [9, 10, 11],
+  "mushroom": [9, 10, 11],
+  "kale": [10, 11, 12, 1, 2],
+  "brussels_sprouts": [10, 11, 12, 1],
+
+  "pea": [6, 7],
+  "green_peas": [6, 7],
+  "bean": [7, 8, 9],
+  "green_beans": [7, 8, 9],
+
+  "watermelon": [7, 8],
+  "melon": [7, 8],
+  "currant": [6, 7],
+  "gooseberry": [6, 7],
+
+  "herbs": [5, 6, 7, 8, 9],
+  "parsley": [5, 6, 7, 8, 9],
+  "basil": [6, 7, 8],
+  "mint": [5, 6, 7, 8],
+
+  "hazelnut": [9, 10],
+  "walnut": [9, 10],
+  "chestnut": [9, 10, 11]
+}
 }

@@ -28,6 +28,7 @@ import de.shopme.tools.knowledge.waterstress.WaterStress
 
 data class CompilerContext(
 
+
     val catalogItem: CatalogItem,
 
     val inputName: String =
@@ -68,7 +69,7 @@ data class CompilerContext(
      * Will later be enriched by dedicated compiler passes.
      */
     var nutritionReference: String? =
-        catalogItem.nutritionReference,
+        catalogItem.nutritionKnowledgeReference(),
 
     /**
      * Nutrition facts resolved by NutritionCompilerPass.
@@ -112,6 +113,9 @@ data class CompilerContext(
      * Carbon footprint resolved by CarbonCompilerPass.
      */
     var carbonFootprint: CarbonFootprint? =
+        null,
+
+    var carbonReference: String? =
         null,
 
     /**

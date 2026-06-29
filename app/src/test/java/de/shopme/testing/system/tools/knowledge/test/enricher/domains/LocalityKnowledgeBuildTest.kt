@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.LocalityCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.LocalityKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import de.shopme.tools.knowledge.locality.DefaultLocalityResolver
 import de.shopme.tools.knowledge.locality.StringLocalityLoader
@@ -24,7 +25,7 @@ class LocalityKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/locality.json"
+                        "knowledge/runtime/locality.json"
 
                     )
 
@@ -40,7 +41,8 @@ class LocalityKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class LocalityKnowledgeBuildTest :
 
                     LocalityCompilerPass(
 
-                        resolver
+                        resolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

@@ -57,7 +57,6 @@ import de.shopme.domain.nutrition.service.NutritionInsightService
 import de.shopme.domain.service.CatalogService
 import de.shopme.presentation.action.ShoppingAction
 import de.shopme.presentation.developer.foodintelligence.FoodIntelligenceScreen
-import de.shopme.presentation.developer.report.BuildReportScreen
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.navigation.Screen
 import de.shopme.presentation.screens.ChooseListsScreen
@@ -70,6 +69,8 @@ import de.shopme.presentation.shopping.components.MultiOverviewScreen
 import de.shopme.presentation.shopping.components.StoreSelectionDialog
 import de.shopme.presentation.state.ShoppingScreenMode
 import de.shopme.presentation.viewmodel.ShoppingViewModel
+import de.shopme.tools.knowledge.compiler.DefaultRuntimeFoodKnowledgeCompilerFactory
+import de.shopme.tools.knowledge.dimension.explorer.DefaultKnowledgeExplorerProvider
 import de.shopme.ui.app.topbar.HivraTopBar
 import de.shopme.ui.components.CartoonLoader
 import de.shopme.ui.illustration.animations.ShareSuccessAnimation
@@ -144,6 +145,16 @@ fun HivraApp(
     val context = LocalContext.current
     var showChooseLists by remember { mutableStateOf(false) }
     val isGoogleUser by vm.isGoogleUser.collectAsStateWithLifecycle()
+
+    val knowledgeExplorerProvider =
+        remember(context) {
+            DefaultKnowledgeExplorerProvider(
+                compiler =
+                    DefaultRuntimeFoodKnowledgeCompilerFactory.create(
+                        context
+                    )
+            )
+        }
 
 
     fun shareLink(link: String) {
@@ -316,11 +327,11 @@ fun HivraApp(
 
                     }
 
-                    var showBuildReport by remember {
-
-                        mutableStateOf(false)
-
-                    }
+//                    var showBuildReport by remember {
+//
+//                        mutableStateOf(false)
+//
+//                    }
 
                     HivraTopBar(
 
@@ -346,7 +357,7 @@ fun HivraApp(
 
                         onBuildReport = {
 
-                            showBuildReport = true
+                            //showBuildReport = true
 
                         },
 
@@ -372,17 +383,17 @@ fun HivraApp(
 
                         }
 
-                        showBuildReport -> {
-
-                            BuildReportScreen(
-                                onClose = {
-
-                                    showBuildReport = false
-
-                                }
-                            )
-
-                        }
+//                        showBuildReport -> {
+//
+//                            BuildReportScreen(
+//                                onClose = {
+//
+//                                    showBuildReport = false
+//
+//                                }
+//                            )
+//
+//                        }
 
                         else -> {
 
@@ -429,15 +440,11 @@ fun HivraApp(
                         Screen.Items -> {
 
                             ShoppingScreen(
-
                                 vm = vm,
-
                                 services = appServices,
-
                                 speechController = speechController,
-
-                                catalogService = catalogService
-
+                                catalogService = catalogService,
+                                knowledgeExplorerProvider = knowledgeExplorerProvider
                             )
 
                         }

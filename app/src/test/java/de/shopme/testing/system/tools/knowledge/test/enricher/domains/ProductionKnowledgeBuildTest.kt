@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.ProductionCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.ProductionKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import de.shopme.tools.knowledge.production.DefaultProductionResolver
 import de.shopme.tools.knowledge.production.StringProductionLoader
@@ -24,7 +25,7 @@ class ProductionKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/production.json"
+                        "knowledge/runtime/production.json"
 
                     )
 
@@ -40,7 +41,8 @@ class ProductionKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class ProductionKnowledgeBuildTest :
 
                     ProductionCompilerPass(
 
-                        resolver
+                        resolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

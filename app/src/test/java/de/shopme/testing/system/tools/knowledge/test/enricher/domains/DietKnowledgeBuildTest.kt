@@ -6,6 +6,7 @@ import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.DietKnowledgeWriter
 import de.shopme.tools.knowledge.diet.DefaultDietResolver
 import de.shopme.tools.knowledge.diet.StringDietLoader
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import org.junit.Test
 
@@ -24,7 +25,7 @@ class DietKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/diet_classification.json"
+                        "knowledge/runtime/diet_classification.json"
 
                     )
 
@@ -40,7 +41,8 @@ class DietKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class DietKnowledgeBuildTest :
 
                     DietCompilerPass(
 
-                        resolver
+                        resolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

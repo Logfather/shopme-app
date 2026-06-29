@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.PesticideCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.PesticidesKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import de.shopme.tools.knowledge.pesticide.DefaultPesticideResolver
 import de.shopme.tools.knowledge.pesticide.StringPesticideLoader
@@ -24,7 +25,7 @@ class PesticidesKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/pesticide.json"
+                        "knowledge/runtime/pesticide.json"
 
                     )
 
@@ -40,7 +41,8 @@ class PesticidesKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class PesticidesKnowledgeBuildTest :
 
                     PesticideCompilerPass(
 
-                        pesticidesResolver
+                        pesticidesResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

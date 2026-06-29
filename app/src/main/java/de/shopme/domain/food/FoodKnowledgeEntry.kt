@@ -8,6 +8,7 @@ import de.shopme.tools.knowledge.carbon.CarbonImpactLevel
 import de.shopme.tools.knowledge.diet.DietClassification
 import de.shopme.tools.knowledge.fairtrade.FairTrade
 import de.shopme.tools.knowledge.foodmiles.FoodMiles
+import de.shopme.tools.knowledge.ingredientgraph.IngredientGraphEntry
 import de.shopme.tools.knowledge.locality.Locality
 import de.shopme.tools.knowledge.nutriscore.NutriScore
 import de.shopme.tools.knowledge.nutrition.NutritionFacts
@@ -16,6 +17,7 @@ import de.shopme.tools.knowledge.pesticide.Pesticide
 import de.shopme.tools.knowledge.pollinator.PollinatorScore
 import de.shopme.tools.knowledge.processing.ProcessingLevel
 import de.shopme.tools.knowledge.production.ProductionMethod
+import de.shopme.tools.knowledge.recipegraph.RecipeGraphEntry
 import de.shopme.tools.knowledge.waterfootprint.WaterFootprint
 import de.shopme.tools.knowledge.waterstress.WaterStress
 
@@ -30,6 +32,8 @@ data class FoodKnowledgeEntry(
     val tags: Set<FoodTag>,
 
     val nutritionReference: String?,
+
+    val carbonReference: String?,
 
     val glycemicIndex: GlycemicIndexLevel,
 
@@ -75,6 +79,10 @@ data class FoodKnowledgeEntry(
 
     val carbonImpact: CarbonImpactLevel?,
 
-    val nutritionFacts: NutritionFacts?
+    val nutritionFacts: NutritionFacts?,
 
-)
+    val ingredientGraph: IngredientGraphEntry?,
+
+    val recipeGraph: RecipeGraphEntry?,
+
+    )

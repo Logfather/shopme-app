@@ -1,6 +1,7 @@
 package de.shopme.testing.system.tools.knowledge.test.enricher
 
 import de.shopme.tools.knowledge.compiler.DefaultFoodKnowledgeBuildCompiler
+import de.shopme.tools.knowledge.compiler.FoodKnowledgeCompilerPipeline
 import de.shopme.tools.knowledge.reader.ResourceCatalogReader
 import org.junit.Test
 import kotlin.test.assertNotNull
@@ -12,7 +13,11 @@ class CompilerInfrastructureTest {
 
         val compiler =
 
-            DefaultFoodKnowledgeBuildCompiler.create()
+            DefaultFoodKnowledgeBuildCompiler.create(
+                FoodKnowledgeCompilerPipeline(
+                    emptyList()
+                )
+            )
 
         assertNotNull(
 
@@ -28,7 +33,11 @@ class CompilerInfrastructureTest {
 
         val compiler =
 
-            DefaultFoodKnowledgeBuildCompiler.create()
+            DefaultFoodKnowledgeBuildCompiler.create(
+                FoodKnowledgeCompilerPipeline(
+                    emptyList()
+                )
+            )
 
         assertNotNull(
 
@@ -43,7 +52,11 @@ class CompilerInfrastructureTest {
 
         val compiler =
 
-            DefaultFoodKnowledgeBuildCompiler.create()
+            DefaultFoodKnowledgeBuildCompiler.create(
+                FoodKnowledgeCompilerPipeline(
+                    emptyList()
+                )
+            )
 
         val reader =
 

@@ -3,11 +3,13 @@ package de.shopme.tools.knowledge.compiler.passes
 import de.shopme.tools.knowledge.carbon.CarbonImpactClassifier
 import de.shopme.tools.knowledge.compiler.CompilerContext
 import de.shopme.tools.knowledge.compiler.FoodKnowledgeCompilerPass
+import de.shopme.tools.knowledge.foods.FoodLookup
 
 class CarbonImpactCompilerPass(
 
-    private val classifier:
-    CarbonImpactClassifier =
+    private val foodLookup: FoodLookup,
+
+    private val classifier: CarbonImpactClassifier =
         CarbonImpactClassifier()
 
 ) : FoodKnowledgeCompilerPass {
@@ -16,16 +18,20 @@ class CarbonImpactCompilerPass(
         context: CompilerContext
     ) {
 
-        val footprint =
-            context.carbonFootprint
-                ?: return
-
         context.carbonImpact =
 
-            classifier.classify(
-                footprint
+            foodLookup.carbonImpact(
+
+                context.normalizedName
+
             )
+                ?: context.carbonFootprint?.let { footprint ->
 
+                    classifier.classify(
+
+                        footprint
+
+                    )
+                }
     }
-
 }

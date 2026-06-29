@@ -25,7 +25,7 @@ class GlycemicIndexKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/glycemic_index.json"
+                        "knowledge.runtime/glycemic_index.json"
 
                     )
 
@@ -92,7 +92,7 @@ class GlycemicIndexKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/glycemic_index.json"
+                        "knowledge.runtime/glycemic_index.json"
 
                     )
 

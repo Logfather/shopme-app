@@ -25,7 +25,7 @@ class PesticideKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/pesticide.json"
+                        "knowledge.runtime/pesticide.json"
 
                     )
 
@@ -92,7 +92,7 @@ class PesticideKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/pesticide.json"
+                        "knowledge.runtime/pesticide.json"
 
                     )
 

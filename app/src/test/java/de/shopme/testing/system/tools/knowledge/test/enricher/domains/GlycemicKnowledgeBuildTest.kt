@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.GlycemicIndexCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.GlycemicKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.glycemic.DefaultGlycemicIndexResolver
 import de.shopme.tools.knowledge.glycemic.StringGlycemicLoader
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
@@ -24,7 +25,7 @@ class GlycemicKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/glycemic_index.json"
+                        "knowledge/runtime/glycemic_index.json"
 
                     )
 
@@ -40,7 +41,8 @@ class GlycemicKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class GlycemicKnowledgeBuildTest :
 
                     GlycemicIndexCompilerPass(
 
-                        glycemicResolver
+                        glycemicResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

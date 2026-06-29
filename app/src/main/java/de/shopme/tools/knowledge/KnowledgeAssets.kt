@@ -3,7 +3,7 @@ package de.shopme.tools.knowledge
 object KnowledgeAssets {
 
     const val ROOT =
-        "knowledge/data/v1/"
+        "knowledge/runtime/"
 
     const val RUNTIME_ROOT =
         "knowledge/runtime/"

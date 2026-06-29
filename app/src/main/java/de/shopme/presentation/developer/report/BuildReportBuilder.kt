@@ -36,9 +36,43 @@ class BuildReportBuilder {
 
     fun build(): BuildReport {
 
+        val builtSections =
+
+            sections.toList()
+
+        val artifacts =
+
+            builtSections.sumOf {
+
+                it.entries.size
+
+            }
+
+        val totalEntries =
+
+            builtSections.sumOf { section ->
+
+                section.entries.sumOf {
+
+                    it.count
+
+                }
+
+            }
+
         return BuildReport(
 
-            sections = sections.toList()
+            summary = BuildReportSummary(
+
+                sections = builtSections.size,
+
+                artifacts = artifacts,
+
+                totalEntries = totalEntries
+
+            ),
+
+            sections = builtSections
 
         )
 

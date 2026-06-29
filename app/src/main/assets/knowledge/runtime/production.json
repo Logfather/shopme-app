@@ -1,25 +1,66 @@
 {
   "entries": {
+
     "apple": [
       "RAW"
     ],
-    "bread": [
-      "BAKED"
+
+    "banana": [
+      "RAW"
     ],
+
+    "tomato": [
+      "RAW"
+    ],
+
     "broccoli": [
       "RAW"
     ],
-    "coffee": [
-      "DRIED"
-    ],
+
     "milk": [
       "RAW"
     ],
+
+    "yogurt": [
+      "FERMENTED"
+    ],
+
+    "cheese": [
+      "FERMENTED"
+    ],
+
+    "bread": [
+      "BAKED"
+    ],
+
+    "toast": [
+      "BAKED"
+    ],
+
+    "coffee": [
+      "DRIED"
+    ],
+
     "tea": [
       "DRIED"
     ],
-    "tomato": [
-      "RAW"
+
+    "pizza_margherita": [
+      "BAKED",
+      "PROCESSED"
+    ],
+
+    "burger": [
+      "PROCESSED"
+    ],
+
+    "cheeseburger": [
+      "ULTRA_PROCESSED"
+    ],
+
+    "ice_cream": [
+      "PROCESSED",
+      "FROZEN"
     ]
   }
 }

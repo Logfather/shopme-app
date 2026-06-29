@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.WaterCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.WaterKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import de.shopme.tools.knowledge.waterfootprint.DefaultWaterResolver
 import de.shopme.tools.knowledge.waterfootprint.StringWaterFootprintLoader
@@ -23,7 +24,7 @@ class WaterKnowledgeBuildTest : BaseKnowledgeBuildTest() {
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/water_footprint.json"
+                        "knowledge/runtime/water_footprint.json"
 
                     )
 
@@ -39,7 +40,8 @@ class WaterKnowledgeBuildTest : BaseKnowledgeBuildTest() {
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -49,7 +51,8 @@ class WaterKnowledgeBuildTest : BaseKnowledgeBuildTest() {
 
                     WaterCompilerPass(
 
-                        waterResolver
+                        waterResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

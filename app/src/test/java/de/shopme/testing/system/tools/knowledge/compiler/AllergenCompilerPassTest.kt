@@ -5,8 +5,9 @@ import de.shopme.testing.system.tools.knowledge.fixture.CompilerContextFixture
 import de.shopme.testing.system.tools.knowledge.fixture.KnowledgeFixtures
 import de.shopme.tools.knowledge.allergen.Allergen
 import de.shopme.tools.knowledge.allergen.DefaultAllergenResolver
-import de.shopme.tools.knowledge.compiler.passes.AllergenCompilerPass
 import de.shopme.tools.knowledge.compiler.CompilerContext
+import de.shopme.tools.knowledge.compiler.passes.AllergenCompilerPass
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -23,7 +24,8 @@ class AllergenCompilerPassTest {
 
     private val pass =
         AllergenCompilerPass(
-            resolver
+            resolver,
+            foodLookup = EmptyFoodLookup
         )
 
     @Test

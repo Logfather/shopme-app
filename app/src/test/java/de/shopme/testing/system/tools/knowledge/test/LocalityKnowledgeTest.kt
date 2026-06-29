@@ -25,7 +25,7 @@ class LocalityKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/locality.json"
+                        "knowledge.runtime/locality.json"
 
                     )
 
@@ -92,7 +92,7 @@ class LocalityKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/locality.json"
+                        "knowledge.runtime/locality.json"
 
                     )
 

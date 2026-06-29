@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.PackagingCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.PackagingKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import de.shopme.tools.knowledge.packaging.DefaultPackagingResolver
 import de.shopme.tools.knowledge.packaging.StringPackagingLoader
@@ -24,7 +25,7 @@ class PackagingKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/packaging.json"
+                        "knowledge/runtime/packaging.json"
 
                     )
 
@@ -40,7 +41,8 @@ class PackagingKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class PackagingKnowledgeBuildTest :
 
                     PackagingCompilerPass(
 
-                        packagingResolver
+                        packagingResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

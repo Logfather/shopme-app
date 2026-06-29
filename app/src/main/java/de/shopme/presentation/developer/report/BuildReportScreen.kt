@@ -109,6 +109,36 @@ fun BuildReportScreen(
 
             )
 
+            Text(
+
+                text = "Sections: ${report.summary.sections}",
+
+                style = MaterialTheme.typography.bodyMedium
+
+            )
+
+            Text(
+
+                text = "Artifacts: ${report.summary.artifacts}",
+
+                style = MaterialTheme.typography.bodyMedium
+
+            )
+
+            Text(
+
+                text = "Entries: ${report.summary.totalEntries}",
+
+                style = MaterialTheme.typography.bodyMedium
+
+            )
+
+            HorizontalDivider(
+
+                modifier = Modifier.padding(vertical = 16.dp)
+
+            )
+
             report.sections.forEach { section ->
 
                 Text(

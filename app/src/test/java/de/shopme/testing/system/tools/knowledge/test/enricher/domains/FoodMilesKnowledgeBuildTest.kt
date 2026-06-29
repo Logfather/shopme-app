@@ -6,6 +6,7 @@ import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.FoodMilesKnowledgeWriter
 import de.shopme.tools.knowledge.foodmiles.DefaultFoodMilesResolver
 import de.shopme.tools.knowledge.foodmiles.StringFoodMilesLoader
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import org.junit.Test
 
@@ -24,7 +25,7 @@ class FoodMilesKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/food_miles.json"
+                        "knowledge/runtime/food_miles.json"
 
                     )
 
@@ -40,7 +41,8 @@ class FoodMilesKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class FoodMilesKnowledgeBuildTest :
 
                     FoodMilesCompilerPass(
 
-                        foodMilesResolver
+                        foodMilesResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

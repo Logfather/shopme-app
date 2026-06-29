@@ -25,7 +25,7 @@ class WaterKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/water_footprint.json"
+                        "knowledge.runtime/water_footprint.json"
 
                     )
 
@@ -92,7 +92,7 @@ class WaterKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/water_footprint.json"
+                        "knowledge.runtime/water_footprint.json"
 
                     )
 

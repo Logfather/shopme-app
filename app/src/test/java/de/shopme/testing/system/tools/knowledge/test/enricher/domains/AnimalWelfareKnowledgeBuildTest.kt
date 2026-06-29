@@ -6,6 +6,7 @@ import de.shopme.tools.knowledge.animalwelfare.StringAnimalWelfareLoader
 import de.shopme.tools.knowledge.compiler.passes.AnimalWelfareCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.AnimalWelfareKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import org.junit.Test
 
@@ -24,7 +25,7 @@ class AnimalWelfareKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/animal_welfare.json"
+                        "knowledge/runtime/animal_welfare.json"
 
                     )
 
@@ -40,7 +41,8 @@ class AnimalWelfareKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class AnimalWelfareKnowledgeBuildTest :
 
                     AnimalWelfareCompilerPass(
 
-                        animalWelfareResolver
+                        animalWelfareResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

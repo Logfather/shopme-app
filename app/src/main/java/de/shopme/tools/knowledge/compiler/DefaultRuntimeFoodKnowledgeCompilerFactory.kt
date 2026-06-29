@@ -41,6 +41,7 @@ import de.shopme.tools.knowledge.fairtrade.DefaultFairTradeResolver
 import de.shopme.tools.knowledge.fairtrade.FairTradeKnowledge
 import de.shopme.tools.knowledge.foodmiles.DefaultFoodMilesResolver
 import de.shopme.tools.knowledge.foodmiles.FoodMilesKnowledge
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.glycemic.DefaultGlycemicIndexResolver
 import de.shopme.tools.knowledge.glycemic.GlycemicIndexKnowledge
 import de.shopme.tools.knowledge.ingredientgraph.DefaultIngredientGraphResolver
@@ -314,36 +315,101 @@ object DefaultRuntimeFoodKnowledgeCompilerFactory {
 
                 listOf(
 
-                    NutritionAliasCompilerPass(aliasResolver),
-                    NutritionCompilerPass(nutritionFactsResolver),
-                    AllergenCompilerPass(allergenResolver),
-                    GlycemicIndexCompilerPass(glycemicIndexResolver),
+                    NutritionAliasCompilerPass(
+                        resolver = aliasResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    NutritionCompilerPass(
+                        resolver = nutritionFactsResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    AllergenCompilerPass(
+                        resolver = allergenResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    GlycemicIndexCompilerPass(
+                        resolver = glycemicIndexResolver,
+                        foodLookup = EmptyFoodLookup),
 
-                    CarbonCompilerPass(carbonFootprintResolver),
-                    WaterCompilerPass(waterResolver),
-                    WaterStressCompilerPass(waterStressResolver),
-                    BiodiversityCompilerPass(biodiversityResolver),
-                    PollinatorCompilerPass(pollinatorResolver),
-                    PesticideCompilerPass(pesticideResolver),
-                    FairTradeCompilerPass(fairTradeResolver),
-                    AnimalWelfareCompilerPass(animalWelfareResolver),
+                    CarbonCompilerPass(carbonFootprintResolver,
+                        foodLookup = EmptyFoodLookup),
 
-                    ProductionCompilerPass(productionResolver),
-                    PackagingCompilerPass(packagingResolver),
-                    ProcessingCompilerPass(processingResolver),
-                    LocalityCompilerPass(localityResolver),
-                    FoodMilesCompilerPass(foodMilesResolver),
-                    TaxonomyCompilerPass(taxonomyResolver),
-                    SeasonalityCompilerPass(seasonalityResolver),
+                    WaterCompilerPass(
+                        resolver = waterResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    WaterStressCompilerPass(
+                        resolver = waterStressResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    BiodiversityCompilerPass(
+                        resolver = biodiversityResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    PollinatorCompilerPass(
+                        resolver = pollinatorResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    PesticideCompilerPass(
+                        resolver = pesticideResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    FairTradeCompilerPass(
+                        resolver = fairTradeResolver,
+                        foodLookup = EmptyFoodLookup),
+                    AnimalWelfareCompilerPass(
+                        resolver = animalWelfareResolver,
+                        foodLookup = EmptyFoodLookup),
 
-                    CarbonImpactCompilerPass(),
-                    DietCompilerPass(dietResolver),
-                    NutriScoreCompilerPass(nutriScoreResolver),
+                    ProductionCompilerPass(
+                        resolver = productionResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    PackagingCompilerPass(
+                        resolver = packagingResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    ProcessingCompilerPass(
+                        resolver = processingResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    LocalityCompilerPass(
+                        resolver = localityResolver,
+                        foodLookup = EmptyFoodLookup),
+                    FoodMilesCompilerPass(
+                        resolver = foodMilesResolver,
+                        foodLookup = EmptyFoodLookup),
+                    TaxonomyCompilerPass(
+                        resolver = taxonomyResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    SeasonalityCompilerPass(
+                        resolver = seasonalityResolver,
+                        foodLookup = EmptyFoodLookup
+                    ),
 
-                    IngredientsCompilerPass(ingredientsResolver),
-                    IngredientGraphCompilerPass(ingredientGraphResolver),
-                    RecipeGraphCompilerPass(recipeGraphResolver),
-                    RecipeCompilerPass(recipeResolver)
+                    CarbonImpactCompilerPass(
+                        foodLookup = EmptyFoodLookup
+                    ),
+                    DietCompilerPass(
+                        resolver = dietResolver,
+                        foodLookup = EmptyFoodLookup),
+                    NutriScoreCompilerPass(
+                        resolver = nutriScoreResolver,
+                        foodLookup = EmptyFoodLookup),
+
+                    IngredientsCompilerPass(
+                        resolver = ingredientsResolver,
+                        foodLookup = EmptyFoodLookup),
+                    IngredientGraphCompilerPass(
+                        resolver = ingredientGraphResolver,
+                        foodLookup = EmptyFoodLookup),
+                    RecipeGraphCompilerPass(
+                        resolver = recipeGraphResolver,
+                        foodLookup = EmptyFoodLookup),
+                    RecipeCompilerPass(
+                        resolver = recipeResolver,
+                        foodLookup = EmptyFoodLookup)
 
                 )
 

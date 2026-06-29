@@ -6,6 +6,7 @@ import de.shopme.tools.knowledge.allergen.StringAllergenLoader
 import de.shopme.tools.knowledge.compiler.passes.AllergenCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.AllergenKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import org.junit.Test
 
@@ -24,7 +25,7 @@ class AllergenKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/allergens.json"
+                        "knowledge/runtime/allergens.json"
 
                     )
 
@@ -40,7 +41,8 @@ class AllergenKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class AllergenKnowledgeBuildTest :
 
                     AllergenCompilerPass(
 
-                        resolver
+                        resolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

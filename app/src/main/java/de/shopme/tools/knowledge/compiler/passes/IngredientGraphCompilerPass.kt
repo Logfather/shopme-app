@@ -2,30 +2,33 @@ package de.shopme.tools.knowledge.compiler.passes
 
 import de.shopme.tools.knowledge.compiler.CompilerContext
 import de.shopme.tools.knowledge.compiler.FoodKnowledgeCompilerPass
+import de.shopme.tools.knowledge.foods.FoodLookup
 import de.shopme.tools.knowledge.ingredientgraph.IngredientGraphResolver
 
 class IngredientGraphCompilerPass(
 
-    private val resolver:
+    private val resolver: IngredientGraphResolver,
 
-    IngredientGraphResolver
+    private val foodLookup: FoodLookup
 
 ) : FoodKnowledgeCompilerPass {
 
     override fun process(
-
         context: CompilerContext
-
     ) {
 
         context.ingredientGraph =
 
-            resolver.resolve(
+            foodLookup.ingredientGraph(
 
-                context.nutritionReference
+                context.normalizedName
 
             )
+                ?: resolver.resolve(
 
+                    context.nutritionReference
+                        ?: context.normalizedName
+
+                )
     }
-
 }

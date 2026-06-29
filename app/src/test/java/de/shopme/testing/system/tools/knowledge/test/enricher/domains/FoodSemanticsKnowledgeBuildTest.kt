@@ -5,6 +5,7 @@ import de.shopme.tools.knowledge.compiler.passes.FoodSemanticsCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.TaxonomyCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.FoodSemanticsKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import de.shopme.tools.knowledge.semantics.DefaultFoodSemanticsResolver
 import de.shopme.tools.knowledge.semantics.StringFoodSemanticsLoader
@@ -27,7 +28,7 @@ class FoodSemanticsKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/food_taxonomy.json"
+                        "knowledge/runtime/food_taxonomy.json"
 
                     )
 
@@ -43,7 +44,7 @@ class FoodSemanticsKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/food_semantics.json"
+                        "knowledge/runtime/food_semantics.json"
 
                     )
 
@@ -59,7 +60,8 @@ class FoodSemanticsKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -69,7 +71,8 @@ class FoodSemanticsKnowledgeBuildTest :
 
                     TaxonomyCompilerPass(
 
-                        taxonomyResolver
+                        taxonomyResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

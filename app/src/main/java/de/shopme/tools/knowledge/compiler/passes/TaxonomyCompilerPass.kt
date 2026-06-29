@@ -2,40 +2,51 @@ package de.shopme.tools.knowledge.compiler.passes
 
 import de.shopme.tools.knowledge.compiler.CompilerContext
 import de.shopme.tools.knowledge.compiler.FoodKnowledgeCompilerPass
+import de.shopme.tools.knowledge.foods.FoodLookup
 import de.shopme.tools.knowledge.taxonomy.FoodTaxonomyResolver
 
 class TaxonomyCompilerPass(
 
-    private val resolver: FoodTaxonomyResolver
+    private val resolver: FoodTaxonomyResolver,
+
+    private val foodLookup: FoodLookup
 
 ) : FoodKnowledgeCompilerPass {
 
     override fun process(
-
         context: CompilerContext
-
     ) {
 
-        val result =
+        val taxonomy =
 
             resolver.resolve(
 
                 context.nutritionReference
+                    ?: context.normalizedName
 
             )
 
-        context.foodTaxonomy =
+        val path =
 
-            result
+            foodLookup.taxonomy(
 
-        if (result != null) {
+                context.normalizedName
 
-            context.taxonomyPath +=
+            )
+                ?: taxonomy?.let { entry ->
 
-                result.parent
+                    listOf(
 
-        }
+                        entry.parent,
 
+                        context.normalizedName
+
+                    )
+                }
+                ?: emptyList()
+
+        context.taxonomyPath.clear()
+
+        context.taxonomyPath.addAll(path)
     }
-
 }

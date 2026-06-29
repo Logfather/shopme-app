@@ -1,97 +1,238 @@
 {
-  "entries": {
-    "barley": [
-      "GLUTEN"
-    ],
-    "beer": [
-      "GLUTEN"
-    ],
-    "bread": [
-      "GLUTEN"
-    ],
-    "butter": [
-      "MILK"
-    ],
-    "cod": [
-      "FISH"
-    ],
-    "croissant": [
-      "GLUTEN",
-      "MILK"
-    ],
-    "egg": [
-      "EGG"
-    ],
-    "feta": [
-      "MILK"
-    ],
-    "gouda": [
-      "MILK"
-    ],
-    "herring": [
-      "FISH"
-    ],
-    "hummus": [
-      "SESAME"
-    ],
-    "kefir": [
-      "MILK"
-    ],
-    "lasagna": [
-      "GLUTEN",
-      "EGG"
-    ],
-    "lobster": [
-      "CRUSTACEAN"
-    ],
-    "mayonnaise": [
-      "EGG",
-      "MUSTARD"
-    ],
-    "milk": [
-      "MILK"
-    ],
-    "mozzarella": [
-      "MILK"
-    ],
-    "muesli": [
-      "GLUTEN",
-      "TREE_NUT"
-    ],
-    "parmesan": [
-      "MILK"
-    ],
-    "pasta": [
-      "GLUTEN"
-    ],
-    "pesto": [
-      "MILK",
-      "TREE_NUT"
-    ],
-    "quark": [
-      "MILK"
-    ],
-    "remoulade": [
-      "EGG",
-      "MUSTARD"
-    ],
-    "salmon": [
-      "FISH"
-    ],
-    "skyr": [
-      "MILK"
-    ],
-    "tempeh": [
-      "SOY"
-    ],
-    "tofu": [
-      "SOY"
-    ],
-    "tuna": [
-      "FISH"
-    ],
-    "wine": [
-      "SULPHITES"
-    ]
+ "entries": {
+  "milk": ["MILK"],
+  "whole_milk": ["MILK"],
+  "skim_milk": ["MILK"],
+  "condensed_milk": ["MILK"],
+  "powdered_milk": ["MILK"],
+  "cream": ["MILK"],
+  "sour_cream": ["MILK"],
+  "creme_fraiche": ["MILK"],
+  "butter": ["MILK"],
+  "ghee": ["MILK"],
+  "yogurt": ["MILK"],
+  "greek_yogurt": ["MILK"],
+  "quark": ["MILK"],
+  "skyr": ["MILK"],
+  "kefir": ["MILK"],
+  "cheese": ["MILK"],
+  "mozzarella": ["MILK"],
+  "cheddar": ["MILK"],
+  "gouda": ["MILK"],
+  "parmesan": ["MILK"],
+  "camembert": ["MILK"],
+  "feta": ["MILK"],
+  "blue_cheese": ["MILK"],
+  "cottage_cheese": ["MILK"],
+  "ricotta": ["MILK"],
+  "mascarpone": ["MILK"],
+  "processed_cheese": ["MILK"],
+  "cream_cheese": ["MILK"],
+  "goat_cheese": ["MILK"],
+  "sheep_cheese": ["MILK"],
+  "brie": ["MILK"],
+  "emmental": ["MILK"],
+  "edam": ["MILK"],
+
+  "egg": ["EGG"],
+  "egg_white": ["EGG"],
+  "egg_yolk": ["EGG"],
+  "mayonnaise": ["EGG", "MUSTARD"],
+
+  "soy": ["SOY"],
+  "soybean": ["SOY"],
+  "soy_milk": ["SOY"],
+  "soy_sauce": ["SOY", "GLUTEN"],
+  "soy_dressing": ["SOY"],
+  "tofu": ["SOY"],
+  "tempeh": ["SOY"],
+  "miso": ["SOY"],
+  "edamame": ["SOY"],
+
+  "peanut": ["PEANUT"],
+  "peanut_butter": ["PEANUT"],
+  "peanut_oil": ["PEANUT"],
+
+  "almond": ["TREE_NUT"],
+  "hazelnut": ["TREE_NUT"],
+  "walnut": ["TREE_NUT"],
+  "cashew": ["TREE_NUT"],
+  "pecan": ["TREE_NUT"],
+  "pecan_nuts": ["TREE_NUT"],
+  "pistachio": ["TREE_NUT"],
+  "macadamia": ["TREE_NUT"],
+  "brazil_nut": ["TREE_NUT"],
+  "pine_nuts": ["TREE_NUT"],
+  "chestnut": ["TREE_NUT"],
+  "mixed_nuts": ["TREE_NUT", "PEANUT"],
+  "nut_mix": ["TREE_NUT", "PEANUT"],
+
+  "chia_seeds": [],
+  "flaxseed": [],
+  "pumpkin_seeds": [],
+  "sunflower_seeds": [],
+  "hemp_seeds": [],
+
+  "wheat": ["GLUTEN"],
+  "spelt": ["GLUTEN"],
+  "rye": ["GLUTEN"],
+  "barley": ["GLUTEN"],
+  "oats": ["GLUTEN"],
+  "flour": ["GLUTEN"],
+  "breadcrumbs": ["GLUTEN"],
+  "semolina": ["GLUTEN"],
+  "couscous": ["GLUTEN"],
+  "bulgur": ["GLUTEN"],
+
+  "bread": ["GLUTEN"],
+  "whole_wheat_bread": ["GLUTEN"],
+  "rye_bread": ["GLUTEN"],
+  "sourdough_bread": ["GLUTEN"],
+  "toast": ["GLUTEN"],
+  "baguette": ["GLUTEN"],
+  "bun": ["GLUTEN"],
+  "bread_roll": ["GLUTEN"],
+  "bagel": ["GLUTEN"],
+  "wrap": ["GLUTEN"],
+  "tortilla": ["GLUTEN"],
+  "pita": ["GLUTEN"],
+  "ciabatta": ["GLUTEN"],
+  "crispbread": ["GLUTEN"],
+  "pretzel": ["GLUTEN"],
+  "croissant": ["GLUTEN", "MILK"],
+
+  "pasta": ["GLUTEN"],
+  "lasagna": ["GLUTEN", "EGG"],
+  "noodles": ["GLUTEN"],
+  "pizza_dough": ["GLUTEN"],
+
+  "cornflakes": [],
+  "bran_flakes": ["GLUTEN"],
+  "oatmeal": ["GLUTEN"],
+  "porridge": ["GLUTEN"],
+  "breakfast_cereal": ["GLUTEN"],
+  "muesli": ["GLUTEN", "TREE_NUT"],
+  "granola": ["TREE_NUT"],
+  "fruit_muesli": ["GLUTEN", "TREE_NUT"],
+  "chocolate_muesli": ["GLUTEN", "TREE_NUT"],
+
+  "cake": ["GLUTEN", "EGG", "MILK"],
+  "muffin": ["GLUTEN", "EGG", "MILK"],
+  "biscuit": ["GLUTEN", "EGG", "MILK"],
+  "cookie": ["GLUTEN", "EGG", "MILK"],
+  "waffle": ["GLUTEN", "EGG", "MILK"],
+  "pancake": ["GLUTEN", "EGG", "MILK"],
+  "cheesecake": ["GLUTEN", "EGG", "MILK"],
+
+  "mustard": ["MUSTARD"],
+  "mustard_sauce": ["MUSTARD"],
+  "barbecue_sauce": ["MUSTARD"],
+  "curry_paste": ["MUSTARD"],
+  "vinaigrette": ["MUSTARD"],
+
+  "celery": ["CELERY"],
+  "celery_root": ["CELERY"],
+
+  "sesame": ["SESAME"],
+  "sesame_oil": ["SESAME"],
+  "tahini": ["SESAME"],
+  "hummus": ["SESAME"],
+
+  "lupin": ["LUPIN"],
+  "lupin_flour": ["LUPIN"],
+
+  "shrimp": ["CRUSTACEAN"],
+  "prawn": ["CRUSTACEAN"],
+  "crab": ["CRUSTACEAN"],
+  "lobster": ["CRUSTACEAN"],
+
+  "mussel": ["MOLLUSC"],
+  "clam": ["MOLLUSC"],
+  "oyster": ["MOLLUSC"],
+  "squid": ["MOLLUSC"],
+  "octopus": ["MOLLUSC"],
+  "scallop": ["MOLLUSC"],
+  "cuttlefish": ["MOLLUSC"],
+
+  "salmon": ["FISH"],
+  "tuna": ["FISH"],
+  "cod": ["FISH"],
+  "herring": ["FISH"],
+  "mackerel": ["FISH"],
+  "anchovy": ["FISH"],
+  "sardine": ["FISH"],
+  "trout": ["FISH"],
+  "pollock": ["FISH"],
+  "halibut": ["FISH"],
+  "eel": ["FISH"],
+
+  "fish_sauce": ["FISH"],
+  "oyster_sauce": ["MOLLUSC"],
+  "teriyaki_sauce": ["SOY", "GLUTEN"],
+  "hoisin_sauce": ["SOY", "GLUTEN"],
+  "worcestershire_sauce": ["FISH"],
+
+  "pesto": ["TREE_NUT", "MILK"],
+  "caesar_dressing": ["EGG", "MILK", "FISH"],
+  "aioli": ["EGG"],
+  "remoulade": ["EGG", "MUSTARD"],
+
+  "lentils": [],
+  "red_lentils": [],
+  "green_lentils": [],
+  "kidney_beans": [],
+  "white_beans": [],
+  "black_beans": [],
+  "peas": [],
+  "green_peas": [],
+  "chickpeas": [],
+  "baked_beans": [],
+  "falafel": [],
+
+  "ham": [],
+  "cooked_ham": [],
+  "salami": [],
+  "bacon": [],
+  "sausage": [],
+  "chicken_breast": [],
+  "turkey": [],
+  "beef": [],
+  "pork": [],
+  "veal": [],
+  "lamb": [],
+
+  "ice_cream": ["MILK"],
+  "milk_chocolate": ["MILK"],
+  "white_chocolate": ["MILK"],
+  "dark_chocolate": [],
+  "hazelnut_chocolate": ["MILK", "TREE_NUT"],
+  "nougat": ["MILK", "TREE_NUT"],
+  "marzipan": ["TREE_NUT"],
+  "praline": ["MILK", "TREE_NUT"],
+  "chocolate_spread": ["MILK", "TREE_NUT"],
+
+  "beer": ["GLUTEN"],
+  "malt_beverage": ["GLUTEN"],
+  "wine": ["SULPHITES"],
+  "dried_fruit": ["SULPHITES"],
+
+  "olive_oil": [],
+  "sunflower_oil": [],
+  "rapeseed_oil": [],
+  "coconut_oil": [],
+  "avocado_oil": [],
+  "corn_oil": [],
+
+  "rice": [],
+  "potato": [],
+  "tomato": [],
+  "banana": [],
+  "apple": [],
+  "carrot": [],
+  "broccoli": [],
+  "spinach": [],
+  "coffee": [],
+  "tea": [],
+  "water": []
   }
 }

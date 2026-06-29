@@ -6,6 +6,7 @@ import de.shopme.tools.knowledge.biodiversity.StringBiodiversityLoader
 import de.shopme.tools.knowledge.compiler.passes.BiodiversityCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.BiodiversityKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import org.junit.Test
 
@@ -24,7 +25,7 @@ class BiodiversityKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/biodiversity.json"
+                        "knowledge/runtime/biodiversity.json"
 
                     )
 
@@ -40,7 +41,8 @@ class BiodiversityKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class BiodiversityKnowledgeBuildTest :
 
                     BiodiversityCompilerPass(
 
-                        biodiversityResolver
+                        biodiversityResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

@@ -25,7 +25,7 @@ class PollinatorKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/pollinator.json"
+                        "knowledge.runtime/pollinator.json"
 
                     )
 
@@ -92,7 +92,7 @@ class PollinatorKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/pollinator.json"
+                        "knowledge.runtime/pollinator.json"
 
                     )
 

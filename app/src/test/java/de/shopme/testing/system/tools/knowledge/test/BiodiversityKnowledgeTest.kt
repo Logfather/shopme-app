@@ -25,7 +25,7 @@ class BiodiversityKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/biodiversity.json"
+                        "knowledge.runtime/biodiversity.json"
 
                     )
 
@@ -92,7 +92,7 @@ class BiodiversityKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/biodiversity.json"
+                        "knowledge.runtime/biodiversity.json"
 
                     )
 

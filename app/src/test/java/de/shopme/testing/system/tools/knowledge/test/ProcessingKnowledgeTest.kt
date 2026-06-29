@@ -25,7 +25,7 @@ class ProcessingKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/processing.json"
+                        "knowledge.runtime/processing.json"
 
                     )
 
@@ -92,7 +92,7 @@ class ProcessingKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/processing.json"
+                        "knowledge.runtime/processing.json"
 
                     )
 

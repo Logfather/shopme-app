@@ -33,7 +33,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -73,7 +72,6 @@ import de.shopme.app.services.AppServices
 import de.shopme.data.input.speech.SpeechController
 import de.shopme.data.sync.logging.RuntimeLog
 import de.shopme.data.sync.logging.SyncLog
-import de.shopme.domain.catalog.CatalogItem
 import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.service.CatalogService
 import de.shopme.presentation.action.ShoppingAction
@@ -83,7 +81,7 @@ import de.shopme.presentation.components.ShopBuddyState
 import de.shopme.presentation.event.ShopEvent
 import de.shopme.presentation.state.ShoppingScreenMode
 import de.shopme.presentation.viewmodel.ShoppingViewModel
-import de.shopme.tools.knowledge.compiler.FoodKnowledgeCompilerTestRunner
+import de.shopme.tools.knowledge.dimension.explorer.KnowledgeExplorerProvider
 import de.shopme.ui.components.SupermarketItemRow
 import de.shopme.ui.components.button.ShopBuddyButton
 import de.shopme.ui.theme.AppButtonDefaults
@@ -109,7 +107,9 @@ fun ShoppingScreen(
 
     speechController: SpeechController,
 
-    catalogService: CatalogService
+    catalogService: CatalogService,
+
+    knowledgeExplorerProvider: KnowledgeExplorerProvider
 
 ) {
 
@@ -722,6 +722,9 @@ fun ShoppingScreen(
 
                                         productionNutritionPipeline =
                                             productionNutritionPipeline,
+
+                                        knowledgeExplorerProvider =
+                                            knowledgeExplorerProvider,
 
                                         nutritionInsightService =
                                             nutritionInsightService

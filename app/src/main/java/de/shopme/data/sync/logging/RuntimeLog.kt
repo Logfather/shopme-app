@@ -9,6 +9,24 @@ object RuntimeLog {
     // INTERNAL
     // ------------------------------------------------------------
 
+
+    private fun safeDebug(
+        tag: String,
+        message: String
+    ) {
+        try {
+
+            android.util.Log.d(
+                tag,
+                message
+            )
+
+        } catch (_: RuntimeException) {
+
+            println("$tag: $message")
+        }
+    }
+
     private fun debug(
         tag: String,
         message: String
@@ -18,9 +36,9 @@ object RuntimeLog {
             return
         }
 
-        Log.d(
-            tag,
-            message
+        safeDebug(
+            tag = tag,
+            message = message
         )
     }
 

@@ -1,18 +1,27 @@
 {
   "entries": {
-    "hummus": {
-      "ingredients": [
-        "chickpeas",
-        "tahini",
-        "olive_oil",
-        "lemon"
-      ]
-    },
-    "mayonnaise": {
+    "aioli": {
       "ingredients": [
         "egg",
-        "oil",
+        "garlic",
+        "olive_oil"
+      ]
+    },
+    "caesar_dressing": {
+      "ingredients": [
+        "egg",
+        "olive_oil",
+        "parmesan",
+        "anchovy",
         "mustard"
+      ]
+    },
+    "remoulade": {
+      "ingredients": [
+        "egg",
+        "mustard",
+        "oil",
+        "pickle"
       ]
     },
     "pesto": {
@@ -23,12 +32,144 @@
         "pine_nuts"
       ]
     },
-    "remoulade": {
+    "hummus": {
+      "ingredients": [
+        "chickpeas",
+        "tahini",
+        "olive_oil",
+        "lemon"
+      ]
+    },
+    "falafel": {
+      "ingredients": [
+        "chickpeas",
+        "parsley",
+        "onion",
+        "garlic"
+      ]
+    },
+    "mayonnaise": {
       "ingredients": [
         "egg",
-        "mustard",
         "oil",
-        "pickle"
+        "mustard"
+      ]
+    },
+    "pizza_margherita": {
+      "ingredients": [
+        "pizza_dough",
+        "tomato",
+        "mozzarella"
+      ]
+    },
+    "cheesecake": {
+      "ingredients": [
+        "cream_cheese",
+        "egg",
+        "sugar",
+        "biscuit"
+      ]
+    },
+    "granola": {
+      "ingredients": [
+        "oats",
+        "nuts",
+        "honey"
+      ]
+    },
+    "fruit_muesli": {
+      "ingredients": [
+        "oats",
+        "dried_fruit",
+        "nuts"
+      ]
+    },
+    "chocolate_muesli": {
+      "ingredients": [
+        "oats",
+        "chocolate",
+        "nuts"
+      ]
+    },
+    "peanut_butter": {
+      "ingredients": [
+        "peanut"
+      ]
+    },
+    "milk_chocolate": {
+      "ingredients": [
+        "milk",
+        "cocoa",
+        "sugar"
+      ]
+    },
+    "white_chocolate": {
+      "ingredients": [
+        "milk",
+        "cocoa_butter",
+        "sugar"
+      ]
+    },
+    "hazelnut_chocolate": {
+      "ingredients": [
+        "milk",
+        "hazelnut",
+        "cocoa",
+        "sugar"
+      ]
+    },
+    "nougat": {
+      "ingredients": [
+        "hazelnut",
+        "milk",
+        "sugar"
+      ]
+    },
+    "marzipan": {
+      "ingredients": [
+        "almond",
+        "sugar"
+      ]
+    },
+    "chocolate_spread": {
+      "ingredients": [
+        "hazelnut",
+        "milk",
+        "cocoa",
+        "sugar"
+      ]
+    },
+    "soy_sauce": {
+      "ingredients": [
+        "soybean",
+        "wheat",
+        "salt"
+      ]
+    },
+    "teriyaki_sauce": {
+      "ingredients": [
+        "soy_sauce",
+        "sugar",
+        "ginger"
+      ]
+    },
+    "hoisin_sauce": {
+      "ingredients": [
+        "soybean",
+        "wheat",
+        "vinegar"
+      ]
+    },
+    "fish_sauce": {
+      "ingredients": [
+        "anchovy",
+        "salt"
+      ]
+    },
+    "oyster_sauce": {
+      "ingredients": [
+        "oyster",
+        "soy_sauce"
       ]
     }
   }

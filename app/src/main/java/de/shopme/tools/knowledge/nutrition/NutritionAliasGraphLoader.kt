@@ -33,19 +33,64 @@ class NutritionAliasGraphLoader(
 
                 }
 
+        validateNoDuplicateKeys(
+            json
+        )
+
         val type =
 
             object :
                 TypeToken<Map<String, String>>() {}.type
 
-        return gson.fromJson(
+        return gson.fromJson<Map<String, String>>(
 
             json,
 
             type
 
         )
+            .toSortedMap()
+    }
 
+    private fun validateNoDuplicateKeys(
+        json: String
+    ) {
+
+        val keys =
+
+            Regex(
+                """"([^"]+)"\s*:"""
+            )
+                .findAll(
+                    json
+                )
+                .map {
+                    it.groupValues[1]
+                }
+                .toList()
+
+        val duplicateKeys =
+
+            keys
+                .groupingBy {
+                    it
+                }
+                .eachCount()
+                .filterValues { count ->
+
+                    count > 1
+
+                }
+                .keys
+                .sorted()
+
+        require(
+            duplicateKeys.isEmpty()
+        ) {
+
+            "Duplicate nutrition alias keys found: $duplicateKeys"
+
+        }
     }
 
 }

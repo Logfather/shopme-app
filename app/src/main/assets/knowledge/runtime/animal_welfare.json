@@ -1,25 +1,36 @@
 {
   "entries": {
-    "beef": {
-      "score": 0.2
+
+    "egg": { "score": 0.60 },
+
+    "milk": { "score": 0.55 },
+    "whole_milk": { "score": 0.55 },
+    "yogurt": { "score": 0.55 },
+
+    "cheese": { "score": 0.40 },
+    "parmesan": { "score": 0.30 },
+
+    "chicken_breast": { "score": 0.45 },
+    "turkey": { "score": 0.45 },
+
+    "pork": { "score": 0.25 },
+
+    "beef": { "score": 0.20 },
+
+    "lamb": { "score": 0.15 },
+
+    "tofu": { "score": 1.00 },
+
+    "lentils": { "score": 1.00 },
+
+    "peas": { "score": 1.00 },
+    "pear": {
+      "score": 1.00
     },
-    "egg": {
-      "score": 0.6
-    },
-    "lentils": {
-      "score": 1.0
-    },
-    "milk": {
-      "score": 0.55
-    },
-    "parmesan": {
-      "score": 0.3
-    },
-    "pork": {
-      "score": 0.25
-    },
-    "tofu": {
-      "score": 1.0
+
+    "quince": {
+      "score": 1.00
     }
+
   }
 }

@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.PollinatorCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.PollinatorKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import de.shopme.tools.knowledge.pollinator.DefaultPollinatorResolver
 import de.shopme.tools.knowledge.pollinator.StringPollinatorLoader
@@ -24,7 +25,7 @@ class PollinatorKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/pollinator.json"
+                        "knowledge/runtime/pollinator.json"
 
                     )
 
@@ -40,7 +41,8 @@ class PollinatorKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class PollinatorKnowledgeBuildTest :
 
                     PollinatorCompilerPass(
 
-                        resolver
+                        resolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.SeasonalityCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.SeasonalityKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import de.shopme.tools.knowledge.seasonality.DefaultSeasonalityResolver
 import de.shopme.tools.knowledge.seasonality.StringSeasonalityLoader
@@ -24,7 +25,7 @@ class SeasonalityKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/seasonality.json"
+                        "knowledge/runtime/seasonality.json"
 
                     )
 
@@ -40,7 +41,8 @@ class SeasonalityKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class SeasonalityKnowledgeBuildTest :
 
                     SeasonalityCompilerPass(
 
-                        resolver
+                        resolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

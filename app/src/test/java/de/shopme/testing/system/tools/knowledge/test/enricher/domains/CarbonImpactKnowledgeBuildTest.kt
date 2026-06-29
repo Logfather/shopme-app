@@ -7,6 +7,7 @@ import de.shopme.tools.knowledge.compiler.passes.CarbonCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.CarbonImpactCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.CarbonImpactKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import org.junit.Test
 
@@ -25,7 +26,7 @@ class CarbonImpactKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/carbon_footprint.json"
+                        "knowledge/runtime/carbon_footprint.json"
 
                     )
 
@@ -41,7 +42,8 @@ class CarbonImpactKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,16 +52,16 @@ class CarbonImpactKnowledgeBuildTest :
                 .add(
 
                     CarbonCompilerPass(
-
-                        carbonResolver
-
+                        carbonResolver,
+                        foodLookup = EmptyFoodLookup
                     )
 
                 )
 
                 .add(
 
-                    CarbonImpactCompilerPass()
+                    CarbonImpactCompilerPass(
+                        foodLookup = EmptyFoodLookup)
 
                 )
 

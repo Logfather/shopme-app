@@ -2,11 +2,14 @@ package de.shopme.tools.knowledge.compiler.passes
 
 import de.shopme.tools.knowledge.compiler.CompilerContext
 import de.shopme.tools.knowledge.compiler.FoodKnowledgeCompilerPass
+import de.shopme.tools.knowledge.foods.FoodLookup
 import de.shopme.tools.knowledge.production.ProductionResolver
 
 class ProductionCompilerPass(
 
-    private val resolver: ProductionResolver
+    private val resolver: ProductionResolver,
+
+    private val foodLookup: FoodLookup
 
 ) : FoodKnowledgeCompilerPass {
 
@@ -16,14 +19,18 @@ class ProductionCompilerPass(
 
         val result =
 
-            resolver.resolve(
+            foodLookup.production(
 
-                context.nutritionReference
+                context.normalizedName
 
             )
+                ?: resolver.resolve(
+
+                    context.nutritionReference
+                        ?: context.normalizedName
+
+                )
 
         context.production += result
-
     }
-
 }

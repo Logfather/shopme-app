@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.TaxonomyCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.FoodTaxonomyKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import de.shopme.tools.knowledge.taxonomy.DefaultFoodTaxonomyResolver
 import de.shopme.tools.knowledge.taxonomy.StringFoodTaxonomyLoader
@@ -24,7 +25,7 @@ class FoodTaxonomyKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/food_taxonomy.json"
+                        "knowledge/runtime/food_taxonomy.json"
 
                     )
 
@@ -40,7 +41,8 @@ class FoodTaxonomyKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class FoodTaxonomyKnowledgeBuildTest :
 
                     TaxonomyCompilerPass(
 
-                        resolver
+                        resolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

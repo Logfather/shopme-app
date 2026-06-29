@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.IngredientGraphCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.IngredientGraphKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.ingredientgraph.DefaultIngredientGraphResolver
 import de.shopme.tools.knowledge.ingredientgraph.StringIngredientGraphLoader
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
@@ -24,7 +25,7 @@ class IngredientGraphKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/ingredient_graph.json"
+                        "knowledge/runtime/ingredient_graph.json"
 
                     )
 
@@ -40,7 +41,8 @@ class IngredientGraphKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class IngredientGraphKnowledgeBuildTest :
 
                     IngredientGraphCompilerPass(
 
-                        resolver
+                        resolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

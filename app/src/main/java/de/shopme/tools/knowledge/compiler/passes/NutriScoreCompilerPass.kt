@@ -2,11 +2,14 @@ package de.shopme.tools.knowledge.compiler.passes
 
 import de.shopme.tools.knowledge.compiler.CompilerContext
 import de.shopme.tools.knowledge.compiler.FoodKnowledgeCompilerPass
+import de.shopme.tools.knowledge.foods.FoodLookup
 import de.shopme.tools.knowledge.nutriscore.NutriScoreResolver
 
 class NutriScoreCompilerPass(
 
-    private val resolver: NutriScoreResolver
+    private val resolver: NutriScoreResolver,
+
+    private val foodLookup: FoodLookup
 
 ) : FoodKnowledgeCompilerPass {
 
@@ -16,12 +19,16 @@ class NutriScoreCompilerPass(
 
         context.nutriScore =
 
-            resolver.resolve(
+            foodLookup.nutriScore(
 
-                context.nutritionReference
+                context.normalizedName
 
             )
+                ?: resolver.resolve(
 
+                    context.nutritionReference
+                        ?: context.normalizedName
+
+                )
     }
-
 }

@@ -25,7 +25,7 @@ class CarbonKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/carbon_footprint.json"
+                        "knowledge.runtime/carbon_footprint.json"
 
                     )
 
@@ -92,7 +92,7 @@ class CarbonKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/carbon_footprint.json"
+                        "knowledge.runtime/carbon_footprint.json"
 
                     )
 

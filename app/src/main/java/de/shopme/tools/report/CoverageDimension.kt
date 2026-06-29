@@ -1,6 +1,6 @@
 package de.shopme.tools.report
 
-import de.shopme.presentation.developer.foodintelligence.KnowledgeSection
+import de.shopme.tools.knowledge.dimension.KnowledgeSection
 
 enum class CoverageDimension(
 

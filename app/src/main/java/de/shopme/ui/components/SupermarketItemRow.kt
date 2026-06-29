@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,13 +33,12 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import de.shopme.domain.model.ShoppingItem
 import de.shopme.domain.nutrition.pipeline.ProductionNutritionPipeline
-import de.shopme.domain.nutrition.provider.FakeNutriScoreProvider
 import de.shopme.domain.nutrition.service.NutritionInsightService
 import de.shopme.domain.service.CatalogService
-import de.shopme.presentation.components.foodintelligence.FoodIntelligenceOverview
-import de.shopme.presentation.components.foodintelligence.FoodIntelligenceSection
 import de.shopme.presentation.components.foodintelligence.InfoChip
 import de.shopme.presentation.mapper.toUiState
+import de.shopme.tools.knowledge.dimension.KnowledgeIndicator
+import de.shopme.tools.knowledge.dimension.explorer.KnowledgeExplorerProvider
 import de.shopme.ui.theme.BrandBlack
 import de.shopme.ui.theme.BrandOlive
 
@@ -54,24 +52,37 @@ fun SupermarketItemRow(
     onUpdate: (String) -> Unit,
     catalogService: CatalogService,
     productionNutritionPipeline: ProductionNutritionPipeline,
-    nutritionInsightService: NutritionInsightService
-){
+    nutritionInsightService: NutritionInsightService,
+    knowledgeExplorerProvider: KnowledgeExplorerProvider
+) {
 
     var isEditing by remember(item.id) {
         mutableStateOf(!item.isChecked)
     }
 
-    var textFieldValue by rememberSaveable(item.id, stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue(item.name))
+    var textFieldValue by rememberSaveable(
+        item.id,
+        stateSaver = TextFieldValue.Saver
+    ) {
+        mutableStateOf(
+            TextFieldValue(item.name)
+        )
     }
 
-    var showNutritionDialog by remember {
+    var showFoodIntelligence by remember {
         mutableStateOf(false)
     }
 
-    LaunchedEffect(item.id, item.name) {
-        if (!isEditing && textFieldValue.text != item.name) {
-            textFieldValue = TextFieldValue(item.name)
+    LaunchedEffect(
+        item.id,
+        item.name
+    ) {
+        if (
+            !isEditing &&
+            textFieldValue.text != item.name
+        ) {
+            textFieldValue =
+                TextFieldValue(item.name)
         }
     }
 
@@ -81,7 +92,10 @@ fun SupermarketItemRow(
         }
     }
 
-    val focusRequester = remember { FocusRequester() }
+    val focusRequester =
+        remember {
+            FocusRequester()
+        }
 
     LaunchedEffect(isEditing) {
         if (isEditing) {
@@ -89,42 +103,40 @@ fun SupermarketItemRow(
         }
     }
 
-    val keyboardController = LocalSoftwareKeyboardController.current
+    val keyboardController =
+        LocalSoftwareKeyboardController.current
 
-    val catalogItem = remember(item.name) {
-        catalogService.resolveExactSpeech(item.name)
-    }
+    val catalogItem =
+        remember(item.name) {
+            catalogService.resolveExactSpeech(item.name)
+        }
 
-    val nutriScore = remember(catalogItem) {
-        FakeNutriScoreProvider.getScore(
-            catalogItem?.nutritionReference
-        )
-    }
+    val knowledgeExplorerModel =
+        remember(catalogItem) {
+            catalogItem?.let {
+                knowledgeExplorerProvider.create(it)
+            }
+        }
 
-    var showFoodIntelligence by remember {
-        mutableStateOf(false)
-    }
-
-    var selectedSection by remember {
-        mutableStateOf<FoodIntelligenceSection?>(null)
-    }
+    val nutriScoreResult =
+        knowledgeExplorerModel?.nutriScore
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp)
-            .background(BrandOlive),
-
-
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp)
+                .background(BrandOlive),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
 
         Box(
-            modifier = Modifier
-                .width(6.dp)
-                .height(40.dp)
-                .background(categoryColor)
+            modifier =
+                Modifier
+                    .width(6.dp)
+                    .height(40.dp)
+                    .background(categoryColor)
         )
 
         Spacer(Modifier.width(12.dp))
@@ -132,6 +144,7 @@ fun SupermarketItemRow(
         Checkbox(
             checked = item.isChecked,
             onCheckedChange = { checked ->
+
                 onToggle(checked)
 
                 if (!checked) {
@@ -146,10 +159,13 @@ fun SupermarketItemRow(
 
             TextField(
                 value = textFieldValue,
-                onValueChange = { textFieldValue = it },
-                modifier = Modifier
-                    .weight(1f)
-                    .focusRequester(focusRequester),
+                onValueChange = {
+                    textFieldValue = it
+                },
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester),
                 singleLine = true
             )
 
@@ -158,17 +174,23 @@ fun SupermarketItemRow(
             TextButton(
                 onClick = {
 
-                    val newText = textFieldValue.text.trim()
+                    val newText =
+                        textFieldValue.text.trim()
 
                     if (newText.isNotBlank()) {
-                        textFieldValue = TextFieldValue(
-                            text = newText,
-                            selection = TextRange(newText.length)
-                        )
+
+                        textFieldValue =
+                            TextFieldValue(
+                                text = newText,
+                                selection =
+                                    TextRange(newText.length)
+                            )
                     }
 
                     onUpdate(newText)
+
                     isEditing = false
+
                     keyboardController?.hide()
                 }
             ) {
@@ -178,6 +200,7 @@ fun SupermarketItemRow(
                     color = BrandBlack
                 )
             }
+
         } else {
 
             Text(
@@ -188,95 +211,47 @@ fun SupermarketItemRow(
 
             Spacer(Modifier.width(12.dp))
 
-            catalogItem?.nutritionReference?.let { nutritionReference ->
+            if (
+                catalogItem != null &&
+                nutriScoreResult != null &&
+                nutriScoreResult.indicator != KnowledgeIndicator.UNKNOWN
+            ) {
 
-                nutriScore?.let {
-
-                    NutriScoreBadge(
-
-                        score = nutriScore,
-
-                        onClick = {
-
-                            showNutritionDialog = true
-
-                        }
-
-                    )
-
-                    if (showNutritionDialog) {
-
-                        NutritionDetailDialog(
-
-                            productName = catalogItem.itemname,
-
-                            nutritionReference = nutritionReference,
-
-                            productionNutritionPipeline =
-                                productionNutritionPipeline,
-
-                            nutritionInsightService =
-                                nutritionInsightService,
-
-                            onDismiss = {
-
-                                showNutritionDialog = false
-
-                            }
-
-                        )
+                NutriScoreBadge(
+                    score = nutriScoreResult.summary,
+                    onClick = {
+                        showFoodIntelligence = true
                     }
-                }
-            }
-
-
-
-            InfoChip(
-
-                onClick = {
-
-                    showFoodIntelligence = true
-
-                }
-
-            )
-
-            if (showFoodIntelligence) {
-
-                AlertDialog(
-
-                    onDismissRequest = {
-
-                        showFoodIntelligence = false
-
-                    },
-
-                    confirmButton = {},
-
-                    text = {
-
-                        FoodIntelligenceOverview(
-
-                            itemName = item.name,
-
-                            onDismiss = {
-
-                                showFoodIntelligence = false
-
-                            }
-
-                        )
-
-                    }
-
                 )
 
+                Spacer(Modifier.width(8.dp))
+            }
+
+            InfoChip(
+                onClick = {
+                    showFoodIntelligence = true
+                }
+            )
+
+            if (
+                showFoodIntelligence &&
+                knowledgeExplorerModel != null
+            ) {
+
+                KnowledgeExplorerDialog(
+                    model = knowledgeExplorerModel,
+                    onDismiss = {
+                        showFoodIntelligence = false
+                    }
+                )
             }
 
             Spacer(Modifier.width(12.dp))
 
             TextButton(
-                onClick = { onDelete() }
+                onClick = {
+                    onDelete()
+                }
             ) {
                 Text(
                     text = "Löschen",
@@ -286,16 +261,22 @@ fun SupermarketItemRow(
             }
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(
+            modifier = Modifier.width(8.dp)
+        )
 
+        Box(
+            modifier = Modifier.size(24.dp)
+        ) {
 
-        Box(modifier = Modifier.size(24.dp)) {
+            val stableStatus =
+                item.syncStatus
 
-            val stableStatus = item.syncStatus
+            val uiState =
+                remember(stableStatus) {
+                    stableStatus.toUiState()
+                }
 
-            val uiState = remember(stableStatus) {
-                stableStatus.toUiState()
-            }
             SyncStatusIcon(
                 state = uiState,
                 onRetry = {

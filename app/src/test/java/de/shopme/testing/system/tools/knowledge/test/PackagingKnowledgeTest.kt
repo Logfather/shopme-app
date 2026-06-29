@@ -25,7 +25,7 @@ class PackagingKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/packaging.json"
+                        "knowledge.runtime/packaging.json"
 
                     )
 
@@ -92,7 +92,7 @@ class PackagingKnowledgeTest {
 
                     javaClass.classLoader.getResourceAsStream(
 
-                        "knowledge/data/v1/packaging.json"
+                        "knowledge.runtime/packaging.json"
 
                     )
 

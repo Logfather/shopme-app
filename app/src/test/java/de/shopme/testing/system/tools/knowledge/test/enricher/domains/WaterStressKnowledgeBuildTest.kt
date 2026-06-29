@@ -4,6 +4,7 @@ import de.shopme.testing.system.tools.knowledge.test.enricher.TestFoodKnowledgeC
 import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.WaterStressCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.WaterStressKnowledgeWriter
+import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
 import de.shopme.tools.knowledge.waterstress.DefaultWaterStressResolver
 import de.shopme.tools.knowledge.waterstress.StringWaterStressLoader
@@ -24,7 +25,7 @@ class WaterStressKnowledgeBuildTest :
 
                     ResourceKnowledgeLoader.load(
 
-                        "knowledge/data/v1/water_stress.json"
+                        "knowledge/runtime/water_stress.json"
 
                     )
 
@@ -40,7 +41,8 @@ class WaterStressKnowledgeBuildTest :
 
                     NutritionAliasCompilerPass(
 
-                        aliasResolver
+                        aliasResolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 
@@ -50,7 +52,8 @@ class WaterStressKnowledgeBuildTest :
 
                     WaterStressCompilerPass(
 
-                        resolver
+                        resolver,
+                        foodLookup = EmptyFoodLookup
 
                     )
 

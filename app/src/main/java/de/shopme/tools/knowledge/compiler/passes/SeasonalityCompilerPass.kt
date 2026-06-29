@@ -2,11 +2,14 @@ package de.shopme.tools.knowledge.compiler.passes
 
 import de.shopme.tools.knowledge.compiler.CompilerContext
 import de.shopme.tools.knowledge.compiler.FoodKnowledgeCompilerPass
+import de.shopme.tools.knowledge.foods.FoodLookup
 import de.shopme.tools.knowledge.seasonality.SeasonalityResolver
 
 class SeasonalityCompilerPass(
 
-    private val resolver: SeasonalityResolver
+    private val resolver: SeasonalityResolver,
+
+    private val foodLookup: FoodLookup
 
 ) : FoodKnowledgeCompilerPass {
 
@@ -16,16 +19,20 @@ class SeasonalityCompilerPass(
 
         val result =
 
-            resolver.resolve(
+            foodLookup.seasonality(
 
-                context.nutritionReference
+                context.normalizedName
 
             )
+                ?: resolver.resolve(
 
-        context.seasonality +=
+                    context.nutritionReference
+                        ?: context.normalizedName
 
-            result
+                )
 
+        context.seasonality.clear()
+
+        context.seasonality.addAll(result)
     }
-
 }
