@@ -24,7 +24,7 @@ class OFFMissingCarbonVariantAnalysisTest {
 
         val carbonFile =
             File(
-                "build/off/off_carbon_knowledge_artifact_candidates.json"
+                "data/generated/off/off_carbon_knowledge_artifact_candidates.json"
             )
 
         require(carbonFile.exists()) {

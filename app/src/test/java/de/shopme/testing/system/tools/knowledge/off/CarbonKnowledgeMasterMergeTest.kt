@@ -29,7 +29,7 @@ class CarbonKnowledgeMasterMergeTest {
 
         val offFile =
             File(
-                "build/off/carbon_footprint_final.json"
+                "data/generated/off/carbon_footprint_final.json"
             )
 
         if (!masterFile.exists()) {

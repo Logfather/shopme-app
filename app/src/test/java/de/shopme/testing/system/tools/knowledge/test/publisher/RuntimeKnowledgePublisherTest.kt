@@ -11,14 +11,14 @@ class RuntimeKnowledgePublishBuildTest {
     fun publishGeneratedRuntimeKnowledge() {
 
         val generatedDirectory =
-            File("build/generated")
+            File("data/generated")
 
         val runtimeDirectory =
-            File("build/runtimeKnowledge")
+            File("data/generated/runtimeKnowledge")
 
         assertTrue(
             generatedDirectory.exists(),
-            "build/generated does not exist. Run the knowledge build tests first."
+            "data/generated does not exist. Run the knowledge build tests first."
         )
 
         RuntimeKnowledgePublisher(

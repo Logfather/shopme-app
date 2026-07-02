@@ -77,7 +77,7 @@ class FoodMilesKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/food_miles.json"
+                "data/generated/food_miles.json"
 
             )
 

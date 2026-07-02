@@ -1,5 +1,6 @@
 package de.shopme.testing.system.tools.knowledge.off
 
+import de.shopme.tools.data.KnowledgeDataDirectories
 import de.shopme.tools.knowledge.foods.FoodsKnowledgeWriter
 import de.shopme.tools.knowledge.foods.importer.FoodsKnowledgeMatcher
 import de.shopme.tools.knowledge.foods.importer.FoodsKnowledgeMerger
@@ -21,13 +22,16 @@ class MergeOFFNutritionIntoFoodsKnowledgeTest {
 
         val base =
             FileFoodsKnowledgeLoader(
-                File("build/generated/foods.json")
+                File("data/generated/foods.json")
             ).load()
 
         val importResult =
             OFFFoodsKnowledgeImporter()
                 .importWithStatistics(
-                    input = File("build/input/off-products.jsonl.gz"),
+                    File(
+                        KnowledgeDataDirectories.openFoodFactsRaw,
+                        "off-products.jsonl.gz"
+                    ),
                     limit = 250_000,
                     progressStep = 50_000
                 )
@@ -82,7 +86,7 @@ class MergeOFFNutritionIntoFoodsKnowledgeTest {
         FoodsKnowledgeWriter()
             .write(
                 knowledge = merged,
-                outputFile = File("build/generated/foods_merged.json")
+                outputFile = File("data/generated/foods_merged.json")
             )
 
         val report =

@@ -46,7 +46,7 @@ class PollinatorKnowledgeWriter :
 
                 File(
 
-                    "build/generated/pollinator.json"
+                    "data/generated/pollinator.json"
 
                 )
 
@@ -57,7 +57,7 @@ class PollinatorKnowledgeWriter :
         println("🧠 POLLINATOR KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/pollinator.json")
+        println("📄 Output  : data/generated/pollinator.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

@@ -51,7 +51,7 @@ class FoodsPatchWriteSmokeTest {
             .print(applyResult)
 
         val output =
-            File("build/test-output/foods.json")
+            File("data/generated/test-output/foods.json")
 
         val writeResult =
             DefaultFoodsPatchWriterFactory

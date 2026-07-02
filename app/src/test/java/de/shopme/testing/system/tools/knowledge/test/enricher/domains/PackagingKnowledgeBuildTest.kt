@@ -77,7 +77,7 @@ class PackagingKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/packaging.json"
+                "data/generated/packaging.json"
 
             )
 

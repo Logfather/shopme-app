@@ -4,6 +4,7 @@ import de.shopme.tools.knowledge.ai.builder.AIKnowledgeBuildRequest
 import de.shopme.tools.knowledge.ai.builder.AIKnowledgeBuildResult
 import de.shopme.tools.knowledge.ai.builder.AIKnowledgeBuilder
 import de.shopme.tools.knowledge.ai.builder.AIKnowledgeSourceInfo
+import de.shopme.tools.knowledge.ai.builder.AIKnowledgeSourceType
 import de.shopme.tools.knowledge.ai.builder.RawKnowledgeInput
 import de.shopme.tools.knowledge.ki_candidates.CandidateMetadata
 import de.shopme.tools.knowledge.ki_candidates.CanonicalKnowledgeCandidate
@@ -42,8 +43,9 @@ class AIKnowledgeBuilderContractTest {
         val result = builder.build(
             AIKnowledgeBuildRequest(
                 source = AIKnowledgeSourceInfo(
-                    name = "open_food_facts",
-                    version = "manual-v1"
+                    type = AIKnowledgeSourceType.OPEN_FOOD_FACTS,
+                    name = "Open Food Facts",
+                    version = "1.0"
                 ),
                 inputs = listOf(
                     RawKnowledgeInput(

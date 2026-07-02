@@ -77,7 +77,7 @@ class AllergenKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/allergens.json"
+                "data/generated/allergens.json"
 
             )
 

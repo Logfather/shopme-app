@@ -46,7 +46,7 @@ class AnimalWelfareKnowledgeWriter :
 
                 File(
 
-                    "build/generated/animal_welfare.json"
+                    "data/generated/animal_welfare.json"
 
                 )
 
@@ -57,7 +57,7 @@ class AnimalWelfareKnowledgeWriter :
         println("🧠 ANIMAL WELFARE KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/animal_welfare.json")
+        println("📄 Output  : data/generated/animal_welfare.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

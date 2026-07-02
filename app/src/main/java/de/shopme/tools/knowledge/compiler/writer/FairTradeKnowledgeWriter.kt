@@ -46,7 +46,7 @@ class FairTradeKnowledgeWriter :
 
                 File(
 
-                    "build/generated/fairtrade.json"
+                    "data/generated/fairtrade.json"
 
                 )
 
@@ -57,7 +57,7 @@ class FairTradeKnowledgeWriter :
         println("🧠 FAIRTRADE KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/fairtrade.json")
+        println("📄 Output  : data/generated/fairtrade.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

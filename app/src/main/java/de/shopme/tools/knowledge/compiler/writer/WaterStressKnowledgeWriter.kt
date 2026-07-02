@@ -49,7 +49,7 @@ class WaterStressKnowledgeWriter :
 
                 File(
 
-                    "build/generated/water_stress.json"
+                    "data/generated/water_stress.json"
 
                 )
 
@@ -60,7 +60,7 @@ class WaterStressKnowledgeWriter :
         println("🧠 WATER STRESS KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/water_stress.json")
+        println("📄 Output  : data/generated/water_stress.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

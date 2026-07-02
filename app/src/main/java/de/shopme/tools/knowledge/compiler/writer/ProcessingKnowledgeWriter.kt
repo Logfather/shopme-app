@@ -40,7 +40,7 @@ class ProcessingKnowledgeWriter :
 
                 File(
 
-                    "build/generated/processing.json"
+                    "data/generated/processing.json"
 
                 )
 
@@ -51,7 +51,7 @@ class ProcessingKnowledgeWriter :
         println("🧠 PROCESSING KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/processing.json")
+        println("📄 Output  : data/generated/processing.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

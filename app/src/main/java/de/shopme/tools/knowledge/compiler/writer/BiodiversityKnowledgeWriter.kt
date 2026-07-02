@@ -46,7 +46,7 @@ class BiodiversityKnowledgeWriter :
 
                 File(
 
-                    "build/generated/biodiversity.json"
+                    "data/generated/biodiversity.json"
 
                 )
 
@@ -57,7 +57,7 @@ class BiodiversityKnowledgeWriter :
         println("🧠 BIODIVERSITY KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/biodiversity.json")
+        println("📄 Output  : data/generated/biodiversity.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

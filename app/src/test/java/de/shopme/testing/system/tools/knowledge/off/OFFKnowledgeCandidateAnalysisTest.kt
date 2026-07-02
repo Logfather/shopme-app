@@ -12,7 +12,7 @@ class OFFKnowledgeCandidateAnalysisTest {
 
         val input =
             File(
-                "build/openfoodfacts/off_knowledge_candidates.json"
+                "data/generated/openfoodfactsoff_knowledge_candidates.json"
             )
 
         require(input.exists()) {

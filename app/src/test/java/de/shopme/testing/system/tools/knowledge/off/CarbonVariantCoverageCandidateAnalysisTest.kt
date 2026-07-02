@@ -19,7 +19,7 @@ class CarbonVariantCoverageCandidateAnalysisTest {
 
         val input =
             File(
-                "build/off/carbon_variant_coverage_candidates.json"
+                "data/generated/off/carbon_variant_coverage_candidates.json"
             )
 
         require(input.exists()) {

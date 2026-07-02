@@ -77,7 +77,7 @@ class ProcessingKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/processing.json"
+                "data/generated/processing.json"
 
             )
 

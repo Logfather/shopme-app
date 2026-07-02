@@ -54,7 +54,7 @@ class DietKnowledgeWriter :
 
                 File(
 
-                    "build/generated/diet_classification.json"
+                    "data/generated/diet_classification.json"
 
                 )
 
@@ -65,7 +65,7 @@ class DietKnowledgeWriter :
         println("🧠 DIET KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/diet_classification.json")
+        println("📄 Output  : data/generated/diet_classification.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

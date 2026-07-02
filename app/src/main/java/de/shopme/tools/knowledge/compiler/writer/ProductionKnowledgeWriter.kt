@@ -54,7 +54,7 @@ class ProductionKnowledgeWriter :
 
                 File(
 
-                    "build/generated/production.json"
+                    "data/generated/production.json"
 
                 )
 
@@ -65,7 +65,7 @@ class ProductionKnowledgeWriter :
         println("🧠 PRODUCTION KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/production.json")
+        println("📄 Output  : data/generated/production.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

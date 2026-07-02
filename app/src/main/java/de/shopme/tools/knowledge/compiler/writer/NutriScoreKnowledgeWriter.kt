@@ -47,7 +47,7 @@ class NutriScoreKnowledgeWriter :
 
                 File(
 
-                    "build/generated/nutri_score.json"
+                    "data/generated/nutri_score.json"
 
                 )
 
@@ -58,7 +58,7 @@ class NutriScoreKnowledgeWriter :
         println("🧠 NUTRI SCORE KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/nutri_score.json")
+        println("📄 Output  : data/generated/nutri_score.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

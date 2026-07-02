@@ -75,7 +75,7 @@ class RuntimeFoodsPatchWriteSmokeTest {
 
         val output =
             File(
-                "build/runtime-foods-write-smoke-test.json"
+                "data/generated/runtime-foods-write-smoke-test.json"
             )
 
         val writeResult =

@@ -21,7 +21,7 @@ class CarbonVariantCoverageCandidateExportTest {
 
         val carbonArtifactFile =
             File(
-                "build/off/off_carbon_knowledge_artifact_candidates.json"
+                "data/generated/off/off_carbon_knowledge_artifact_candidates.json"
             )
 
         require(carbonArtifactFile.exists()) {
@@ -60,7 +60,7 @@ class CarbonVariantCoverageCandidateExportTest {
 
         val outputFile =
             File(
-                "build/off/carbon_variant_coverage_candidates.json"
+                "data/generated/off/carbon_variant_coverage_candidates.json"
             )
 
         outputFile.parentFile?.mkdirs()

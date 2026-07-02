@@ -40,7 +40,7 @@ class PesticidesKnowledgeWriter :
 
                 File(
 
-                    "build/generated/pesticides.json"
+                    "data/generated/pesticides.json"
 
                 )
 
@@ -51,7 +51,7 @@ class PesticidesKnowledgeWriter :
         println("🧠 PESTICIDES KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/pesticides.json")
+        println("📄 Output  : data/generated/pesticides.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

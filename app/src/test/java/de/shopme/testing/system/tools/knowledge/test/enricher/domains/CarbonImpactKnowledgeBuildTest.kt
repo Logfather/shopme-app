@@ -83,7 +83,7 @@ class CarbonImpactKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/carbon_impact.json"
+                "data/generated/carbon_impact.json"
 
             )
 

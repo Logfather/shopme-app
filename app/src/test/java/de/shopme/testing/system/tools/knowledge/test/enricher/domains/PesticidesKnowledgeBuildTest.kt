@@ -77,7 +77,7 @@ class PesticidesKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/pesticides.json"
+                "data/generated/pesticides.json"
 
             )
 

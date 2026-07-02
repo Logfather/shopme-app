@@ -12,11 +12,11 @@ class OFFDumpPreviewTest {
     fun exportFirst50Entries() {
 
         val input = File(
-            "build/input/openfoodfacts-products.jsonl.gz"
+            "data/raw/openfoodfacts/openfoodfacts-products.jsonl.gz"
         )
 
         val output = File(
-            "build/openfoodfacts/first_50_entries.json"
+            "data/generated/openfoodfacts/first_50_entries.json"
         )
 
         output.parentFile.mkdirs()

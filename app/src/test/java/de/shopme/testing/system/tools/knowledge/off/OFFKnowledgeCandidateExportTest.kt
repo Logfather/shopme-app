@@ -24,12 +24,12 @@ class OFFKnowledgeCandidateExportTest {
 
         val extractFile =
             File(
-                "build/off/off_hivra_extract.jsonl"
+                "data/generated/off/off_hivra_extract.jsonl"
             )
 
         val outputFile =
             File(
-                "build/off/off_knowledge_candidates.json"
+                "data/generated/off/off_knowledge_candidates.json"
             )
 
         require(extractFile.exists()) {

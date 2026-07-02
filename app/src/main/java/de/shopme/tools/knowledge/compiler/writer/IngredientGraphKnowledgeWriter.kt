@@ -46,7 +46,7 @@ class IngredientGraphKnowledgeWriter :
 
                 File(
 
-                    "build/generated/ingredient_graph.json"
+                    "data/generated/ingredient_graph.json"
 
                 )
 
@@ -57,7 +57,7 @@ class IngredientGraphKnowledgeWriter :
         println("🧠 INGREDIENT GRAPH KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/ingredient_graph.json")
+        println("📄 Output  : data/generated/ingredient_graph.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

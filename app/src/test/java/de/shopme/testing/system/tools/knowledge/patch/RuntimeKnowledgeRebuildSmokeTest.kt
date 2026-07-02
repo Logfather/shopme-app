@@ -11,7 +11,7 @@ class RuntimeKnowledgeRebuildSmokeTest {
     fun rebuildRuntimeKnowledgeFromGeneratedFoodsJson() {
 
         val generatedFoods =
-            File("build/generated/foods.json")
+            File("data/generated/foods.json")
 
         assertTrue(
             "Expected generated foods.json to exist before rebuild.",
@@ -21,10 +21,10 @@ class RuntimeKnowledgeRebuildSmokeTest {
         CreateFoodKnowledge.main(emptyArray())
 
         val rebuiltFoods =
-            File("build/generated/foods.json")
+            File("data/generated/foods.json")
 
         val nutrition =
-            File("build/generated/nutrition.json")
+            File("data/generated/nutrition.json")
 
         assertTrue(
             "Expected rebuilt foods.json to exist.",

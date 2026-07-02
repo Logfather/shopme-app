@@ -22,17 +22,17 @@ class CarbonKnowledgeArtifactMergeTest {
 
         val offArtifactFile =
             File(
-                "build/off/carbon_footprint_from_off.json"
+                "data/generated/off/carbon_footprint_from_off.json"
             )
 
         val variantFile =
             File(
-                "build/off/carbon_variant_coverage_merge_candidates.json"
+                "data/generated/off/carbon_variant_coverage_merge_candidates.json"
             )
 
         val outputFile =
             File(
-                "build/off/carbon_footprint_final.json"
+                "data/generated/off/carbon_footprint_final.json"
             )
 
         require(offArtifactFile.exists()) {

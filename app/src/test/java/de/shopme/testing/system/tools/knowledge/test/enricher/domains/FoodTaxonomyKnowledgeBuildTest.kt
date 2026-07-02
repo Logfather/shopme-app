@@ -77,7 +77,7 @@ class FoodTaxonomyKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/food_taxonomy.json"
+                "data/generated/food_taxonomy.json"
 
             )
 

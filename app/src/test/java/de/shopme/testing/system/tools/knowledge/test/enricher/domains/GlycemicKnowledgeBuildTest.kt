@@ -77,7 +77,7 @@ class GlycemicKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/glycemic.json"
+                "data/generated/glycemic.json"
 
             )
 

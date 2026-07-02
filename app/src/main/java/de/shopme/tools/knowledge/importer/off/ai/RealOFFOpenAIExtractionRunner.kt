@@ -64,7 +64,7 @@ object RealOFFOpenAIExtractionRunner {
         println("Candidates: ${result.candidates.size}")
 
         val outputFile = File(
-            "build/ai-import/openai-knowledge-import-batch.json"
+            "data/generated/ai-import/openai-knowledge-import-batch.json"
         )
 
         outputFile.parentFile.mkdirs()

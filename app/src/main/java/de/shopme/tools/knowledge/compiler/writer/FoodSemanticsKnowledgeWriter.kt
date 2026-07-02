@@ -70,7 +70,7 @@ class FoodSemanticsKnowledgeWriter :
 
                 File(
 
-                    "build/generated/food_semantics.json"
+                    "data/generated/food_semantics.json"
 
                 )
 
@@ -81,7 +81,7 @@ class FoodSemanticsKnowledgeWriter :
         println("🧠 FOOD SEMANTICS KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/food_semantics.json")
+        println("📄 Output  : data/generated/food_semantics.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

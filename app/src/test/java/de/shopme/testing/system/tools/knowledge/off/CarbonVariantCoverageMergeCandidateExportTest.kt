@@ -21,17 +21,17 @@ class CarbonVariantCoverageMergeCandidateExportTest {
 
         val variantFile =
             File(
-                "build/off/carbon_variant_coverage_safe.json"
+                "data/generated/off/carbon_variant_coverage_safe.json"
             )
 
         val carbonFile =
             File(
-                "build/off/off_carbon_knowledge_artifact_candidates.json"
+                "data/generated/off/off_carbon_knowledge_artifact_candidates.json"
             )
 
         val outputFile =
             File(
-                "build/off/carbon_variant_coverage_merge_candidates.json"
+                "data/generated/off/carbon_variant_coverage_merge_candidates.json"
             )
 
         require(variantFile.exists()) {

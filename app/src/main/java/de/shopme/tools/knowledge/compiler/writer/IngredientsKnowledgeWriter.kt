@@ -45,7 +45,7 @@ class IngredientsKnowledgeWriter :
 
                 File(
 
-                    "build/generated/ingredients.json"
+                    "data/generated/ingredients.json"
 
                 )
 
@@ -56,7 +56,7 @@ class IngredientsKnowledgeWriter :
         println("🧠 INGREDIENTS KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/ingredients.json")
+        println("📄 Output  : data/generated/ingredients.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

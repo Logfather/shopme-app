@@ -57,7 +57,7 @@ class NutritionKnowledgeWriter :
 
                 File(
 
-                    "build/generated/nutrition.json"
+                    "data/generated/nutrition.json"
 
                 )
 
@@ -68,7 +68,7 @@ class NutritionKnowledgeWriter :
         println("🧠 NUTRITION KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${knowledge.entries.size}")
-        println("📄 Output  : build/generated/nutrition.json")
+        println("📄 Output  : data/generated/nutrition.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

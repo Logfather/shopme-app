@@ -77,7 +77,7 @@ class AnimalWelfareKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/animal_welfare.json"
+                "data/generated/animal_welfare.json"
 
             )
 

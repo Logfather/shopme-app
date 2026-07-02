@@ -77,7 +77,7 @@ class RecipeGraphKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/recipe_graph.json"
+                "data/generated/recipe_graph.json"
 
             )
 

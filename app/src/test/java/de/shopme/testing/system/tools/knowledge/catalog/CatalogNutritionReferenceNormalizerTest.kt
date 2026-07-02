@@ -13,7 +13,7 @@ class CatalogNutritionReferenceNormalizerTest {
 
         val outputFile =
             File(
-                "build/generated/normalized_supermarket_dataset.json"
+                "data/generated/normalized_supermarket_dataset.json"
             )
 
         CatalogNutritionReferenceNormalizer()

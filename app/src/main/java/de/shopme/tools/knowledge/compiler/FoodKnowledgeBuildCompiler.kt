@@ -53,7 +53,7 @@ class FoodKnowledgeBuildCompiler {
             CatalogImportWriter()
                 .write(
                     items = catalog,
-                    file = File("build/generated/foods.proposed.json")
+                    file = File("data/generated/foods.proposed.json")
                 )
 
             println()
@@ -70,7 +70,7 @@ class FoodKnowledgeBuildCompiler {
 
         val bootstrapFoodsKnowledge =
             FileFoodsKnowledgeLoader(
-                File("build/generated/foods.json")
+                File("data/generated/foods.json")
             ).load()
 
         val foodLookup =
@@ -107,7 +107,7 @@ class FoodKnowledgeBuildCompiler {
         FoodsKnowledgeWriter()
             .write(
                 knowledge = foodsKnowledge,
-                outputFile = File("build/generated/foods.json")
+                outputFile = File("data/generated/foods.json")
             )
 
         val nutritionRuntimeArtifact =
@@ -120,13 +120,13 @@ class FoodKnowledgeBuildCompiler {
             .write(
                 knowledge = nutritionRuntimeArtifact,
                 output = File(
-                    "build/generated/nutrition.json"
+                    "data/generated/nutrition.json"
                 )
             )
 
         KnowledgeArtifactPublisher(
             generatedDirectory =
-                File("build/generated"),
+                File("data/generated"),
             knowledgeDirectory =
                 File("src/main/assets/knowledge")
         ).publish(

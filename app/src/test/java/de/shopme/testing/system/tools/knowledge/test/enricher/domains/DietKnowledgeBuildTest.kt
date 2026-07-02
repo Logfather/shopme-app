@@ -77,7 +77,7 @@ class DietKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/diet_classification.json"
+                "data/generated/diet_classification.json"
 
             )
 

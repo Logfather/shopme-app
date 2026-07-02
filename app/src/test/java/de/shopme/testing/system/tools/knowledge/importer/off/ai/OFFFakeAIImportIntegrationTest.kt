@@ -1,5 +1,6 @@
 package de.shopme.testing.system.tools.knowledge.importer.off.ai
 
+import de.shopme.tools.data.KnowledgeDataDirectories
 import de.shopme.tools.knowledge.compiler.candidate.KnowledgeImportProcessor
 import de.shopme.tools.knowledge.importer.off.JsonlGzipOFFImportReader
 import de.shopme.tools.knowledge.importer.off.ai.FakeOFFAIExtractionClient
@@ -16,7 +17,10 @@ class OFFFakeAIImportIntegrationTest {
     fun importsOFFPreviewThroughFakeAIIntoCatalogItems() {
 
         val file =
-            File("build/input/off-products-preview-50k.jsonl.gz")
+            File(
+                KnowledgeDataDirectories.openFoodFactsPreview,
+                "off-products-preview-50k.jsonl.gz"
+            )
 
         assertTrue(
             "Expected OFF preview file to exist at ${file.path}",

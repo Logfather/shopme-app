@@ -46,7 +46,7 @@ class RecipeGraphKnowledgeWriter :
 
                 File(
 
-                    "build/generated/recipe_graph.json"
+                    "data/generated/recipe_graph.json"
 
                 )
 
@@ -57,7 +57,7 @@ class RecipeGraphKnowledgeWriter :
         println("🧠 RECIPE GRAPH KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/recipe_graph.json")
+        println("📄 Output  : data/generated/recipe_graph.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

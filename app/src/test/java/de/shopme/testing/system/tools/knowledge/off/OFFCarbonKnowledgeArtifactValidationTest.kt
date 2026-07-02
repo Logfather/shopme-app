@@ -18,7 +18,7 @@ class OFFCarbonKnowledgeArtifactValidationTest {
 
         val input =
             File(
-                "build/off/carbon_footprint_from_off.json"
+                "data/generated/off/carbon_footprint_from_off.json"
             )
 
         require(input.exists()) {

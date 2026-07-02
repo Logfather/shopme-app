@@ -19,12 +19,12 @@ class OFFKnowledgeProposalApplyPlanExportTest {
 
         val proposalFile =
             File(
-                "build/off/off_knowledge_proposals.json"
+                "data/generated/off/off_knowledge_proposals.json"
             )
 
         val outputFile =
             File(
-                "build/off/off_knowledge_apply_plan.json"
+                "data/generated/off/off_knowledge_apply_plan.json"
             )
 
         require(

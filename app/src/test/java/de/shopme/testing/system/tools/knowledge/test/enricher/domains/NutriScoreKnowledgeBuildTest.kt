@@ -77,7 +77,7 @@ class NutriScoreKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/nutri_score.json"
+                "data/generated/nutri_score.json"
 
             )
 

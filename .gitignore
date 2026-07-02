@@ -21,3 +21,7 @@ captures/
 # Signing
 *.keystore
 *.jks
+
+# Data Sorage
+app/src/main/java/de/shopme/tools/data/
+data/

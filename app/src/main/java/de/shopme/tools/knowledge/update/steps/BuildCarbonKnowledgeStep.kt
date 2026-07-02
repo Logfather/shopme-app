@@ -33,7 +33,7 @@ class BuildCarbonKnowledgeStep :
 
                 file =
                     File(
-                        "build/input/agribalyse-synthese.csv"
+                        "data/generated/agribalyse-synthese.csv"
                     ),
 
                 productColumn =
@@ -74,7 +74,7 @@ class BuildCarbonKnowledgeStep :
             builder = builder,
             outputFile =
                 File(
-                    "build/generated/carbon_footprint.json"
+                    "data/generated/carbon_footprint.json"
                 )
         ).finish()
 
@@ -90,7 +90,7 @@ class BuildCarbonKnowledgeStep :
         val generatedCarbonFile =
 
             File(
-                "build/generated/carbon_footprint.json"
+                "data/generated/carbon_footprint.json"
             )
 
         val carbonReferences =

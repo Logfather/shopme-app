@@ -12,7 +12,7 @@ class OFFCarbonAnalysisTest {
 
         val input =
             File(
-                "build/off/off_hivra_extract.jsonl"
+                "data/generated/off/off_hivra_extract.jsonl"
             )
 
         require(input.exists()) {

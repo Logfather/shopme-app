@@ -20,12 +20,12 @@ class OFFCarbonKnowledgeImportCandidateExportTest {
 
         val input =
             File(
-                "build/off/off_knowledge_import_candidates.json"
+                "data/generated/off/off_knowledge_import_candidates.json"
             )
 
         val output =
             File(
-                "build/off/off_carbon_import_candidates.json"
+                "data/generated/off/off_carbon_import_candidates.json"
             )
 
         require(input.exists()) {

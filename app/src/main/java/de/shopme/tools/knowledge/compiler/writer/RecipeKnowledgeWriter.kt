@@ -48,7 +48,7 @@ class RecipeKnowledgeWriter :
 
                 File(
 
-                    "build/generated/recipes.json"
+                    "data/generated/recipes.json"
 
                 )
 
@@ -59,7 +59,7 @@ class RecipeKnowledgeWriter :
         println("🧠 RECIPE KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/recipes.json")
+        println("📄 Output  : data/generated/recipes.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

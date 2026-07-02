@@ -10,7 +10,7 @@ class PublishRuntimeKnowledgeStep :
     val generatedCarbonKnowledge =
 
         File(
-            "build/generated/carbon_footprint.json"
+            "data/generated/carbon_footprint.json"
         )
 
     val runtimeCarbonKnowledge =

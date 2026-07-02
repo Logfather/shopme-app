@@ -19,12 +19,12 @@ class OFFKnowledgeImportCandidateExportTest {
 
         val applyPlanFile =
             File(
-                "build/off/off_knowledge_apply_plan.json"
+                "data/generated/off/off_knowledge_apply_plan.json"
             )
 
         val outputFile =
             File(
-                "build/off/off_knowledge_import_candidates.json"
+                "data/generated/off/off_knowledge_import_candidates.json"
             )
 
         require(applyPlanFile.exists()) {

@@ -13,7 +13,7 @@ class OFFRawCarbonAnalysisTest {
 
         val input =
             File(
-                "build/input/openfoodfacts-products.jsonl.gz"
+                "data/generated/openfoodfacts/openfoodfacts-products.jsonl.gz"
             )
 
         require(input.exists()) {

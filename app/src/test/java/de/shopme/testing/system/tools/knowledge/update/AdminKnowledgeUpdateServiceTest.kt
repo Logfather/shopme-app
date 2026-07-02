@@ -35,7 +35,7 @@ class AdminKnowledgeUpdateServiceTest {
 
         val output =
             File(
-                "build/generated/carbon_footprint.json"
+                "data/generated/carbon_footprint.json"
             )
 
         assertTrue(

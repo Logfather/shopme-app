@@ -77,7 +77,7 @@ class LocalityKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/locality.json"
+                "data/generated/locality.json"
 
             )
 

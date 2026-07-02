@@ -77,7 +77,7 @@ class PollinatorKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/pollinator.json"
+                "data/generated/pollinator.json"
 
             )
 

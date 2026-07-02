@@ -46,7 +46,7 @@ class WaterKnowledgeWriter :
 
                 File(
 
-                    "build/generated/water_footprint.json"
+                    "data/generated/water_footprint.json"
 
                 )
 
@@ -57,7 +57,7 @@ class WaterKnowledgeWriter :
         println("🧠 WATER KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/water_footprint.json")
+        println("📄 Output  : data/generated/water_footprint.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

@@ -46,7 +46,7 @@ class LocalityKnowledgeWriter :
 
                 File(
 
-                    "build/generated/locality.json"
+                    "data/generated/locality.json"
 
                 )
 
@@ -57,7 +57,7 @@ class LocalityKnowledgeWriter :
         println("🧠 LOCALITY KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/locality.json")
+        println("📄 Output  : data/generated/locality.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

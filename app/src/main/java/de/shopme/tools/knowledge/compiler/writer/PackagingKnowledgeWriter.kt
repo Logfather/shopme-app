@@ -46,7 +46,7 @@ class PackagingKnowledgeWriter :
 
                 File(
 
-                    "build/generated/packaging.json"
+                    "data/generated/packaging.json"
 
                 )
 
@@ -57,7 +57,7 @@ class PackagingKnowledgeWriter :
         println("🧠 PACKAGING KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/packaging.json")
+        println("📄 Output  : data/generated/packaging.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

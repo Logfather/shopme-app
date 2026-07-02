@@ -1,5 +1,6 @@
 package de.shopme.testing.system.tools.knowledge.off
 
+import de.shopme.tools.data.KnowledgeDataDirectories
 import de.shopme.tools.knowledge.foods.FoodsKnowledgeWriter
 import de.shopme.tools.knowledge.foods.importer.OFFFoodsKnowledgeImporter
 import java.io.File
@@ -13,8 +14,9 @@ class ImportOFFFoodsKnowledgeTest {
         val foodsKnowledge =
             OFFFoodsKnowledgeImporter()
                 .import(
-                    input = File(
-                        "build/input/off-products.jsonl.gz"
+                    File(
+                        KnowledgeDataDirectories.openFoodFactsRaw,
+                        "off-products.jsonl.gz"
                     )
                 )
 
@@ -22,7 +24,7 @@ class ImportOFFFoodsKnowledgeTest {
             .write(
                 knowledge = foodsKnowledge,
                 outputFile = File(
-                    "build/generated/foods_off.json"
+                    "data/generated/foods_off.json"
                 )
             )
 
@@ -31,7 +33,7 @@ class ImportOFFFoodsKnowledgeTest {
         println("🧠 OPEN FOOD FACTS CANONICAL IMPORT")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("Foods : ${foodsKnowledge.foods.size}")
-        println("Output: build/generated/foods_off.json")
+        println("Output: data/generated/foods_off.json")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     }
 }

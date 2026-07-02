@@ -46,7 +46,7 @@ class FoodTaxonomyKnowledgeWriter :
 
                 File(
 
-                    "build/generated/food_taxonomy.json"
+                    "data/generated/food_taxonomy.json"
 
                 )
 
@@ -57,7 +57,7 @@ class FoodTaxonomyKnowledgeWriter :
         println("🧠 FOOD TAXONOMY KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/food_taxonomy.json")
+        println("📄 Output  : data/generated/food_taxonomy.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

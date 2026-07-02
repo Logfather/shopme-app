@@ -77,7 +77,7 @@ class SeasonalityKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/seasonality.json"
+                "data/generated/seasonality.json"
 
             )
 

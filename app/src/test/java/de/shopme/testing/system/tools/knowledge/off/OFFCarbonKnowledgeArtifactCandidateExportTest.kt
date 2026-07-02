@@ -21,17 +21,17 @@ class OFFCarbonKnowledgeArtifactCandidateExportTest {
 
         val extractFile =
             File(
-                "build/off/off_hivra_extract.jsonl"
+                "data/generated/off/off_hivra_extract.jsonl"
             )
 
         val carbonImportCandidateFile =
             File(
-                "build/off/off_carbon_import_candidates.json"
+                "data/generated/off/off_carbon_import_candidates.json"
             )
 
         val outputFile =
             File(
-                "build/off/off_carbon_knowledge_artifact_candidates.json"
+                "data/generated/off/off_carbon_knowledge_artifact_candidates.json"
             )
 
         require(extractFile.exists()) {

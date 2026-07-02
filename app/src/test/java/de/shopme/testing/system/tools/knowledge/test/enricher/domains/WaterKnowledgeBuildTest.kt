@@ -76,7 +76,7 @@ class WaterKnowledgeBuildTest : BaseKnowledgeBuildTest() {
 
             java.io.File(
 
-                "build/generated/water_footprint.json"
+                "data/generated/water_footprint.json"
 
             )
 

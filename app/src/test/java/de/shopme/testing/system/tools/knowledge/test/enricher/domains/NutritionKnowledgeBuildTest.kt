@@ -78,7 +78,7 @@ class NutritionKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/nutrition.json"
+                "data/generated/nutrition.json"
 
             )
 

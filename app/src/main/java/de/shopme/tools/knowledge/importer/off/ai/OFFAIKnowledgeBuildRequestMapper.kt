@@ -2,6 +2,7 @@ package de.shopme.tools.knowledge.importer.off.ai
 
 import de.shopme.tools.knowledge.ai.builder.AIKnowledgeBuildRequest
 import de.shopme.tools.knowledge.ai.builder.AIKnowledgeSourceInfo
+import de.shopme.tools.knowledge.ai.builder.AIKnowledgeSourceType
 import de.shopme.tools.knowledge.ai.builder.RawKnowledgeInput
 
 class OFFAIKnowledgeBuildRequestMapper {
@@ -13,6 +14,7 @@ class OFFAIKnowledgeBuildRequestMapper {
         return AIKnowledgeBuildRequest(
 
             source = AIKnowledgeSourceInfo(
+                type = AIKnowledgeSourceType.CUSTOM,
                 name = batch.source,
                 version = batch.sourceVersion
             ),

@@ -13,7 +13,7 @@ class CarbonKnowledgeWriter(
 
     private val outputFile: File =
         File(
-            "build/generated/carbon_footprint.json"
+            "data/generated/carbon_footprint.json"
         ),
 
     private val runtimeOutputFile: File =

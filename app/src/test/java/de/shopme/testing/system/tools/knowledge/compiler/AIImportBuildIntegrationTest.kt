@@ -56,7 +56,7 @@ class AIImportBuildIntegrationTest {
             )
 
         val proposedCatalog =
-            File("build/generated/foods.proposed.json")
+            File("data/generated/foods.proposed.json")
 
         assertTrue(
             "Expected foods.proposed.json to be generated",

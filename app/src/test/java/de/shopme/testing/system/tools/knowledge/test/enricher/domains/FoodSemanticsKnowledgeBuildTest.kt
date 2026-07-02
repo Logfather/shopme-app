@@ -106,7 +106,7 @@ class FoodSemanticsKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/food_semantics.json"
+                "data/generated/food_semantics.json"
 
             )
 

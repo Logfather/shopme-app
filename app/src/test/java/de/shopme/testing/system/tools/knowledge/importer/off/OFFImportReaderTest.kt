@@ -12,7 +12,7 @@ class OFFImportReaderTest {
     fun readsPreviewFileAsStream() {
 
         val file =
-            File("build/input/off-products-preview-50k.jsonl.gz")
+            File("")
 
         assertTrue(
             "Expected OFF preview file to exist at ${file.path}",

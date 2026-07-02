@@ -54,7 +54,7 @@ class AllergenKnowledgeWriter :
 
                 File(
 
-                    "build/generated/allergens.json"
+                    "data/generated/allergens.json"
 
                 )
 
@@ -65,7 +65,7 @@ class AllergenKnowledgeWriter :
         println("🧠 ALLERGEN KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/allergens.json")
+        println("📄 Output  : data/generated/allergens.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

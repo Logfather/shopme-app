@@ -2,6 +2,7 @@ package de.shopme.testing.system.tools.knowledge.off
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
+import de.shopme.tools.data.KnowledgeDataDirectories
 import de.shopme.tools.knowledge.off.OFFHivraExtractMapper
 import java.io.File
 import java.io.InputStreamReader
@@ -24,12 +25,13 @@ class OFFHivraExtractExportTest {
 
         val input =
             File(
-                        "build/input/off-products.jsonl.gz"
-                    )
+                KnowledgeDataDirectories.openFoodFactsRaw,
+                "off-products.jsonl.gz"
+            )
 
         val output =
             File(
-                        "build/off/off_hivra_extract.jsonl"
+                        "data/generated/off/off_hivra_extract.jsonl"
                     )
 
         require(input.exists()) {

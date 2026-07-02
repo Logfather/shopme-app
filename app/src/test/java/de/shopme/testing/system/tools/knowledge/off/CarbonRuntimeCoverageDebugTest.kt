@@ -29,7 +29,7 @@ class CarbonRuntimeCoverageDebugTest {
 
         val offCarbonFile =
             File(
-                "build/off/carbon_footprint_final.json"
+                "data/generated/off/carbon_footprint_final.json"
             )
 
         require(runtimeCarbonFile.exists()) {

@@ -77,7 +77,7 @@ class BiodiversityKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/biodiversity.json"
+                "data/generated/biodiversity.json"
 
             )
 

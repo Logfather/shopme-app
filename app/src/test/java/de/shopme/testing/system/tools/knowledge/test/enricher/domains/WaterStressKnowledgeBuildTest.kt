@@ -77,7 +77,7 @@ class WaterStressKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/water_stress.json"
+                "data/generated/water_stress.json"
 
             )
 

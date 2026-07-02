@@ -77,7 +77,7 @@ class FairTradeKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/fairtrade.json"
+                "data/generated/fairtrade.json"
 
             )
 

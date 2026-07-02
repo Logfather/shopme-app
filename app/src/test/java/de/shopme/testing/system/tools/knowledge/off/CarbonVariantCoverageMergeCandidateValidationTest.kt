@@ -19,12 +19,12 @@ class CarbonVariantCoverageMergeCandidateValidationTest {
 
         val input =
             File(
-                "build/off/carbon_variant_coverage_merge_candidates.json"
+                "data/generated/off/carbon_variant_coverage_merge_candidates.json"
             )
 
         val invalidOutput =
             File(
-                "build/off/invalid_carbon_variant_coverage_merge_candidates.json"
+                "data/generated/off/invalid_carbon_variant_coverage_merge_candidates.json"
             )
 
         require(input.exists()) {

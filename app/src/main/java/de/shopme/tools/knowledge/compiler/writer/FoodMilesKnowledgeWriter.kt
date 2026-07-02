@@ -46,7 +46,7 @@ class FoodMilesKnowledgeWriter :
 
                 File(
 
-                    "build/generated/food_miles.json"
+                    "data/generated/food_miles.json"
 
                 )
 
@@ -57,7 +57,7 @@ class FoodMilesKnowledgeWriter :
         println("🧠 FOOD MILES KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/food_miles.json")
+        println("📄 Output  : data/generated/food_miles.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

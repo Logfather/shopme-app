@@ -77,7 +77,7 @@ class RecipeKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/recipes.json"
+                "data/generated/recipes.json"
 
             )
 

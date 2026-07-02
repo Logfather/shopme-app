@@ -45,7 +45,7 @@ class SeasonalityKnowledgeWriter :
 
                 File(
 
-                    "build/generated/seasonality.json"
+                    "data/generated/seasonality.json"
 
                 )
 
@@ -56,7 +56,7 @@ class SeasonalityKnowledgeWriter :
         println("🧠 SEASONALITY KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/seasonality.json")
+        println("📄 Output  : data/generated/seasonality.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

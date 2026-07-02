@@ -12,7 +12,7 @@ class PublishRuntimeKnowledgeStepTest {
         val generated =
 
             File(
-                "build/generated/carbon_footprint.json"
+                "data/generated/carbon_footprint.json"
             )
 
         generated.parentFile?.mkdirs()

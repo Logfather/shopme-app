@@ -43,7 +43,7 @@ class CarbonImpactKnowledgeWriter :
 
                 File(
 
-                    "build/generated/carbon_impact.json"
+                    "data/generated/carbon_impact.json"
 
                 )
 
@@ -54,7 +54,7 @@ class CarbonImpactKnowledgeWriter :
         println("🧠 CARBON IMPACT KNOWLEDGE")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println("📊 Entries : ${entries.size}")
-        println("📄 Output  : build/generated/carbon_impact.json")
+        println("📄 Output  : data/generated/carbon_impact.json")
         println("🏁 FINISHED")
         println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         println()

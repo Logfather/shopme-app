@@ -77,7 +77,7 @@ class ProductionKnowledgeBuildTest :
 
             java.io.File(
 
-                "build/generated/production.json"
+                "data/generated/production.json"
 
             )
 

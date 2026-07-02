@@ -1,5 +1,6 @@
 package de.shopme.testing.system.tools.knowledge.off
 
+import de.shopme.tools.data.KnowledgeDataDirectories
 import java.io.BufferedWriter
 import java.io.File
 import java.io.OutputStreamWriter
@@ -14,7 +15,7 @@ class OFFPreviewDumpTest {
 
         val input =
             File(
-                "build/input/off-products.jsonl.gz"
+                "../data/raw/openfoodfacts/openfoodfacts-products.jsonl.gz"
             )
 
         require(input.exists()) {
@@ -23,7 +24,8 @@ class OFFPreviewDumpTest {
 
         val output =
             File(
-                "build/input/off-products-preview-50k.jsonl.gz"
+                KnowledgeDataDirectories.openFoodFactsPreview,
+                "off-products-preview-50k.jsonl.gz"
             )
 
         output.parentFile.mkdirs()
