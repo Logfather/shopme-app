@@ -4,7 +4,7 @@ import de.shopme.tools.knowledge.compiler.KnowledgeBuildContext
 import de.shopme.tools.knowledge.compiler.shared.exception.KnowledgeValidationException
 import de.shopme.tools.knowledge.compiler.shared.validation.BuildValidator
 import de.shopme.tools.knowledge.lookup.ArtifactLookup
-import de.shopme.tools.knowledge.pesticide.PesticideKnowledge
+import de.shopme.tools.knowledge.pesticides.PesticideKnowledge
 
 class PesticidesKnowledgeReferenceValidator(
 

@@ -294,31 +294,55 @@ class ShoppingViewModel(
 
         viewModelScope.launch {
 
-            val uid = authProvider.currentUserId()
+            val uid =
+                try {
+                    authProvider.currentUserId()
+                } catch (_: IllegalStateException) {
+
+                    RuntimeLog.runtime(
+                        "Skip bootstrap | user not authenticated"
+                    )
+
+                    return@launch
+                }
 
             if (lastBootstrapUid == uid) {
+
                 RuntimeLog.runtime(
                     "Skip bootstrap | same uid"
                 )
+
                 return@launch
             }
 
-            lastBootstrapUid = uid
+            lastBootstrapUid =
+                uid
 
-            // 🔥 Invite Flow
-            handleInviteFlow(deepLinkInviteId)
+            // Invite Flow
+            handleInviteFlow(
+                deepLinkInviteId
+            )
 
-            if (deepLinkInviteId != null) return@launch
+            if (deepLinkInviteId != null) {
+                return@launch
+            }
 
-            // Fallback
+            // Fallback deeplink
             if (deepLinkListId != null) {
+
                 _state.update {
                     it.copy(
-                        inviteListIds = listOf(deepLinkListId),
-                        showInviteDialog = true
+                        inviteListIds =
+                            listOf(
+                                deepLinkListId
+                            ),
+
+                        showInviteDialog =
+                            true
                     )
                 }
             }
+
             RuntimeLog.runtime(
                 "Skip profile load | handled by auth observer"
             )

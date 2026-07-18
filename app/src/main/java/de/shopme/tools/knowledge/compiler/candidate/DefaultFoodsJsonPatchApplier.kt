@@ -17,22 +17,21 @@ class DefaultFoodsJsonPatchApplier : FoodsJsonPatchApplier {
             return sortCatalog(catalog)
         }
 
-        val addedCatalogItems = createAddedCatalogItems(
-            catalog = catalog,
-            patch = patch
-        )
+        val addedCatalogItems =
+            createAddedCatalogItems(
+                catalog = catalog,
+                patch = patch
+            )
 
-        val updatedCatalogItems = applyUpdateOperations(
-            catalog = catalog,
-            patch = patch
-        )
+        val updatedCatalogItems =
+            applyUpdateOperations(
+                catalog = catalog,
+                patch = patch
+            )
 
-        val updatedCatalog = mergeCatalogItems(
-            updatedCatalogItems = updatedCatalogItems,
-            addedCatalogItems = addedCatalogItems
+        return sortCatalog(
+            updatedCatalogItems + addedCatalogItems
         )
-
-        return sortCatalog(updatedCatalog)
     }
 
     private fun createAddedCatalogItems(
@@ -40,16 +39,20 @@ class DefaultFoodsJsonPatchApplier : FoodsJsonPatchApplier {
         patch: FoodsJsonPatch
     ): List<CatalogItem> {
 
-        val existingNormalizedNames = catalog
-            .map { it.normalized }
-            .toSet()
+        val existingNormalizedNames =
+            catalog
+                .map { item -> item.normalized }
+                .toSet()
 
         return patch.operations
             .filter { operation ->
                 operation.type == FoodsJsonPatchOperationType.ADD
             }
             .filterNot { operation ->
-                existingNormalizedNames.contains(operation.canonicalId)
+                val normalizedName =
+                    operation.catalogNormalizedName()
+
+                existingNormalizedNames.contains(normalizedName)
             }
             .map { operation ->
                 operation.toCatalogItem()
@@ -61,25 +64,32 @@ class DefaultFoodsJsonPatchApplier : FoodsJsonPatchApplier {
         patch: FoodsJsonPatch
     ): List<CatalogItem> {
 
-        val updatesByCanonicalId = patch.operations
-            .filter { operation ->
-                operation.type == FoodsJsonPatchOperationType.UPDATE
-            }
-            .associateBy { operation ->
-                operation.canonicalId
-            }
+        val updatesByNormalizedName =
+            patch.operations
+                .filter { operation ->
+                    operation.type == FoodsJsonPatchOperationType.UPDATE
+                }
+                .associateBy { operation ->
+                    operation.catalogNormalizedName()
+                }
 
-        if (updatesByCanonicalId.isEmpty()) {
+        if (updatesByNormalizedName.isEmpty()) {
             return catalog
         }
 
         return catalog.map { item ->
 
-            val operation = updatesByCanonicalId[item.normalized]
-                ?: return@map item
+            val operation =
+                updatesByNormalizedName[item.normalized]
+                    ?: return@map item
 
             item.copy(
-                colloquial = operation.candidate.aliases.toList(),
+                itemname = operation.displayName(),
+                normalized = operation.catalogNormalizedName(),
+                plural = operation.catalogNormalizedName(),
+                colloquial = operation.sortedAliases(),
+                phonetic_tokens = operation.catalogTokens(),
+                autocomplete_tokens = operation.catalogTokens(),
                 knowledge = catalogKnowledgeMapper.map(operation.candidate)
             )
         }
@@ -87,15 +97,21 @@ class DefaultFoodsJsonPatchApplier : FoodsJsonPatchApplier {
 
     private fun FoodsJsonPatchOperation.toCatalogItem(): CatalogItem {
 
-        val displayName = displayName()
-        val tokens = catalogTokens()
+        val displayName =
+            displayName()
+
+        val normalizedName =
+            catalogNormalizedName()
+
+        val tokens =
+            catalogTokens()
 
         return CatalogItem(
             itemname = displayName,
             category = "unknown",
             production = "unknown",
-            normalized = canonicalId,
-            plural = canonicalId,
+            normalized = normalizedName,
+            plural = normalizedName,
             colloquial = sortedAliases(),
             phonetic_tokens = tokens,
             autocomplete_tokens = tokens,
@@ -103,47 +119,49 @@ class DefaultFoodsJsonPatchApplier : FoodsJsonPatchApplier {
         )
     }
 
-    private fun sortCatalog(
-        catalog: List<CatalogItem>
-    ): List<CatalogItem> {
-
-        return catalog.sortedBy {
-            it.normalized
-        }
-    }
-
-    private fun mergeCatalogItems(
-        updatedCatalogItems: List<CatalogItem>,
-        addedCatalogItems: List<CatalogItem>
-    ): List<CatalogItem> {
-
-        return updatedCatalogItems + addedCatalogItems
-    }
-
-    private fun containsCatalogItem(
-        catalog: List<CatalogItem>,
-        normalized: String
-    ): Boolean {
-
-        return catalog.any {
-            it.normalized == normalized
-        }
-    }
-
     private fun FoodsJsonPatchOperation.displayName(): String =
         candidate.aliases
             .firstOrNull()
+            ?.takeIf { it.isNotBlank() }
             ?: canonicalId
+
+    private fun FoodsJsonPatchOperation.catalogNormalizedName(): String =
+        displayName().normalizedCatalogName()
 
     private fun FoodsJsonPatchOperation.catalogTokens(): List<String> =
         candidate.aliases
             .plus(canonicalId)
-            .map { it.lowercase() }
+            .map { value ->
+                value.normalizedCatalogName()
+            }
+            .filter { value ->
+                value.isNotBlank()
+            }
             .distinct()
             .sorted()
 
     private fun FoodsJsonPatchOperation.sortedAliases(): List<String> =
         candidate.aliases
-            .toList()
+            .map { alias ->
+                alias.trim()
+            }
+            .filter { alias ->
+                alias.isNotBlank()
+            }
+            .distinct()
             .sorted()
+
+    private fun String.normalizedCatalogName(): String =
+        trim()
+            .lowercase()
+            .replace(Regex("\\s+"), " ")
+            .takeIf { it.isNotBlank() }
+            ?: ""
+
+    private fun sortCatalog(
+        catalog: List<CatalogItem>
+    ): List<CatalogItem> =
+        catalog.sortedBy { item ->
+            item.normalized
+        }
 }

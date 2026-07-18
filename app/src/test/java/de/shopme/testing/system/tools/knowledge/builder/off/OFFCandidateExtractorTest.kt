@@ -1,14 +1,14 @@
 package de.shopme.testing.system.tools.knowledge.builder.off
 
 import de.shopme.tools.knowledge.ai.builder.RawKnowledgeInput
-import de.shopme.tools.knowledge.ai.builder.off.OFFCandidateExtractor
+import de.shopme.tools.knowledge.ai.builder.off.RawOFFCandidateExtractor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class OFFCandidateExtractorTest {
 
-    private val extractor = OFFCandidateExtractor()
+    private val extractor = RawOFFCandidateExtractor()
 
     @Test
     fun extractReadsSourceId() {

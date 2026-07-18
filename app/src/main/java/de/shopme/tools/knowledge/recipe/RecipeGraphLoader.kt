@@ -13,7 +13,7 @@ class RecipeGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "recipe_graph.json",
+    KnowledgeAssets.RUNTIME_ROOT + "recipe_graph.json",
 
     RecipeKnowledge::class.java
 

@@ -12,7 +12,7 @@ class WaterGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "water_footprint.json",
+    KnowledgeAssets.RUNTIME_ROOT + "water_footprint.json",
 
     WaterKnowledge::class.java
 

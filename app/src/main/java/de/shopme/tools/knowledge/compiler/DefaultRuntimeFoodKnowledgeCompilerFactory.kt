@@ -7,22 +7,17 @@ import de.shopme.tools.knowledge.animalwelfare.AnimalWelfareKnowledge
 import de.shopme.tools.knowledge.animalwelfare.DefaultAnimalWelfareResolver
 import de.shopme.tools.knowledge.biodiversity.BiodiversityKnowledge
 import de.shopme.tools.knowledge.biodiversity.DefaultBiodiversityResolver
-import de.shopme.tools.knowledge.carbon.CarbonKnowledge
-import de.shopme.tools.knowledge.carbon.DefaultCarbonFootprintResolver
 import de.shopme.tools.knowledge.compiler.passes.AllergenCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.AnimalWelfareCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.BiodiversityCompilerPass
-import de.shopme.tools.knowledge.compiler.passes.CarbonCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.CarbonImpactCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.DietCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.FairTradeCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.FoodMilesCompilerPass
-import de.shopme.tools.knowledge.compiler.passes.GlycemicIndexCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.IngredientGraphCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.IngredientsCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.LocalityCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.NutriScoreCompilerPass
-import de.shopme.tools.knowledge.compiler.passes.NutritionAliasCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.NutritionCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.PackagingCompilerPass
 import de.shopme.tools.knowledge.compiler.passes.PesticideCompilerPass
@@ -42,8 +37,6 @@ import de.shopme.tools.knowledge.fairtrade.FairTradeKnowledge
 import de.shopme.tools.knowledge.foodmiles.DefaultFoodMilesResolver
 import de.shopme.tools.knowledge.foodmiles.FoodMilesKnowledge
 import de.shopme.tools.knowledge.foods.EmptyFoodLookup
-import de.shopme.tools.knowledge.glycemic.DefaultGlycemicIndexResolver
-import de.shopme.tools.knowledge.glycemic.GlycemicIndexKnowledge
 import de.shopme.tools.knowledge.ingredientgraph.DefaultIngredientGraphResolver
 import de.shopme.tools.knowledge.ingredientgraph.IngredientGraphKnowledge
 import de.shopme.tools.knowledge.ingredients.DefaultIngredientsResolver
@@ -53,14 +46,12 @@ import de.shopme.tools.knowledge.locality.DefaultLocalityResolver
 import de.shopme.tools.knowledge.locality.LocalityKnowledge
 import de.shopme.tools.knowledge.nutriscore.DefaultNutriScoreResolver
 import de.shopme.tools.knowledge.nutriscore.NutriScoreFactsKnowledge
-import de.shopme.tools.knowledge.nutrition.DefaultNutritionAliasResolver
 import de.shopme.tools.knowledge.nutrition.DefaultNutritionFactsResolver
-import de.shopme.tools.knowledge.nutrition.NutritionAliasGraphLoader
 import de.shopme.tools.knowledge.nutrition.NutritionFactsKnowledge
 import de.shopme.tools.knowledge.packaging.DefaultPackagingResolver
 import de.shopme.tools.knowledge.packaging.PackagingKnowledge
-import de.shopme.tools.knowledge.pesticide.DefaultPesticideResolver
-import de.shopme.tools.knowledge.pesticide.PesticideKnowledge
+import de.shopme.tools.knowledge.pesticides.DefaultPesticideResolver
+import de.shopme.tools.knowledge.pesticides.PesticideKnowledge
 import de.shopme.tools.knowledge.pollinator.DefaultPollinatorResolver
 import de.shopme.tools.knowledge.pollinator.PollinatorKnowledge
 import de.shopme.tools.knowledge.processing.DefaultProcessingResolver
@@ -86,13 +77,6 @@ object DefaultRuntimeFoodKnowledgeCompilerFactory {
         context: Context
     ): FoodKnowledgeCompiler {
 
-        val aliasResolver =
-            DefaultNutritionAliasResolver(
-                NutritionAliasGraphLoader(
-                    context
-                ).load()
-            )
-
         val nutritionFactsResolver =
             DefaultNutritionFactsResolver(
                 RuntimeKnowledgeLoader(
@@ -108,24 +92,6 @@ object DefaultRuntimeFoodKnowledgeCompilerFactory {
                     context,
                     "allergens.json",
                     AllergenKnowledge::class.java
-                ).load()
-            )
-
-        val glycemicIndexResolver =
-            DefaultGlycemicIndexResolver(
-                RuntimeKnowledgeLoader(
-                    context,
-                    "glycemic.json",
-                    GlycemicIndexKnowledge::class.java
-                ).load()
-            )
-
-        val carbonFootprintResolver =
-            DefaultCarbonFootprintResolver(
-                RuntimeKnowledgeLoader(
-                    context,
-                    "carbon_footprint.json",
-                    CarbonKnowledge::class.java
                 ).load()
             )
 
@@ -315,10 +281,6 @@ object DefaultRuntimeFoodKnowledgeCompilerFactory {
 
                 listOf(
 
-                    NutritionAliasCompilerPass(
-                        resolver = aliasResolver,
-                        foodLookup = EmptyFoodLookup
-                    ),
                     NutritionCompilerPass(
                         resolver = nutritionFactsResolver,
                         foodLookup = EmptyFoodLookup
@@ -327,12 +289,6 @@ object DefaultRuntimeFoodKnowledgeCompilerFactory {
                         resolver = allergenResolver,
                         foodLookup = EmptyFoodLookup
                     ),
-                    GlycemicIndexCompilerPass(
-                        resolver = glycemicIndexResolver,
-                        foodLookup = EmptyFoodLookup),
-
-                    CarbonCompilerPass(carbonFootprintResolver,
-                        foodLookup = EmptyFoodLookup),
 
                     WaterCompilerPass(
                         resolver = waterResolver,

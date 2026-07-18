@@ -1,6 +1,6 @@
 package de.shopme.testing.system.tools.knowledge.off
 
-import de.shopme.tools.data.KnowledgeDataDirectories
+import de.shopme.tools.knowledge.data.KnowledgeDataDirectories
 import java.io.BufferedWriter
 import java.io.File
 import java.io.OutputStreamWriter

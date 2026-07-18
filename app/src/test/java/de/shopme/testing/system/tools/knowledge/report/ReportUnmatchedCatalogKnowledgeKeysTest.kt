@@ -1,0 +1,138 @@
+package de.shopme.testing.system.tools.knowledge.report
+
+import de.shopme.tools.report.CatalogKnowledgeKeyExtractor
+import java.io.File
+import kotlin.test.Test
+import kotlin.test.assertTrue
+
+class ReportUnmatchedCatalogKnowledgeKeysTest {
+
+    @Test
+    fun reportUnmatchedCatalogKnowledgeKeys() {
+
+        val catalogFile =
+            File(
+                "..",
+                "data/raw/catalog/supermarket_dataset.translated.json"
+            )
+
+        val catalogKeys =
+            CatalogKnowledgeKeyExtractor()
+                .extract(
+                    CatalogJsonFileReader()
+                        .read(catalogFile)
+                )
+
+        assertTrue(
+            catalogKeys.isNotEmpty(),
+            "No runtime catalog knowledge keys found"
+        )
+
+        println(
+            "Catalog knowledge keys = ${catalogKeys.size}"
+        )
+
+        val projectRoot =
+            File("..")
+
+        val serverDirectory =
+            File(
+                projectRoot,
+                "data/generated/knowledge/server"
+            )
+
+        require(serverDirectory.isDirectory) {
+            "Server knowledge directory does not exist: " +
+                    serverDirectory.absolutePath
+        }
+
+        val outputDirectory =
+            File(
+                projectRoot,
+                "data/generated/reports/catalog-server-matches"
+            )
+
+        val nutritionQueryExpander =
+            NutritionRetrievalQueryExpander()
+
+        val writer =
+            CatalogServerKnowledgeMatchReportWriter()
+
+        serverDirectory
+            .listFiles()
+            .orEmpty()
+            .asSequence()
+            .filter(File::isFile)
+            .filter {
+                it.extension.equals(
+                    other = "json",
+                    ignoreCase = true
+                )
+            }
+            .sortedBy {
+                it.name
+            }
+            .forEach { artifactFile ->
+
+                val reporter =
+                    CatalogServerKnowledgeMatchReporter(
+                        nearestCandidateLimit =
+                            5,
+                        queryExpander =
+                            if (
+                                artifactFile.name.equals(
+                                    other =
+                                        "nutrition.json",
+                                    ignoreCase =
+                                        true
+                                )
+                            ) {
+                                nutritionQueryExpander
+                            } else {
+                                null
+                            }
+                    )
+
+                val report =
+                    reporter.report(
+                        artifactFile = artifactFile,
+                        catalogKeys = catalogKeys
+                    )
+
+                val outputFile =
+                    File(
+                        outputDirectory,
+                        "${artifactFile.nameWithoutExtension}.matches.json"
+                    )
+
+                writer.write(
+                    report = report,
+                    outputFile = outputFile
+                )
+
+                val unmatchedWithCandidates =
+                    report.unmatched.count {
+                        it.nearestCandidates.isNotEmpty()
+                    }
+
+                val unmatchedWithoutCandidates =
+                    report.unmatched.count {
+                        it.nearestCandidates.isEmpty()
+                    }
+
+                println()
+                println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                println("CATALOG → SERVER MATCH REPORT")
+                println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                println("Artifact                  : ${report.artifactName}")
+                println("Catalog keys              : ${report.catalogKeyCount}")
+                println("Server keys               : ${report.serverKeyCount}")
+                println("Exact matches             : ${report.exactMatches.size}")
+                println("Unmatched                 : ${report.unmatched.size}")
+                println("Unmatched with candidates : $unmatchedWithCandidates")
+                println("No candidates             : $unmatchedWithoutCandidates")
+                println("Report                    : ${outputFile.path}")
+                println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            }
+    }
+}

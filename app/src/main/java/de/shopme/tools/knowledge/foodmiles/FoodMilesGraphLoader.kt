@@ -12,7 +12,7 @@ class FoodMilesGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT +
+    KnowledgeAssets.RUNTIME_ROOT +
 
             "food_miles.json",
 

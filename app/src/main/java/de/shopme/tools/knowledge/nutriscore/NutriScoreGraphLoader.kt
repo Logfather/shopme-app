@@ -13,7 +13,7 @@ class NutriScoreGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "nutri_score_facts.json",
+    KnowledgeAssets.RUNTIME_ROOT + "nutri_score_facts.json",
 
     NutriScoreFactsKnowledge::class.java
 

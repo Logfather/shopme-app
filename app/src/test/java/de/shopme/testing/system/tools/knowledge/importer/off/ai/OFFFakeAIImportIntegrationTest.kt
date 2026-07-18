@@ -1,6 +1,6 @@
 package de.shopme.testing.system.tools.knowledge.importer.off.ai
 
-import de.shopme.tools.data.KnowledgeDataDirectories
+import de.shopme.tools.knowledge.data.KnowledgeDataDirectories
 import de.shopme.tools.knowledge.compiler.candidate.KnowledgeImportProcessor
 import de.shopme.tools.knowledge.importer.off.JsonlGzipOFFImportReader
 import de.shopme.tools.knowledge.importer.off.ai.FakeOFFAIExtractionClient

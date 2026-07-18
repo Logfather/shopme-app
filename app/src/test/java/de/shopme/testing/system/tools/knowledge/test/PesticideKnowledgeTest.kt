@@ -1,7 +1,7 @@
 package de.shopme.testing.system.tools.knowledge.test
 
 import com.google.gson.Gson
-import de.shopme.tools.knowledge.pesticide.PesticideKnowledge
+import de.shopme.tools.knowledge.pesticides.PesticideKnowledge
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

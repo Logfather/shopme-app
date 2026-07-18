@@ -34,17 +34,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import de.shopme.data.datasource.catalog.CatalogLoader
 import de.shopme.data.sync.logging.RuntimeLog
-import de.shopme.tools.knowledge.compiler.DefaultRuntimeFoodKnowledgeCompilerFactory
 import de.shopme.tools.knowledge.dimension.DefaultKnowledgeDimensionRegistry
 import de.shopme.tools.knowledge.dimension.KnowledgeDimensionCapability
 import de.shopme.tools.knowledge.dimension.KnowledgeDimensionInfo
 import de.shopme.tools.knowledge.dimension.KnowledgeSection
-import de.shopme.tools.knowledge.reader.LocalCatalogReader
-import de.shopme.tools.report.FoodKnowledgeCoverageCalculator
 import de.shopme.tools.report.FoodKnowledgeCoverageReport
 import de.shopme.tools.report.ReportTimestamp
+import de.shopme.tools.report.RuntimeCatalogKnowledgeKeyCounter
+import de.shopme.tools.report.RuntimeKnowledgeCoverageCalculator
 import de.shopme.ui.icons.oeicons.OttoThinkingIcon
 import de.shopme.ui.theme.BrandCreme
 import de.shopme.ui.theme.BrandGreen
@@ -80,39 +78,33 @@ fun FoodIntelligenceScreen(
     }
 
     val statistics = remember(context) {
-        val compiler =
-            DefaultRuntimeFoodKnowledgeCompilerFactory.create(
+
+        val uniqueKnowledgeKeyCount =
+            RuntimeCatalogKnowledgeKeyCounter(
                 context
-            )
-
-        val calculator =
-            FoodKnowledgeCoverageCalculator()
-
-        val catalog =
-            LocalCatalogReader(
-                CatalogLoader(
-                    context
-                )
-            ).read()
-
-        val knowledge =
-            catalog.map(
-                compiler::compile
-            )
+            ).count()
 
         val report =
             FoodKnowledgeCoverageReport(
-                generatedAt = ReportTimestamp.now(),
-                catalogEntries = catalog.size,
+                generatedAt =
+                    ReportTimestamp.now(),
+
+                catalogEntries =
+                    uniqueKnowledgeKeyCount,
+
                 entries =
-                    calculator.calculate(
-                        knowledge
+                    RuntimeKnowledgeCoverageCalculator(
+                        context
+                    ).calculate(
+                        total =
+                            uniqueKnowledgeKeyCount
                     )
             )
 
-        report.entries.forEach {
+        report.entries.forEach { entry ->
             RuntimeLog.runtime(
-                "${it.name} -> ${it.covered}"
+                "${entry.name} -> " +
+                        "${entry.covered}/${entry.total}"
             )
         }
 
@@ -145,81 +137,125 @@ fun FoodIntelligenceScreen(
     }
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = BrandCreme
+        modifier =
+            Modifier.fillMaxSize(),
+
+        color =
+            BrandCreme
     ) {
         Column(
-            modifier = Modifier
-                .padding(24.dp)
-                .verticalScroll(
-                    rememberScrollState()
-                )
+            modifier =
+                Modifier
+                    .padding(24.dp)
+                    .verticalScroll(
+                        rememberScrollState()
+                    )
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            bottom = 16.dp
+                        ),
+
+                horizontalArrangement =
+                    Arrangement.SpaceBetween,
+
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
                 Text(
-                    text = "← Schließen",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.clickable {
-                        onClose()
-                    }
+                    text =
+                        "← Schließen",
+
+                    style =
+                        MaterialTheme.typography.titleMedium,
+
+                    modifier =
+                        Modifier.clickable {
+                            onClose()
+                        }
                 )
             }
 
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
                 OttoThinkingIcon(
-                    modifier = Modifier.size(60.dp)
+                    modifier =
+                        Modifier.size(60.dp)
                 )
 
                 Text(
-                    text = "Lebensmittelwissen",
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.padding(start = 12.dp)
+                    text =
+                        "Lebensmittelwissen",
+
+                    style =
+                        MaterialTheme.typography.headlineMedium,
+
+                    modifier =
+                        Modifier.padding(
+                            start = 12.dp
+                        )
                 )
             }
 
             Spacer(
-                Modifier.height(16.dp)
+                modifier =
+                    Modifier.height(16.dp)
             )
 
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = BrandCreme
-                )
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            vertical = 16.dp
+                        ),
+
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor =
+                            BrandCreme
+                    )
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier =
+                        Modifier.padding(16.dp),
+
+                    verticalArrangement =
+                        Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Was zeigt diese Übersicht?",
-                        style = MaterialTheme.typography.titleMedium
+                        text =
+                            "Was zeigt diese Übersicht?",
+
+                        style =
+                            MaterialTheme.typography.titleMedium
                     )
 
                     Text(
                         text =
-                            "Diese Übersicht zeigt, für wie viele Produkte bereits Informationen " +
-                                    "in den einzelnen Wissensbereichen verfügbar sind.\n\n" +
-                                    "Je höher die Abdeckung, desto umfassender kann Hivra Fragen " +
+                            "Diese Übersicht zeigt, für wie viele eindeutige Lebensmittelreferenzen " +
+                                    "bereits Informationen in den einzelnen Wissensbereichen verfügbar sind.\n\n" +
+                                    "Mehrere Handelsartikel können dabei auf dieselbe Lebensmittelreferenz " +
+                                    "verweisen. Je höher die Abdeckung, desto umfassender kann Hivra Fragen " +
                                     "zu diesem Thema beantworten.",
-                        style = MaterialTheme.typography.bodyMedium
+
+                        style =
+                            MaterialTheme.typography.bodyMedium
                     )
 
                     HorizontalDivider()
 
                     Text(
-                        text = "Beispiel",
-                        style = MaterialTheme.typography.titleSmall
+                        text =
+                            "Beispiel",
+
+                        style =
+                            MaterialTheme.typography.titleSmall
                     )
 
                     Text(
@@ -228,14 +264,18 @@ fun FoodIntelligenceScreen(
                                     "🟡 Regionalität       73 %\n\n" +
                                     "🟠 Bestäuber          34 %\n\n" +
                                     "🔴 Wasserstress        4 %\n",
-                        style = MaterialTheme.typography.bodyMedium
+
+                        style =
+                            MaterialTheme.typography.bodyMedium
                     )
 
                     Text(
                         text =
                             "Die Farben zeigen nicht die Qualität der Lebensmittel, " +
                                     "sondern den Ausbaugrad des vorhandenen Wissens.",
-                        style = MaterialTheme.typography.bodySmall
+
+                        style =
+                            MaterialTheme.typography.bodySmall
                     )
 
                     HorizontalDivider()
@@ -243,129 +283,198 @@ fun FoodIntelligenceScreen(
             }
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.End
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top = 8.dp
+                        ),
+
+                horizontalArrangement =
+                    Arrangement.End
             ) {
                 TextButton(
                     onClick = {
-                        sort = CoverageSort.KNOWLEDGE
+                        sort =
+                            CoverageSort.KNOWLEDGE
                     }
                 ) {
-                    Text("🧠 Wissen")
+                    Text(
+                        text =
+                            "🧠 Wissen"
+                    )
                 }
 
                 TextButton(
                     onClick = {
-                        sort = CoverageSort.ALPHABET
+                        sort =
+                            CoverageSort.ALPHABET
                     }
                 ) {
-                    Text("A-Z ↑")
+                    Text(
+                        text =
+                            "A-Z ↑"
+                    )
                 }
 
                 TextButton(
                     onClick = {
-                        sort = CoverageSort.COVERAGE_DESC
+                        sort =
+                            CoverageSort.COVERAGE_DESC
                     }
                 ) {
-                    Text("Coverage ↓")
+                    Text(
+                        text =
+                            "Coverage ↓"
+                    )
                 }
             }
 
             HorizontalDivider(
-                modifier = Modifier.padding(vertical = 16.dp)
+                modifier =
+                    Modifier.padding(
+                        vertical = 16.dp
+                    )
             )
 
-            var currentSection: KnowledgeSection? = null
+            var currentSection: KnowledgeSection? =
+                null
 
             entries.forEach { statistic ->
-                val section = statistic.dimension.section
+
+                val section =
+                    statistic.dimension.section
 
                 if (section != currentSection) {
-                    currentSection = section
+                    currentSection =
+                        section
 
                     HorizontalDivider(
-                        modifier = Modifier.padding(
-                            vertical = 16.dp
-                        )
+                        modifier =
+                            Modifier.padding(
+                                vertical = 16.dp
+                            )
                     )
 
                     Text(
-                        text = section.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = BrandGreen
+                        text =
+                            section.title,
+
+                        style =
+                            MaterialTheme.typography.titleMedium,
+
+                        color =
+                            BrandGreen
                     )
                 }
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                        .clickable {
-                            selectedCapability =
-                                registry.all()
-                                    .firstOrNull {
-                                        it.coverageDimension == statistic.dimension
-                                    }
-                        },
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                vertical = 6.dp
+                            )
+                            .clickable {
+                                selectedCapability =
+                                    registry
+                                        .all()
+                                        .firstOrNull {
+                                            it.coverageDimension ==
+                                                    statistic.dimension
+                                        }
+                            },
+
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
                     Text(
-                        text = statistic.name,
-                        modifier = Modifier.weight(1.4f)
+                        text =
+                            statistic.name,
+
+                        modifier =
+                            Modifier.weight(1.4f)
                     )
 
                     val progress =
-                        (statistic.covered.toFloat() / statistic.total.toFloat())
-                            .coerceIn(
-                                0f,
-                                1f
-                            )
+                        if (statistic.total > 0) {
+                            (
+                                    statistic.covered.toFloat() /
+                                            statistic.total.toFloat()
+                                    )
+                                .coerceIn(
+                                    0f,
+                                    1f
+                                )
+                        } else {
+                            0f
+                        }
 
                     LinearProgressIndicator(
                         progress = {
                             progress
                         },
-                        modifier = Modifier
-                            .weight(1.6f)
-                            .height(6.dp)
-                            .clip(
-                                RoundedCornerShape(50)
+
+                        modifier =
+                            Modifier
+                                .weight(1.6f)
+                                .height(6.dp)
+                                .clip(
+                                    RoundedCornerShape(50)
+                                ),
+
+                        color =
+                            coverageColor(
+                                statistic.percentage
                             ),
-                        color = coverageColor(
-                            statistic.percentage
-                        ),
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+
+                        trackColor =
+                            MaterialTheme.colorScheme.surfaceVariant
                     )
 
                     Text(
-                        text = CoverageFormatter.format(
-                            statistic
-                        ),
-                        modifier = Modifier
-                            .weight(1.1f)
-                            .padding(start = 12.dp),
-                        textAlign = TextAlign.End
+                        text =
+                            CoverageFormatter.format(
+                                statistic
+                            ),
+
+                        modifier =
+                            Modifier
+                                .weight(1.1f)
+                                .padding(
+                                    start = 12.dp
+                                ),
+
+                        textAlign =
+                            TextAlign.End
                     )
                 }
             }
 
             HorizontalDivider(
-                modifier = Modifier.padding(vertical = 16.dp)
+                modifier =
+                    Modifier.padding(
+                        vertical = 16.dp
+                    )
             )
 
             Text(
-                text = "Generated by Hivra Food Intelligence Compiler",
-                style = MaterialTheme.typography.labelMedium
+                text =
+                    "Generated by Hivra Food Intelligence Compiler",
+
+                style =
+                    MaterialTheme.typography.labelMedium
             )
         }
 
         selectedCapability?.let { capability ->
             KnowledgeDimensionInfoDialog(
-                info = capability.info(),
+                info =
+                    capability.info(),
+
                 onDismiss = {
-                    selectedCapability = null
+                    selectedCapability =
+                        null
                 }
             )
         }
@@ -378,80 +487,115 @@ fun KnowledgeDimensionInfoDialog(
     onDismiss: () -> Unit
 ) {
     AlertDialog(
-        containerColor = BrandCreme,
-        onDismissRequest = onDismiss,
+        containerColor =
+            BrandCreme,
+
+        onDismissRequest =
+            onDismiss,
+
         confirmButton = {
             TextButton(
-                onClick = onDismiss
+                onClick =
+                    onDismiss
             ) {
-                Text("Schließen")
+                Text(
+                    text =
+                        "Schließen"
+                )
             }
         },
+
         title = {
             Text(
-                text = info.title
+                text =
+                    info.title
             )
         },
+
         text = {
             Column {
                 Text(
-                    text = "Worum geht es?",
-                    style = MaterialTheme.typography.titleSmall
+                    text =
+                        "Worum geht es?",
+
+                    style =
+                        MaterialTheme.typography.titleSmall
                 )
 
                 Text(
-                    text = info.description
+                    text =
+                        info.description
                 )
 
                 Spacer(
-                    Modifier.height(12.dp)
+                    modifier =
+                        Modifier.height(12.dp)
                 )
 
                 Text(
-                    text = "Welche Daten speichern wir?",
-                    style = MaterialTheme.typography.titleSmall
+                    text =
+                        "Welche Daten speichern wir?",
+
+                    style =
+                        MaterialTheme.typography.titleSmall
                 )
 
-                info.storedFacts.forEach {
+                info.storedFacts.forEach { fact ->
                     Text(
-                        text = "✓ $it"
+                        text =
+                            "✓ $fact"
                     )
                 }
 
                 Spacer(
-                    Modifier.height(12.dp)
+                    modifier =
+                        Modifier.height(12.dp)
                 )
 
                 Text(
-                    text = "Wie entsteht die Bewertung?",
-                    style = MaterialTheme.typography.titleSmall
+                    text =
+                        "Wie entsteht die Bewertung?",
+
+                    style =
+                        MaterialTheme.typography.titleSmall
                 )
 
                 Text(
-                    text = info.evaluation
+                    text =
+                        info.evaluation
                 )
 
                 Spacer(
-                    Modifier.height(12.dp)
+                    modifier =
+                        Modifier.height(12.dp)
                 )
 
                 Text(
-                    text = "Interpretation",
-                    style = MaterialTheme.typography.titleSmall
+                    text =
+                        "Interpretation",
+
+                    style =
+                        MaterialTheme.typography.titleSmall
                 )
 
-                info.interpretations.forEach {
+                info.interpretations.forEach { interpretation ->
                     Text(
-                        text = "${it.indicator} ${it.title}"
+                        text =
+                            "${interpretation.indicator} " +
+                                    interpretation.title
                     )
 
                     Text(
-                        text = it.description,
-                        style = MaterialTheme.typography.bodySmall
+                        text =
+                            interpretation.description,
+
+                        style =
+                            MaterialTheme.typography.bodySmall
                     )
 
                     Spacer(
-                        Modifier.height(8.dp)
+                        modifier =
+                            Modifier.height(8.dp)
                     )
                 }
             }

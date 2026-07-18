@@ -13,7 +13,7 @@ class NutritionFactsGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "nutrition_facts.json",
+    KnowledgeAssets.RUNTIME_ROOT + "nutrition_facts.json",
 
     NutritionFactsKnowledge::class.java
 

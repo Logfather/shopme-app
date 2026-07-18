@@ -9,7 +9,7 @@ import de.shopme.tools.knowledge.ki_candidates.KnowledgeDimensionCandidate
 import de.shopme.tools.knowledge.ki_candidates.KnowledgeDimensionCandidateType
 
 class DeterministicOFFCandidateBuilder(
-    private val extractor: OFFCandidateExtractor = OFFCandidateExtractor()
+    private val extractor: RawOFFCandidateExtractor = RawOFFCandidateExtractor()
 ) : AIKnowledgeBuilder {
 
     override fun build(

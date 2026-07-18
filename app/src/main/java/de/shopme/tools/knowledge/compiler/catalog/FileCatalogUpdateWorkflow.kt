@@ -7,14 +7,12 @@ class FileCatalogUpdateWorkflow(
     private val reader: FileCatalogReader,
     private val updateWorkflow: AIKnowledgeCatalogUpdateWorkflow,
     private val importWorkflow: AIKnowledgeCatalogImportWorkflow? = null
-){
+) : AIKnowledgeCatalogResultImporter {
 
     fun applyPatch(
         patch: FoodsJsonPatch
     ) {
-
-        val catalog =
-            reader.read()
+        val catalog = reader.read()
 
         updateWorkflow.updateCatalog(
             catalog = catalog,
@@ -22,10 +20,9 @@ class FileCatalogUpdateWorkflow(
         )
     }
 
-    fun importAIKnowledge(
+    override fun importAIKnowledge(
         result: AIKnowledgeBuildResult
     ) {
-
         val catalog = reader.read()
 
         requireNotNull(importWorkflow) {

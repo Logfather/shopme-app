@@ -12,7 +12,7 @@ class PackagingGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT +
+    KnowledgeAssets.RUNTIME_ROOT +
             "packaging.json",
 
     PackagingKnowledge::class.java

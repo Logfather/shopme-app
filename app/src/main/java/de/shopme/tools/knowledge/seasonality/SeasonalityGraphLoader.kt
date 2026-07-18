@@ -12,7 +12,7 @@ class SeasonalityGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "seasonality.json",
+    KnowledgeAssets.RUNTIME_ROOT + "seasonality.json",
 
     SeasonalityKnowledge::class.java
 

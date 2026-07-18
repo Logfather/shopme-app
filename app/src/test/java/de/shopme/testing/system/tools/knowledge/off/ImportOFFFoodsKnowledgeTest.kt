@@ -1,6 +1,6 @@
 package de.shopme.testing.system.tools.knowledge.off
 
-import de.shopme.tools.data.KnowledgeDataDirectories
+import de.shopme.tools.knowledge.data.KnowledgeDataDirectories
 import de.shopme.tools.knowledge.foods.FoodsKnowledgeWriter
 import de.shopme.tools.knowledge.foods.importer.OFFFoodsKnowledgeImporter
 import java.io.File

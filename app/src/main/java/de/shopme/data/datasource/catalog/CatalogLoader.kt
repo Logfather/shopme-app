@@ -10,12 +10,21 @@ class CatalogLoader(
     private val context: Context
 ) {
 
+    object CatalogAssets {
+
+        const val CATALOG =
+            "catalog/catalog.json"
+    }
+
     fun load(): List<CatalogItem> {
 
-        val json = context.assets
-            .open("catalog/supermarket_dataset.json")
-            .bufferedReader()
-            .use { it.readText() }
+        val json =
+            context.assets
+                .open(CatalogAssets.CATALOG)
+                .bufferedReader()
+                .use {
+                    it.readText()
+                }
 
         val type = object : TypeToken<List<CatalogItem>>() {}.type
 

@@ -12,7 +12,7 @@ class AllergenGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "allergens.json",
+    KnowledgeAssets.RUNTIME_ROOT + "allergens.json",
 
     AllergenKnowledge::class.java
 

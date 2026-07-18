@@ -15,7 +15,7 @@ import de.shopme.tools.knowledge.locality.Locality
 import de.shopme.tools.knowledge.nutriscore.NutriScore
 import de.shopme.tools.knowledge.nutrition.NutritionFacts
 import de.shopme.tools.knowledge.packaging.Packaging
-import de.shopme.tools.knowledge.pesticide.Pesticide
+import de.shopme.tools.knowledge.pesticides.Pesticide
 import de.shopme.tools.knowledge.pollinator.PollinatorScore
 import de.shopme.tools.knowledge.processing.ProcessingLevel
 import de.shopme.tools.knowledge.production.ProductionMethod

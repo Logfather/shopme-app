@@ -12,7 +12,7 @@ class ProductionGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "production.json",
+    KnowledgeAssets.RUNTIME_ROOT + "production.json",
 
     ProductionKnowledge::class.java
 

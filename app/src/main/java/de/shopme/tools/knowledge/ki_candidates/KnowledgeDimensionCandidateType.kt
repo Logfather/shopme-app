@@ -3,7 +3,9 @@ package de.shopme.tools.knowledge.ki_candidates
 enum class KnowledgeDimensionCandidateType {
 
     NUTRITION,
+    NUTRI_SCORE,
     CARBON,
+    DIET,
     WATER,
     WATER_STRESS,
     GLYCEMIC,
@@ -24,5 +26,6 @@ enum class KnowledgeDimensionCandidateType {
     RECIPE_GRAPH,
     CARBON_IMPACT,
     PESTICIDES,
-    PROCESSING
+    PROCESSING,
+    ENVIRONMENTAL_IMPACT
 }

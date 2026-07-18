@@ -12,7 +12,7 @@ class AnimalWelfareGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "animal_welfare.json",
+    KnowledgeAssets.RUNTIME_ROOT + "animal_welfare.json",
 
     AnimalWelfareKnowledge::class.java
 

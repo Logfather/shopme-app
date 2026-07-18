@@ -15,7 +15,7 @@ import de.shopme.tools.knowledge.nutriscore.NutriScoreResolver
 import de.shopme.tools.knowledge.nutrition.NutritionAliasResolver
 import de.shopme.tools.knowledge.nutrition.NutritionFactsResolver
 import de.shopme.tools.knowledge.packaging.PackagingResolver
-import de.shopme.tools.knowledge.pesticide.PesticideResolver
+import de.shopme.tools.knowledge.pesticides.PesticideResolver
 import de.shopme.tools.knowledge.pollinator.PollinatorResolver
 import de.shopme.tools.knowledge.processing.ProcessingResolver
 import de.shopme.tools.knowledge.production.ProductionResolver

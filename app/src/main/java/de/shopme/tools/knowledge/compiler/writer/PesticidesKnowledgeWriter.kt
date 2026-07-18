@@ -1,8 +1,8 @@
 package de.shopme.tools.knowledge.compiler.writer
 
 import de.shopme.tools.knowledge.compiler.CompilerContext
-import de.shopme.tools.knowledge.pesticide.Pesticide
-import de.shopme.tools.knowledge.pesticide.PesticideKnowledge
+import de.shopme.tools.knowledge.pesticides.Pesticide
+import de.shopme.tools.knowledge.pesticides.PesticideKnowledge
 import de.shopme.tools.knowledge.pesticides.PesticidesKnowledgeJsonWriter
 import java.io.File
 

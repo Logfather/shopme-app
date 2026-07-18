@@ -20,7 +20,7 @@ class DietGraphLoader(
             context.assets
 
                 .open(
-                    KnowledgeAssets.ROOT +
+                    KnowledgeAssets.RUNTIME_ROOT +
                             "diet_classification.json"
                 )
 

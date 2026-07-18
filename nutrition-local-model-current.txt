@@ -1,0 +1,2492 @@
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: app/src/main/java/de/shopme/tools/knowledge/mapping/catalog/training/NutritionMatcherTrainingExample.kt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+package de.shopme.tools.knowledge.mapping.catalog.training
+
+data class NutritionMatcherTrainingExample(
+    val id: String,
+    val catalogKey: String,
+    val serverArtifact: String,
+    val serverKey: String,
+    val label: NutritionMatcherTrainingLabel,
+    val role: NutritionMatcherTrainingExampleRole,
+    val selected: Boolean,
+    val candidateRank: Int,
+    val candidateCount: Int,
+    val diagnosticScore: Double,
+    val diagnosticScoreAvailable: Boolean,
+    val sharedTokens: List<String>,
+    val matcherConfidence: Double,
+    val originalDecisionType: String,
+    val originalDecisionReason: String?,
+    val originalValidationStatus: String,
+    val originalValidationReason: String?,
+    val representativeDecisionType: String?,
+    val representativeReasons: List<String>,
+    val trainingWeight: Double,
+    val provenance: NutritionMatcherTrainingProvenance
+)
+
+enum class NutritionMatcherTrainingLabel {
+    POSITIVE,
+    NEGATIVE
+}
+
+enum class NutritionMatcherTrainingExampleRole {
+
+    /**
+     * Regulär vom GPT-Matcher ausgewählt, vom ursprünglichen
+     * Validator akzeptiert und produktiv persistiert.
+     */
+    ACCEPTED_ORIGINAL_MATCH,
+
+    /**
+     * Zunächst wegen niedriger Konfidenz abgelehnt, anschließend
+     * vom Representative Validator akzeptiert.
+     */
+    ACCEPTED_SELECTED,
+
+    /**
+     * Vom Matcher ausgewählt, aber vom Representative Validator
+     * als inkompatibel verworfen.
+     */
+    REJECTED_SELECTED,
+
+    /**
+     * Kandidat einer vollständigen NO_MATCH-Entscheidung.
+     */
+    REJECTED_NO_MATCH_CANDIDATE,
+
+    /**
+     * Nicht ausgewählte Alternative zu einem ausgewählten Kandidaten.
+     */
+    NON_SELECTED_ALTERNATIVE
+}
+
+data class NutritionMatcherTrainingProvenance(
+    val sourceType: String,
+    val candidateQualityFile: String,
+    val diagnosticsFile: String,
+    val representativeValidationFile: String,
+    val sourceVersion: Int,
+    val matcher: String,
+    val validator: String
+)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: app/src/main/java/de/shopme/tools/knowledge/mapping/catalog/training/NutritionMatcherTrainingDataset.kt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+package de.shopme.tools.knowledge.mapping.catalog.training
+
+data class NutritionMatcherTrainingDataset(
+    val version: Int = 1,
+    val datasetType: String =
+        "NUTRITION_CATALOG_SERVER_MATCHER",
+    val summary:
+    NutritionMatcherTrainingDatasetSummary,
+    val examples:
+    List<NutritionMatcherTrainingExample>
+)
+
+data class NutritionMatcherTrainingDatasetSummary(
+    val sourceCatalogKeyCount: Int,
+    val exampleCount: Int,
+    val positiveCount: Int,
+    val negativeCount: Int,
+    val acceptedOriginalMatchCount: Int,
+    val acceptedSelectedCount: Int,
+    val rejectedSelectedCount: Int,
+    val rejectedNoMatchCandidateCount: Int,
+    val nonSelectedAlternativeCount: Int
+)
+
+data class ExportNutritionMatcherTrainingDatasetResult(
+    val dataset: NutritionMatcherTrainingDataset,
+    val outputFile: String
+)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: app/src/main/java/de/shopme/tools/knowledge/mapping/catalog/training/model/LocalNutritionMatcherCandidate.kt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+package de.shopme.tools.knowledge.mapping.catalog.training.model
+
+data class LocalNutritionMatcherCandidate(
+    val catalogKey: String,
+    val serverKey: String,
+    val candidateRank: Int,
+    val candidateCount: Int,
+    val diagnosticScore: Double,
+    val diagnosticScoreAvailable: Boolean,
+    val sharedTokens: List<String>
+)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: app/src/main/java/de/shopme/tools/knowledge/mapping/catalog/training/model/LocalNutritionMatcherFeatureExtractor.kt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+package de.shopme.tools.knowledge.mapping.catalog.training.model
+
+import de.shopme.tools.knowledge.mapping.catalog.training.NutritionMatcherTrainingExample
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresFactory.model
+import kotlin.math.max
+import kotlin.math.min
+
+class LocalNutritionMatcherFeatureExtractor {
+
+    /**
+     * diagnostic_score_available ist bewusst kein Feature.
+     *
+     * Es würde die Herkunft des Beispiels verraten:
+     *
+     * false -> ursprünglich akzeptierter Match
+     * true  -> Candidate-Quality-/Rejected-Pipeline
+     */
+    val featureNames: List<String> =
+        listOf(
+            "diagnostic_score",
+            "reciprocal_candidate_rank",
+            "reciprocal_candidate_count",
+            "shared_token_count",
+            "shared_token_ratio",
+            "token_jaccard",
+            "catalog_token_coverage",
+            "server_token_coverage",
+            "token_count_similarity",
+            "character_length_similarity",
+            "exact_normalized_match"
+        )
+
+    fun extract(
+        example: NutritionMatcherTrainingExample,
+        diagnosticScoreImputationValue: Double
+    ): DoubleArray {
+
+        return extract(
+            candidate =
+                LocalNutritionMatcherCandidate(
+                    catalogKey =
+                        example.catalogKey,
+                    serverKey =
+                        example.serverKey,
+                    candidateRank =
+                        example.candidateRank,
+                    candidateCount =
+                        example.candidateCount,
+                    diagnosticScore =
+                        example.diagnosticScore,
+                    diagnosticScoreAvailable =
+                        example.diagnosticScoreAvailable,
+                    sharedTokens =
+                        example.sharedTokens
+                ),
+            diagnosticScoreImputationValue =
+                diagnosticScoreImputationValue
+        )
+    }
+
+    fun extract(
+        candidate: LocalNutritionMatcherCandidate,
+        diagnosticScoreImputationValue: Double
+    ): DoubleArray {
+
+        require(
+            diagnosticScoreImputationValue.isFinite()
+        ) {
+            "Diagnostic score imputation value must be finite."
+        }
+
+        require(candidate.catalogKey.isNotBlank()) {
+            "Local matcher catalogKey must not be blank."
+        }
+
+        require(candidate.serverKey.isNotBlank()) {
+            "Local matcher serverKey must not be blank."
+        }
+
+        require(candidate.candidateCount > 0) {
+            "Local matcher candidateCount must be greater than zero."
+        }
+
+        require(
+            candidate.candidateRank in
+                    1..candidate.candidateCount
+        ) {
+            "Local matcher candidateRank must be within " +
+                    "1..candidateCount."
+        }
+
+        val diagnosticScore =
+            if (candidate.diagnosticScoreAvailable) {
+                candidate.diagnosticScore
+            } else {
+                diagnosticScoreImputationValue
+            }
+
+        require(diagnosticScore.isFinite()) {
+            "Effective diagnostic score must be finite."
+        }
+
+        val catalogTokens =
+            tokenize(
+                value = candidate.catalogKey
+            )
+
+        val serverTokens =
+            tokenize(
+                value = candidate.serverKey
+            )
+
+        val calculatedSharedTokens =
+            catalogTokens intersect serverTokens
+
+        val unionTokens =
+            catalogTokens union serverTokens
+
+        val catalogTokenCount =
+            catalogTokens.size
+
+        val serverTokenCount =
+            serverTokens.size
+
+        val maxTokenCount =
+            max(
+                catalogTokenCount,
+                serverTokenCount
+            )
+
+        val minTokenCount =
+            min(
+                catalogTokenCount,
+                serverTokenCount
+            )
+
+        val maxCharacterLength =
+            max(
+                candidate.catalogKey.length,
+                candidate.serverKey.length
+            )
+
+        val minCharacterLength =
+            min(
+                candidate.catalogKey.length,
+                candidate.serverKey.length
+            )
+
+        return doubleArrayOf(
+            diagnosticScore,
+            safeDivide(
+                numerator = 1.0,
+                denominator =
+                    candidate.candidateRank.toDouble()
+            ),
+            safeDivide(
+                numerator = 1.0,
+                denominator =
+                    candidate.candidateCount.toDouble()
+            ),
+            calculatedSharedTokens.size.toDouble(),
+            safeDivide(
+                numerator =
+                    candidate.sharedTokens
+                        .distinct()
+                        .size
+                        .toDouble(),
+                denominator =
+                    maxTokenCount.toDouble()
+            ),
+            safeDivide(
+                numerator =
+                    calculatedSharedTokens.size.toDouble(),
+                denominator =
+                    unionTokens.size.toDouble()
+            ),
+            safeDivide(
+                numerator =
+                    calculatedSharedTokens.size.toDouble(),
+                denominator =
+                    catalogTokenCount.toDouble()
+            ),
+            safeDivide(
+                numerator =
+                    calculatedSharedTokens.size.toDouble(),
+                denominator =
+                    serverTokenCount.toDouble()
+            ),
+            safeDivide(
+                numerator =
+                    minTokenCount.toDouble(),
+                denominator =
+                    maxTokenCount.toDouble()
+            ),
+            safeDivide(
+                numerator =
+                    minCharacterLength.toDouble(),
+                denominator =
+                    maxCharacterLength.toDouble()
+            ),
+            if (
+                normalize(candidate.catalogKey) ==
+                normalize(candidate.serverKey)
+            ) {
+                1.0
+            } else {
+                0.0
+            }
+        )
+    }
+
+    private fun tokenize(
+        value: String
+    ): Set<String> {
+
+        return normalize(value)
+            .split(" ")
+            .asSequence()
+            .map {
+                it.trim()
+            }
+            .filter {
+                it.length >= MIN_TOKEN_LENGTH
+            }
+            .filterNot {
+                it in STOP_TOKENS
+            }
+            .toSortedSet()
+    }
+
+    private fun normalize(
+        value: String
+    ): String {
+
+        return value
+            .lowercase()
+            .replace(
+                NON_ALPHANUMERIC_REGEX,
+                " "
+            )
+            .replace(
+                WHITESPACE_REGEX,
+                " "
+            )
+            .trim()
+    }
+
+    private fun safeDivide(
+        numerator: Double,
+        denominator: Double
+    ): Double {
+
+        if (
+            denominator == 0.0 ||
+            !denominator.isFinite()
+        ) {
+            return 0.0
+        }
+
+        val result =
+            numerator / denominator
+
+        return if (result.isFinite()) {
+            result
+        } else {
+            0.0
+        }
+    }
+
+    private companion object {
+
+        const val MIN_TOKEN_LENGTH =
+            2
+
+        val NON_ALPHANUMERIC_REGEX =
+            Regex("[^a-z0-9]+")
+
+        val WHITESPACE_REGEX =
+            Regex("\\s+")
+
+        val STOP_TOKENS =
+            setOf(
+                "and",
+                "or",
+                "the",
+                "with",
+                "of",
+                "in",
+                "on",
+                "for",
+                "to",
+                "a",
+                "an"
+            )
+    }
+}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: app/src/main/java/de/shopme/tools/knowledge/mapping/catalog/training/model/LocalNutritionMatcherModel.kt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+package de.shopme.tools.knowledge.mapping.catalog.training.model
+
+data class LocalNutritionMatcherModel(
+    val version: Int = 1,
+    val modelType: String =
+        "WEIGHTED_LOGISTIC_REGRESSION",
+    val datasetType: String =
+        "NUTRITION_CATALOG_SERVER_MATCHER",
+    val featureNames: List<String>,
+    val featureMeans: List<Double>,
+    val featureStandardDeviations: List<Double>,
+    val coefficients: List<Double>,
+    val intercept: Double,
+    val decisionThreshold: Double,
+
+    /**
+     * Wird ausschließlich aus verfügbaren diagnosticScore-Werten
+     * des Trainingssplits berechnet.
+     *
+     * Beispiele ohne Score verwenden diesen Wert. Dadurch ist ein
+     * fehlender Score nach der Standardisierung neutral und verrät
+     * nicht mehr die Herkunft des Beispiels.
+     */
+    val diagnosticScoreImputationValue: Double,
+
+    val training:
+    LocalNutritionMatcherTrainingMetadata,
+    val metrics:
+    LocalNutritionMatcherModelMetrics
+)
+
+data class LocalNutritionMatcherTrainingMetadata(
+    val datasetFile: String,
+    val datasetVersion: Int,
+    val exampleCount: Int,
+    val trainingExampleCount: Int,
+    val testExampleCount: Int,
+    val trainingCatalogKeyCount: Int,
+    val testCatalogKeyCount: Int,
+    val positiveClassWeight: Double,
+    val negativeClassWeight: Double,
+    val learningRate: Double,
+    val iterationCount: Int,
+    val l2Regularization: Double,
+    val splitModulo: Int,
+    val testBuckets: List<Int>
+)
+
+data class LocalNutritionMatcherModelMetrics(
+    val training:
+    LocalNutritionMatcherClassificationMetrics,
+    val test:
+    LocalNutritionMatcherClassificationMetrics,
+    val trainingByRole:
+    List<LocalNutritionMatcherRoleMetrics>,
+    val testByRole:
+    List<LocalNutritionMatcherRoleMetrics>
+)
+
+data class LocalNutritionMatcherClassificationMetrics(
+    val exampleCount: Int,
+    val positiveCount: Int,
+    val negativeCount: Int,
+    val truePositive: Int,
+    val falsePositive: Int,
+    val trueNegative: Int,
+    val falseNegative: Int,
+    val accuracy: Double,
+    val precision: Double,
+    val recall: Double,
+    val f1: Double,
+    val balancedAccuracy: Double,
+    val averageLogLoss: Double
+)
+
+data class LocalNutritionMatcherRoleMetrics(
+    val role: String,
+    val exampleCount: Int,
+    val positiveCount: Int,
+    val negativeCount: Int,
+    val predictedPositiveCount: Int,
+    val truePositive: Int,
+    val falsePositive: Int,
+    val trueNegative: Int,
+    val falseNegative: Int,
+    val precision: Double,
+    val recall: Double,
+    val falsePositiveRate: Double
+)
+
+data class TrainLocalNutritionMatcherModelResult(
+    val model: LocalNutritionMatcherModel,
+    val outputFile: String
+)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: app/src/main/java/de/shopme/tools/knowledge/mapping/catalog/training/model/LocalNutritionMatcherModelTrainer.kt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+package de.shopme.tools.knowledge.mapping.catalog.training.model
+
+import com.google.gson.GsonBuilder
+import de.shopme.tools.knowledge.mapping.catalog.training.NutritionMatcherTrainingDataset
+import de.shopme.tools.knowledge.mapping.catalog.training.NutritionMatcherTrainingExample
+import de.shopme.tools.knowledge.mapping.catalog.training.NutritionMatcherTrainingExampleRole
+import de.shopme.tools.knowledge.mapping.catalog.training.NutritionMatcherTrainingLabel
+import java.io.File
+import java.io.PrintStream
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import kotlin.math.exp
+import kotlin.math.ln
+import kotlin.math.max
+import kotlin.math.sqrt
+
+class LocalNutritionMatcherModelTrainer(
+    private val featureExtractor:
+    LocalNutritionMatcherFeatureExtractor =
+        LocalNutritionMatcherFeatureExtractor()
+) {
+
+    fun train(
+        datasetFile: File,
+        outputFile: File,
+        output: PrintStream = System.out
+    ): TrainLocalNutritionMatcherModelResult {
+
+        require(datasetFile.isFile) {
+            "Nutrition matcher training dataset does not exist: " +
+                    datasetFile.absolutePath
+        }
+
+        val dataset =
+            readDataset(
+                datasetFile = datasetFile
+            )
+
+        require(dataset.version == DATASET_VERSION) {
+            "Unsupported nutrition matcher dataset version: " +
+                    dataset.version
+        }
+
+        require(
+            dataset.datasetType ==
+                    EXPECTED_DATASET_TYPE
+        ) {
+            "Unsupported nutrition matcher dataset type: " +
+                    dataset.datasetType
+        }
+
+        require(dataset.examples.isNotEmpty()) {
+            "Nutrition matcher training dataset is empty."
+        }
+
+        require(
+            dataset.examples.any {
+                it.label ==
+                        NutritionMatcherTrainingLabel.POSITIVE
+            }
+        ) {
+            "Nutrition matcher training dataset has no " +
+                    "positive examples."
+        }
+
+        require(
+            dataset.examples.any {
+                it.label ==
+                        NutritionMatcherTrainingLabel.NEGATIVE
+            }
+        ) {
+            "Nutrition matcher training dataset has no " +
+                    "negative examples."
+        }
+
+        val split =
+            splitByCatalogKey(
+                examples =
+                    dataset.examples
+            )
+
+        require(
+            split.trainingExamples.isNotEmpty()
+        ) {
+            "Local matcher training split is empty."
+        }
+
+        require(
+            split.testExamples.isNotEmpty()
+        ) {
+            "Local matcher test split is empty."
+        }
+
+        require(
+            split.trainingExamples.any {
+                it.label ==
+                        NutritionMatcherTrainingLabel.POSITIVE
+            }
+        ) {
+            "Training split has no positive examples."
+        }
+
+        require(
+            split.trainingExamples.any {
+                it.label ==
+                        NutritionMatcherTrainingLabel.NEGATIVE
+            }
+        ) {
+            "Training split has no negative examples."
+        }
+
+        val diagnosticScoreImputationValue =
+            calculateDiagnosticScoreImputationValue(
+                trainingExamples =
+                    split.trainingExamples
+            )
+
+        val trainingRaw =
+            split.trainingExamples.map {
+                RawTrainingExample(
+                    source =
+                        it,
+                    features =
+                        featureExtractor.extract(
+                            example =
+                                it,
+                            diagnosticScoreImputationValue =
+                                diagnosticScoreImputationValue
+                        ),
+                    target =
+                        targetOf(it)
+                )
+            }
+
+        val testRaw =
+            split.testExamples.map {
+                RawTrainingExample(
+                    source =
+                        it,
+                    features =
+                        featureExtractor.extract(
+                            example =
+                                it,
+                            diagnosticScoreImputationValue =
+                                diagnosticScoreImputationValue
+                        ),
+                    target =
+                        targetOf(it)
+                )
+            }
+
+        val scaling =
+            calculateScaling(
+                trainingExamples =
+                    trainingRaw
+            )
+
+        val trainingExamples =
+            trainingRaw.map {
+                it.toScaled(
+                    scaling = scaling
+                )
+            }
+
+        val testExamples =
+            testRaw.map {
+                it.toScaled(
+                    scaling = scaling
+                )
+            }
+
+        val classWeights =
+            calculateClassWeights(
+                examples =
+                    trainingExamples
+            )
+
+        val trained =
+            fitLogisticRegression(
+                examples =
+                    trainingExamples,
+                positiveClassWeight =
+                    classWeights.positive,
+                negativeClassWeight =
+                    classWeights.negative
+            )
+
+        val trainingMetrics =
+            calculateMetrics(
+                examples =
+                    trainingExamples,
+                coefficients =
+                    trained.coefficients,
+                intercept =
+                    trained.intercept
+            )
+
+        val testMetrics =
+            calculateMetrics(
+                examples =
+                    testExamples,
+                coefficients =
+                    trained.coefficients,
+                intercept =
+                    trained.intercept
+            )
+
+        val trainingByRole =
+            calculateRoleMetrics(
+                examples =
+                    trainingExamples,
+                coefficients =
+                    trained.coefficients,
+                intercept =
+                    trained.intercept
+            )
+
+        val testByRole =
+            calculateRoleMetrics(
+                examples =
+                    testExamples,
+                coefficients =
+                    trained.coefficients,
+                intercept =
+                    trained.intercept
+            )
+
+        val model =
+            LocalNutritionMatcherModel(
+                featureNames =
+                    featureExtractor.featureNames,
+                featureMeans =
+                    scaling.means.toList(),
+                featureStandardDeviations =
+                    scaling.standardDeviations.toList(),
+                coefficients =
+                    trained.coefficients.toList(),
+                intercept =
+                    trained.intercept,
+                decisionThreshold =
+                    DECISION_THRESHOLD,
+                diagnosticScoreImputationValue =
+                    diagnosticScoreImputationValue,
+                training =
+                    LocalNutritionMatcherTrainingMetadata(
+                        datasetFile =
+                            datasetFile.name,
+                        datasetVersion =
+                            dataset.version,
+                        exampleCount =
+                            dataset.examples.size,
+                        trainingExampleCount =
+                            trainingExamples.size,
+                        testExampleCount =
+                            testExamples.size,
+                        trainingCatalogKeyCount =
+                            split.trainingCatalogKeys.size,
+                        testCatalogKeyCount =
+                            split.testCatalogKeys.size,
+                        positiveClassWeight =
+                            classWeights.positive,
+                        negativeClassWeight =
+                            classWeights.negative,
+                        learningRate =
+                            LEARNING_RATE,
+                        iterationCount =
+                            ITERATION_COUNT,
+                        l2Regularization =
+                            L2_REGULARIZATION,
+                        splitModulo =
+                            SPLIT_MODULO,
+                        testBuckets =
+                            TEST_BUCKETS.sorted()
+                    ),
+                metrics =
+                    LocalNutritionMatcherModelMetrics(
+                        training =
+                            trainingMetrics,
+                        test =
+                            testMetrics,
+                        trainingByRole =
+                            trainingByRole,
+                        testByRole =
+                            testByRole
+                    )
+            )
+
+        validateModel(
+            model = model
+        )
+
+        writeModel(
+            model = model,
+            outputFile = outputFile
+        )
+
+        printResult(
+            model = model,
+            outputFile = outputFile,
+            output = output
+        )
+
+        return TrainLocalNutritionMatcherModelResult(
+            model = model,
+            outputFile = outputFile.absolutePath
+        )
+    }
+
+    private fun calculateDiagnosticScoreImputationValue(
+        trainingExamples:
+        List<NutritionMatcherTrainingExample>
+    ): Double {
+
+        val availableScores =
+            trainingExamples
+                .asSequence()
+                .filter {
+                    it.diagnosticScoreAvailable
+                }
+                .map {
+                    it.diagnosticScore
+                }
+                .toList()
+
+        require(availableScores.isNotEmpty()) {
+            "Training split contains no available diagnostic scores."
+        }
+
+        require(
+            availableScores.all {
+                it.isFinite()
+            }
+        ) {
+            "Training split contains a non-finite diagnostic score."
+        }
+
+        return availableScores.average()
+    }
+
+    private fun calculateRoleMetrics(
+        examples: List<ScaledTrainingExample>,
+        coefficients: DoubleArray,
+        intercept: Double
+    ): List<LocalNutritionMatcherRoleMetrics> {
+
+        return examples
+            .groupBy {
+                it.source.role
+            }
+            .toSortedMap(
+                compareBy {
+                    it.name
+                }
+            )
+            .map { (role, roleExamples) ->
+
+                calculateRoleMetrics(
+                    role =
+                        role,
+                    examples =
+                        roleExamples,
+                    coefficients =
+                        coefficients,
+                    intercept =
+                        intercept
+                )
+            }
+    }
+
+    private fun calculateRoleMetrics(
+        role: NutritionMatcherTrainingExampleRole,
+        examples: List<ScaledTrainingExample>,
+        coefficients: DoubleArray,
+        intercept: Double
+    ): LocalNutritionMatcherRoleMetrics {
+
+        var truePositive =
+            0
+
+        var falsePositive =
+            0
+
+        var trueNegative =
+            0
+
+        var falseNegative =
+            0
+
+        examples.forEach { example ->
+
+            val probability =
+                sigmoid(
+                    intercept +
+                            dot(
+                                coefficients,
+                                example.features
+                            )
+                )
+
+            val predictedPositive =
+                probability >=
+                        DECISION_THRESHOLD
+
+            val actualPositive =
+                example.target == 1.0
+
+            when {
+
+                predictedPositive &&
+                        actualPositive -> {
+                    truePositive++
+                }
+
+                predictedPositive &&
+                        !actualPositive -> {
+                    falsePositive++
+                }
+
+                !predictedPositive &&
+                        actualPositive -> {
+                    falseNegative++
+                }
+
+                else -> {
+                    trueNegative++
+                }
+            }
+        }
+
+        val positiveCount =
+            truePositive + falseNegative
+
+        val negativeCount =
+            trueNegative + falsePositive
+
+        val precision =
+            divide(
+                numerator =
+                    truePositive,
+                denominator =
+                    truePositive + falsePositive
+            )
+
+        val recall =
+            divide(
+                numerator =
+                    truePositive,
+                denominator =
+                    truePositive + falseNegative
+            )
+
+        val falsePositiveRate =
+            divide(
+                numerator =
+                    falsePositive,
+                denominator =
+                    falsePositive + trueNegative
+            )
+
+        return LocalNutritionMatcherRoleMetrics(
+            role =
+                role.name,
+            exampleCount =
+                examples.size,
+            positiveCount =
+                positiveCount,
+            negativeCount =
+                negativeCount,
+            predictedPositiveCount =
+                truePositive + falsePositive,
+            truePositive =
+                truePositive,
+            falsePositive =
+                falsePositive,
+            trueNegative =
+                trueNegative,
+            falseNegative =
+                falseNegative,
+            precision =
+                precision,
+            recall =
+                recall,
+            falsePositiveRate =
+                falsePositiveRate
+        )
+    }
+
+    private fun readDataset(
+        datasetFile: File
+    ): NutritionMatcherTrainingDataset {
+
+        return runCatching {
+
+            GsonBuilder()
+                .create()
+                .fromJson(
+                    datasetFile.readText(),
+                    NutritionMatcherTrainingDataset::class.java
+                )
+
+        }.getOrElse { throwable ->
+
+            throw IllegalArgumentException(
+                "Could not read nutrition matcher training " +
+                        "dataset: " +
+                        datasetFile.absolutePath,
+                throwable
+            )
+        }
+    }
+
+    private fun splitByCatalogKey(
+        examples: List<NutritionMatcherTrainingExample>
+    ): DatasetSplit {
+
+        val grouped =
+            examples.groupBy {
+                it.catalogKey
+            }
+
+        val trainingCatalogKeys =
+            sortedSetOf<String>()
+
+        val testCatalogKeys =
+            sortedSetOf<String>()
+
+        grouped.keys
+            .sorted()
+            .forEach { catalogKey ->
+
+                val bucket =
+                    stableBucket(
+                        value = catalogKey,
+                        modulo = SPLIT_MODULO
+                    )
+
+                if (bucket in TEST_BUCKETS) {
+                    testCatalogKeys += catalogKey
+                } else {
+                    trainingCatalogKeys += catalogKey
+                }
+            }
+
+        val trainingExamples =
+            examples.filter {
+                it.catalogKey in trainingCatalogKeys
+            }
+
+        val testExamples =
+            examples.filter {
+                it.catalogKey in testCatalogKeys
+            }
+
+        require(
+            trainingCatalogKeys
+                .intersect(testCatalogKeys)
+                .isEmpty()
+        ) {
+            "Catalog keys overlap between training and test split."
+        }
+
+        return DatasetSplit(
+            trainingExamples =
+                trainingExamples,
+            testExamples =
+                testExamples,
+            trainingCatalogKeys =
+                trainingCatalogKeys,
+            testCatalogKeys =
+                testCatalogKeys
+        )
+    }
+
+    private fun calculateScaling(
+        trainingExamples: List<RawTrainingExample>
+    ): FeatureScaling {
+
+        val featureCount =
+            featureExtractor.featureNames.size
+
+        require(
+            trainingExamples.all {
+                it.features.size == featureCount
+            }
+        ) {
+            "Unexpected local matcher feature count."
+        }
+
+        val means =
+            DoubleArray(featureCount)
+
+        trainingExamples.forEach { example ->
+
+            example.features.forEachIndexed {
+                    index,
+                    value ->
+
+                means[index] += value
+            }
+        }
+
+        means.indices.forEach { index ->
+
+            means[index] /=
+                trainingExamples.size.toDouble()
+        }
+
+        val variances =
+            DoubleArray(featureCount)
+
+        trainingExamples.forEach { example ->
+
+            example.features.forEachIndexed {
+                    index,
+                    value ->
+
+                val difference =
+                    value - means[index]
+
+                variances[index] +=
+                    difference * difference
+            }
+        }
+
+        val standardDeviations =
+            DoubleArray(featureCount)
+
+        standardDeviations.indices.forEach { index ->
+
+            val variance =
+                variances[index] /
+                        trainingExamples.size.toDouble()
+
+            val standardDeviation =
+                sqrt(
+                    max(
+                        variance,
+                        0.0
+                    )
+                )
+
+            standardDeviations[index] =
+                if (
+                    standardDeviation <
+                    MIN_STANDARD_DEVIATION
+                ) {
+                    1.0
+                } else {
+                    standardDeviation
+                }
+        }
+
+        return FeatureScaling(
+            means =
+                means,
+            standardDeviations =
+                standardDeviations
+        )
+    }
+
+    private fun calculateClassWeights(
+        examples: List<ScaledTrainingExample>
+    ): ClassWeights {
+
+        val positiveCount =
+            examples.count {
+                it.target == 1.0
+            }
+
+        val negativeCount =
+            examples.size - positiveCount
+
+        require(positiveCount > 0)
+        require(negativeCount > 0)
+
+        val total =
+            examples.size.toDouble()
+
+        return ClassWeights(
+            positive =
+                total /
+                        (2.0 * positiveCount.toDouble()),
+            negative =
+                total /
+                        (2.0 * negativeCount.toDouble())
+        )
+    }
+
+    private fun fitLogisticRegression(
+        examples: List<ScaledTrainingExample>,
+        positiveClassWeight: Double,
+        negativeClassWeight: Double
+    ): TrainedParameters {
+
+        val featureCount =
+            featureExtractor.featureNames.size
+
+        val coefficients =
+            DoubleArray(featureCount)
+
+        var intercept =
+            0.0
+
+        repeat(ITERATION_COUNT) {
+
+            val coefficientGradients =
+                DoubleArray(featureCount)
+
+            var interceptGradient =
+                0.0
+
+            var totalWeight =
+                0.0
+
+            examples.forEach { example ->
+
+                val probability =
+                    sigmoid(
+                        intercept +
+                                dot(
+                                    coefficients,
+                                    example.features
+                                )
+                    )
+
+                val classWeight =
+                    if (example.target == 1.0) {
+                        positiveClassWeight
+                    } else {
+                        negativeClassWeight
+                    }
+
+                val effectiveWeight =
+                    classWeight *
+                            example.source.trainingWeight
+
+                val error =
+                    probability -
+                            example.target
+
+                coefficientGradients.indices
+                    .forEach { index ->
+
+                        coefficientGradients[index] +=
+                            effectiveWeight *
+                                    error *
+                                    example.features[index]
+                    }
+
+                interceptGradient +=
+                    effectiveWeight * error
+
+                totalWeight +=
+                    effectiveWeight
+            }
+
+            require(totalWeight > 0.0)
+
+            coefficients.indices.forEach { index ->
+
+                val averageGradient =
+                    coefficientGradients[index] /
+                            totalWeight
+
+                val regularizationGradient =
+                    L2_REGULARIZATION *
+                            coefficients[index]
+
+                coefficients[index] -=
+                    LEARNING_RATE *
+                            (
+                                    averageGradient +
+                                            regularizationGradient
+                                    )
+            }
+
+            intercept -=
+                LEARNING_RATE *
+                        (
+                                interceptGradient /
+                                        totalWeight
+                                )
+        }
+
+        return TrainedParameters(
+            coefficients =
+                coefficients,
+            intercept =
+                intercept
+        )
+    }
+
+    private fun calculateMetrics(
+        examples: List<ScaledTrainingExample>,
+        coefficients: DoubleArray,
+        intercept: Double
+    ): LocalNutritionMatcherClassificationMetrics {
+
+        var truePositive =
+            0
+
+        var falsePositive =
+            0
+
+        var trueNegative =
+            0
+
+        var falseNegative =
+            0
+
+        var totalLogLoss =
+            0.0
+
+        examples.forEach { example ->
+
+            val probability =
+                sigmoid(
+                    intercept +
+                            dot(
+                                coefficients,
+                                example.features
+                            )
+                )
+                    .coerceIn(
+                        MIN_PROBABILITY,
+                        MAX_PROBABILITY
+                    )
+
+            val predictedPositive =
+                probability >=
+                        DECISION_THRESHOLD
+
+            val actualPositive =
+                example.target == 1.0
+
+            when {
+
+                predictedPositive &&
+                        actualPositive -> {
+                    truePositive++
+                }
+
+                predictedPositive &&
+                        !actualPositive -> {
+                    falsePositive++
+                }
+
+                !predictedPositive &&
+                        actualPositive -> {
+                    falseNegative++
+                }
+
+                else -> {
+                    trueNegative++
+                }
+            }
+
+            totalLogLoss +=
+                -(
+                        example.target *
+                                ln(probability) +
+                                (1.0 - example.target) *
+                                ln(1.0 - probability)
+                        )
+        }
+
+        val positiveCount =
+            truePositive + falseNegative
+
+        val negativeCount =
+            trueNegative + falsePositive
+
+        val accuracy =
+            divide(
+                numerator =
+                    truePositive + trueNegative,
+                denominator =
+                    examples.size
+            )
+
+        val precision =
+            divide(
+                numerator =
+                    truePositive,
+                denominator =
+                    truePositive + falsePositive
+            )
+
+        val recall =
+            divide(
+                numerator =
+                    truePositive,
+                denominator =
+                    truePositive + falseNegative
+            )
+
+        val specificity =
+            divide(
+                numerator =
+                    trueNegative,
+                denominator =
+                    trueNegative + falsePositive
+            )
+
+        val f1 =
+            if (
+                precision + recall == 0.0
+            ) {
+                0.0
+            } else {
+                2.0 *
+                        precision *
+                        recall /
+                        (precision + recall)
+            }
+
+        return LocalNutritionMatcherClassificationMetrics(
+            exampleCount =
+                examples.size,
+            positiveCount =
+                positiveCount,
+            negativeCount =
+                negativeCount,
+            truePositive =
+                truePositive,
+            falsePositive =
+                falsePositive,
+            trueNegative =
+                trueNegative,
+            falseNegative =
+                falseNegative,
+            accuracy =
+                accuracy,
+            precision =
+                precision,
+            recall =
+                recall,
+            f1 =
+                f1,
+            balancedAccuracy =
+                (recall + specificity) / 2.0,
+            averageLogLoss =
+                if (examples.isEmpty()) {
+                    0.0
+                } else {
+                    totalLogLoss /
+                            examples.size.toDouble()
+                }
+        )
+    }
+
+    private fun validateModel(
+        model: LocalNutritionMatcherModel
+    ) {
+        val featureCount =
+            model.featureNames.size
+
+        require(
+            model.diagnosticScoreImputationValue.isFinite()
+        ) {
+            "Diagnostic score imputation value must be finite."
+        }
+
+        require(
+            "diagnostic_score_available" !in
+                    model.featureNames
+        ) {
+            "diagnostic_score_available must not be a model feature."
+        }
+
+        require(
+            model.featureNames.size == 11
+        ) {
+            "Leakage-free local nutrition matcher must have 11 features."
+        }
+
+        require(featureCount > 0)
+
+        require(
+            model.featureMeans.size ==
+                    featureCount
+        )
+
+        require(
+            model.featureStandardDeviations.size ==
+                    featureCount
+        )
+
+        require(
+            model.coefficients.size ==
+                    featureCount
+        )
+
+        require(
+            model.featureMeans.all {
+                it.isFinite()
+            }
+        )
+
+        require(
+            model.featureStandardDeviations.all {
+                it.isFinite() &&
+                        it > 0.0
+            }
+        )
+
+        require(
+            model.coefficients.all {
+                it.isFinite()
+            }
+        )
+
+        require(model.intercept.isFinite())
+
+        require(
+            model.decisionThreshold in 0.0..1.0
+        )
+    }
+
+    private fun writeModel(
+        model: LocalNutritionMatcherModel,
+        outputFile: File
+    ) {
+        outputFile.parentFile
+            ?.let { directory ->
+
+                if (!directory.exists()) {
+                    check(directory.mkdirs()) {
+                        "Could not create local matcher model " +
+                                "directory: " +
+                                directory.absolutePath
+                    }
+                }
+
+                require(directory.isDirectory) {
+                    "Local matcher model parent path is not " +
+                            "a directory: " +
+                            directory.absolutePath
+                }
+            }
+
+        val gson =
+            GsonBuilder()
+                .setPrettyPrinting()
+                .disableHtmlEscaping()
+                .create()
+
+        outputFile.writeText(
+            gson.toJson(model) + "\n"
+        )
+    }
+
+    private fun printResult(
+        model: LocalNutritionMatcherModel,
+        outputFile: File,
+        output: PrintStream
+    ) {
+        val training =
+            model.metrics.training
+
+        val test =
+            model.metrics.test
+
+        output.println()
+        output.println(
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        )
+        output.println(
+            "LOCAL NUTRITION MATCHER MODEL"
+        )
+        output.println(
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        )
+        output.println(
+            "Model                    : " +
+                    model.modelType
+        )
+        output.println(
+            "Features                 : " +
+                    model.featureNames.size
+        )
+        output.println(
+            "Training examples        : " +
+                    training.exampleCount
+        )
+        output.println(
+            "Test examples            : " +
+                    test.exampleCount
+        )
+        output.println()
+        output.println(
+            "TRAIN precision          : " +
+                    format(training.precision)
+        )
+        output.println(
+            "TRAIN recall             : " +
+                    format(training.recall)
+        )
+        output.println(
+            "TRAIN F1                 : " +
+                    format(training.f1)
+        )
+        output.println(
+            "TRAIN balanced accuracy  : " +
+                    format(
+                        training.balancedAccuracy
+                    )
+        )
+        output.println()
+        output.println(
+            "TEST precision           : " +
+                    format(test.precision)
+        )
+        output.println(
+            "TEST recall              : " +
+                    format(test.recall)
+        )
+        output.println(
+            "TEST F1                  : " +
+                    format(test.f1)
+        )
+        output.println(
+            "TEST balanced accuracy   : " +
+                    format(
+                        test.balancedAccuracy
+                    )
+        )
+        output.println()
+        output.println(
+            "Output                   : " +
+                    outputFile.absolutePath
+        )
+        output.println()
+        output.println(
+            "TEST METRICS BY ROLE"
+        )
+
+        model.metrics.testByRole
+            .forEach { role ->
+
+                output.println(
+                    "${role.role.padEnd(29)} " +
+                            "count=${role.exampleCount} " +
+                            "precision=${format(role.precision)} " +
+                            "recall=${format(role.recall)} " +
+                            "fpr=${format(role.falsePositiveRate)}"
+                )
+            }
+        output.println()
+        output.println(
+            "Diagnostic score mean    : " +
+                    format(
+                        model.diagnosticScoreImputationValue
+                    )
+        )
+        output.println(
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        )
+    }
+
+    private fun RawTrainingExample.toScaled(
+        scaling: FeatureScaling
+    ): ScaledTrainingExample {
+
+        val scaledFeatures =
+            DoubleArray(features.size)
+
+        features.indices.forEach { index ->
+
+            scaledFeatures[index] =
+                (
+                        features[index] -
+                                scaling.means[index]
+                        ) /
+                        scaling.standardDeviations[index]
+        }
+
+        return ScaledTrainingExample(
+            source =
+                source,
+            features =
+                scaledFeatures,
+            target =
+                target
+        )
+    }
+
+    private fun targetOf(
+        example: NutritionMatcherTrainingExample
+    ): Double {
+
+        return if (
+            example.label ==
+            NutritionMatcherTrainingLabel.POSITIVE
+        ) {
+            1.0
+        } else {
+            0.0
+        }
+    }
+
+    private fun stableBucket(
+        value: String,
+        modulo: Int
+    ): Int {
+
+        require(modulo > 0)
+
+        val digest =
+            MessageDigest
+                .getInstance("SHA-256")
+                .digest(
+                    value.toByteArray(
+                        StandardCharsets.UTF_8
+                    )
+                )
+
+        val unsigned =
+            (
+                    (digest[0].toInt() and 0xff) shl 24
+                    ) or
+                    (
+                            (digest[1].toInt() and 0xff) shl 16
+                            ) or
+                    (
+                            (digest[2].toInt() and 0xff) shl 8
+                            ) or
+                    (digest[3].toInt() and 0xff)
+
+        return (unsigned and Int.MAX_VALUE) % modulo
+    }
+
+    private fun sigmoid(
+        value: Double
+    ): Double {
+
+        return when {
+
+            value >= 0.0 -> {
+                1.0 /
+                        (
+                                1.0 +
+                                        exp(-value)
+                                )
+            }
+
+            else -> {
+                val exponential =
+                    exp(value)
+
+                exponential /
+                        (1.0 + exponential)
+            }
+        }
+    }
+
+    private fun dot(
+        left: DoubleArray,
+        right: DoubleArray
+    ): Double {
+
+        require(left.size == right.size)
+
+        var result =
+            0.0
+
+        left.indices.forEach { index ->
+
+            result +=
+                left[index] * right[index]
+        }
+
+        return result
+    }
+
+    private fun divide(
+        numerator: Int,
+        denominator: Int
+    ): Double {
+
+        if (denominator == 0) {
+            return 0.0
+        }
+
+        return numerator.toDouble() /
+                denominator.toDouble()
+    }
+
+    private fun format(
+        value: Double
+    ): String {
+
+        return "%.4f".format(
+            java.util.Locale.ROOT,
+            value
+        )
+    }
+
+    private data class DatasetSplit(
+        val trainingExamples:
+        List<NutritionMatcherTrainingExample>,
+        val testExamples:
+        List<NutritionMatcherTrainingExample>,
+        val trainingCatalogKeys: Set<String>,
+        val testCatalogKeys: Set<String>
+    )
+
+    private data class RawTrainingExample(
+        val source: NutritionMatcherTrainingExample,
+        val features: DoubleArray,
+        val target: Double
+    )
+
+    private data class ScaledTrainingExample(
+        val source: NutritionMatcherTrainingExample,
+        val features: DoubleArray,
+        val target: Double
+    )
+
+    private data class FeatureScaling(
+        val means: DoubleArray,
+        val standardDeviations: DoubleArray
+    )
+
+    private data class ClassWeights(
+        val positive: Double,
+        val negative: Double
+    )
+
+    private data class TrainedParameters(
+        val coefficients: DoubleArray,
+        val intercept: Double
+    )
+
+    private companion object {
+
+        const val DATASET_VERSION =
+            1
+
+        const val EXPECTED_DATASET_TYPE =
+            "NUTRITION_CATALOG_SERVER_MATCHER"
+
+        const val LEARNING_RATE =
+            0.05
+
+        const val ITERATION_COUNT =
+            3000
+
+        const val L2_REGULARIZATION =
+            0.001
+
+        const val DECISION_THRESHOLD =
+            0.5
+
+        const val SPLIT_MODULO =
+            10
+
+        val TEST_BUCKETS =
+            setOf(
+                0,
+                1
+            )
+
+        const val MIN_STANDARD_DEVIATION =
+            1e-12
+
+        const val MIN_PROBABILITY =
+            1e-12
+
+        const val MAX_PROBABILITY =
+            1.0 - 1e-12
+    }
+}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: app/src/main/java/de/shopme/tools/knowledge/mapping/catalog/training/model/LocalNutritionMatcherPredictor.kt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+package de.shopme.tools.knowledge.mapping.catalog.training.model
+
+import com.google.gson.Gson
+import de.shopme.tools.knowledge.mapping.catalog.training.NutritionMatcherTrainingExample
+import java.io.File
+import kotlin.math.exp
+
+class LocalNutritionMatcherPredictor(
+    private val model: LocalNutritionMatcherModel,
+    private val featureExtractor:
+    LocalNutritionMatcherFeatureExtractor =
+        LocalNutritionMatcherFeatureExtractor()
+) {
+
+    init {
+        val featureCount =
+            featureExtractor.featureNames.size
+
+        require(
+            model.featureNames ==
+                    featureExtractor.featureNames
+        ) {
+            "Local nutrition matcher feature contract differs " +
+                    "from the trained model."
+        }
+
+        require(
+            model.featureMeans.size ==
+                    featureCount
+        )
+
+        require(
+            model.featureStandardDeviations.size ==
+                    featureCount
+        )
+
+        require(
+            model.coefficients.size ==
+                    featureCount
+        )
+
+        require(
+            "diagnostic_score_available" !in
+                    model.featureNames
+        ) {
+            "Local matcher model contains forbidden " +
+                    "source-leakage feature."
+        }
+
+        require(
+            model.diagnosticScoreImputationValue
+                .isFinite()
+        ) {
+            "Local matcher model contains invalid diagnostic " +
+                    "score imputation value."
+        }
+    }
+
+    fun predictProbability(
+        example: NutritionMatcherTrainingExample
+    ): Double {
+
+        return predictProbability(
+            candidate =
+                LocalNutritionMatcherCandidate(
+                    catalogKey =
+                        example.catalogKey,
+                    serverKey =
+                        example.serverKey,
+                    candidateRank =
+                        example.candidateRank,
+                    candidateCount =
+                        example.candidateCount,
+                    diagnosticScore =
+                        example.diagnosticScore,
+                    diagnosticScoreAvailable =
+                        example.diagnosticScoreAvailable,
+                    sharedTokens =
+                        example.sharedTokens
+                )
+        )
+    }
+
+    fun predictProbability(
+        candidate: LocalNutritionMatcherCandidate
+    ): Double {
+
+        val rawFeatures =
+            featureExtractor.extract(
+                candidate =
+                    candidate,
+                diagnosticScoreImputationValue =
+                    model.diagnosticScoreImputationValue
+            )
+
+        var score =
+            model.intercept
+
+        rawFeatures.indices.forEach { index ->
+
+            val scaled =
+                (
+                        rawFeatures[index] -
+                                model.featureMeans[index]
+                        ) /
+                        model.featureStandardDeviations[index]
+
+            score +=
+                model.coefficients[index] *
+                        scaled
+        }
+
+        return sigmoid(
+            value = score
+        )
+    }
+
+    fun predictsMatch(
+        example: NutritionMatcherTrainingExample
+    ): Boolean {
+
+        return predictProbability(
+            example = example
+        ) >= model.decisionThreshold
+    }
+
+    fun predictsMatch(
+        candidate: LocalNutritionMatcherCandidate
+    ): Boolean {
+
+        return predictProbability(
+            candidate = candidate
+        ) >= model.decisionThreshold
+    }
+
+    companion object {
+
+        fun fromFile(
+            modelFile: File
+        ): LocalNutritionMatcherPredictor {
+
+            require(modelFile.isFile) {
+                "Local nutrition matcher model does not exist: " +
+                        modelFile.absolutePath
+            }
+
+            val model =
+                Gson().fromJson(
+                    modelFile.readText(),
+                    LocalNutritionMatcherModel::class.java
+                )
+
+            return LocalNutritionMatcherPredictor(
+                model = model
+            )
+        }
+
+        private fun sigmoid(
+            value: Double
+        ): Double {
+
+            return if (value >= 0.0) {
+
+                1.0 /
+                        (
+                                1.0 +
+                                        exp(-value)
+                                )
+
+            } else {
+
+                val exponential =
+                    exp(value)
+
+                exponential /
+                        (1.0 + exponential)
+            }
+        }
+    }
+}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: app/src/test/java/de/shopme/testing/system/tools/knowledge/mapping/catalog/training/model/RunLocalNutritionMatcherModelTrainingTest.kt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+package de.shopme.testing.system.tools.knowledge.mapping.catalog.training.model
+
+import com.google.gson.JsonParser
+import de.shopme.tools.knowledge.mapping.catalog.training.model.LocalNutritionMatcherModelTrainer
+import java.io.File
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+class RunLocalNutritionMatcherModelTrainingTest {
+
+    @Test
+    fun trainFirstLocalNutritionMatcherModel() {
+
+        val projectRoot =
+            File("..")
+
+        val datasetFile =
+            File(
+                projectRoot,
+                "data/generated/knowledge/" +
+                        "training/" +
+                        "nutrition.matcher-training-dataset.json"
+            )
+
+        val outputFile =
+            File(
+                projectRoot,
+                "data/generated/knowledge/" +
+                        "models/" +
+                        "nutrition.local-matcher-model.json"
+            )
+
+        require(datasetFile.isFile) {
+            "Nutrition matcher training dataset does not exist: " +
+                    datasetFile.absolutePath
+        }
+
+        val result =
+            LocalNutritionMatcherModelTrainer()
+                .train(
+                    datasetFile =
+                        datasetFile,
+                    outputFile =
+                        outputFile
+                )
+
+        val model =
+            result.model
+
+        assertTrue(
+            outputFile.isFile
+        )
+
+        assertEquals(
+            expected = 1,
+            actual =
+                model.version
+        )
+
+        assertEquals(
+            expected =
+                "WEIGHTED_LOGISTIC_REGRESSION",
+            actual =
+                model.modelType
+        )
+
+        assertEquals(
+            expected =
+                "NUTRITION_CATALOG_SERVER_MATCHER",
+            actual =
+                model.datasetType
+        )
+
+        assertEquals(
+            expected =
+                model.featureNames.size,
+            actual =
+                model.coefficients.size
+        )
+
+        assertEquals(
+            expected = 4256,
+            actual =
+                model.training.exampleCount
+        )
+
+        assertEquals(
+            expected = 4256,
+            actual =
+                model.training.exampleCount
+        )
+
+        assertEquals(
+            expected = 3441,
+            actual =
+                model.training.trainingExampleCount
+        )
+
+        assertEquals(
+            expected = 815,
+            actual =
+                model.training.testExampleCount
+        )
+
+        assertEquals(
+            expected =
+                model.training.exampleCount,
+            actual =
+                model.training.trainingExampleCount +
+                        model.training.testExampleCount
+        )
+
+        assertTrue(
+            model.training.trainingExampleCount > 0
+        )
+
+        assertTrue(
+            model.training.testExampleCount > 0
+        )
+
+        assertEquals(
+            expected =
+                model.training.exampleCount,
+            actual =
+                model.training.trainingExampleCount +
+                        model.training.testExampleCount
+        )
+
+        assertTrue(
+            model.metrics.training.averageLogLoss
+                .isFinite()
+        )
+
+        assertTrue(
+            model.metrics.test.averageLogLoss
+                .isFinite()
+        )
+
+        assertTrue(
+            model.metrics.training.f1 in
+                    0.0..1.0
+        )
+
+        assertTrue(
+            model.metrics.test.f1 in
+                    0.0..1.0
+        )
+
+        assertEquals(
+            expected = 11,
+            actual =
+                model.featureNames.size
+        )
+
+        assertTrue(
+            "diagnostic_score_available" !in
+                    model.featureNames
+        )
+
+        assertTrue(
+            model.diagnosticScoreImputationValue
+                .isFinite()
+        )
+
+        assertTrue(
+            model.metrics.testByRole.isNotEmpty()
+        )
+
+        val persisted =
+            JsonParser.parseString(
+                outputFile.readText()
+            )
+                .asJsonObject
+
+        assertEquals(
+            expected =
+                "WEIGHTED_LOGISTIC_REGRESSION",
+            actual =
+                persisted["modelType"]
+                    .asString
+        )
+
+        println()
+        println(
+            "Local matcher training examples=" +
+                    model.training.trainingExampleCount
+        )
+        println(
+            "Local matcher test examples=" +
+                    model.training.testExampleCount
+        )
+        println(
+            "Local matcher train precision=" +
+                    model.metrics.training.precision
+        )
+        println(
+            "Local matcher train recall=" +
+                    model.metrics.training.recall
+        )
+        println(
+            "Local matcher train F1=" +
+                    model.metrics.training.f1
+        )
+        println(
+            "Local matcher test precision=" +
+                    model.metrics.test.precision
+        )
+        println(
+            "Local matcher test recall=" +
+                    model.metrics.test.recall
+        )
+        println(
+            "Local matcher test F1=" +
+                    model.metrics.test.f1
+        )
+        println(
+            "Local matcher model=" +
+                    outputFile.path
+        )
+
+        println(
+            "Diagnostic score imputation=" +
+                    model.diagnosticScoreImputationValue
+        )
+
+        model.metrics.testByRole.forEach {
+            println(
+                "Test role=${it.role}, " +
+                        "count=${it.exampleCount}, " +
+                        "precision=${it.precision}, " +
+                        "recall=${it.recall}, " +
+                        "falsePositiveRate=${it.falsePositiveRate}"
+            )
+        }
+    }
+}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: app/src/test/java/de/shopme/testing/system/tools/knowledge/mapping/catalog/training/model/LocalNutritionMatcherFeatureExtractorLeakageTest.kt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+package de.shopme.testing.system.tools.knowledge.mapping.catalog.training.model
+
+import de.shopme.tools.knowledge.mapping.catalog.training.NutritionMatcherTrainingExample
+import de.shopme.tools.knowledge.mapping.catalog.training.NutritionMatcherTrainingExampleRole
+import de.shopme.tools.knowledge.mapping.catalog.training.NutritionMatcherTrainingLabel
+import de.shopme.tools.knowledge.mapping.catalog.training.NutritionMatcherTrainingProvenance
+import de.shopme.tools.knowledge.mapping.catalog.training.model.LocalNutritionMatcherFeatureExtractor
+import kotlin.test.Test
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+
+class LocalNutritionMatcherFeatureExtractorLeakageTest {
+
+    @Test
+    fun doNotExposeDiagnosticScoreAvailabilityAsFeature() {
+
+        val extractor =
+            LocalNutritionMatcherFeatureExtractor()
+
+        assertFalse(
+            "diagnostic_score_available" in
+                    extractor.featureNames
+        )
+
+        assertEquals(
+            expected = 11,
+            actual =
+                extractor.featureNames.size
+        )
+    }
+
+    @Test
+    fun imputeUnavailableDiagnosticScoresNeutrally() {
+
+        val extractor =
+            LocalNutritionMatcherFeatureExtractor()
+
+        val imputationValue =
+            0.6842
+
+        val unavailableWithZeroPlaceholder =
+            example(
+                diagnosticScore =
+                    0.0,
+                diagnosticScoreAvailable =
+                    false
+            )
+
+        val unavailableWithDifferentPlaceholder =
+            example(
+                diagnosticScore =
+                    999.0,
+                diagnosticScoreAvailable =
+                    false
+            )
+
+        val availableAtImputationValue =
+            example(
+                diagnosticScore =
+                    imputationValue,
+                diagnosticScoreAvailable =
+                    true
+            )
+
+        val zeroPlaceholderFeatures =
+            extractor.extract(
+                example =
+                    unavailableWithZeroPlaceholder,
+                diagnosticScoreImputationValue =
+                    imputationValue
+            )
+
+        val differentPlaceholderFeatures =
+            extractor.extract(
+                example =
+                    unavailableWithDifferentPlaceholder,
+                diagnosticScoreImputationValue =
+                    imputationValue
+            )
+
+        val availableFeatures =
+            extractor.extract(
+                example =
+                    availableAtImputationValue,
+                diagnosticScoreImputationValue =
+                    imputationValue
+            )
+
+        assertContentEquals(
+            expected =
+                zeroPlaceholderFeatures,
+            actual =
+                differentPlaceholderFeatures
+        )
+
+        assertContentEquals(
+            expected =
+                availableFeatures,
+            actual =
+                zeroPlaceholderFeatures
+        )
+    }
+
+    private fun example(
+        diagnosticScore: Double,
+        diagnosticScoreAvailable: Boolean
+    ): NutritionMatcherTrainingExample {
+
+        return NutritionMatcherTrainingExample(
+            id =
+                "fixture",
+            catalogKey =
+                "fruit yogurt",
+            serverArtifact =
+                "nutrition.json",
+            serverKey =
+                "cherry fruit yogurt",
+            label =
+                NutritionMatcherTrainingLabel.POSITIVE,
+            role =
+                NutritionMatcherTrainingExampleRole
+                    .ACCEPTED_ORIGINAL_MATCH,
+            selected =
+                true,
+            candidateRank =
+                1,
+            candidateCount =
+                5,
+            diagnosticScore =
+                diagnosticScore,
+            diagnosticScoreAvailable =
+                diagnosticScoreAvailable,
+            sharedTokens =
+                listOf(
+                    "fruit",
+                    "yogurt"
+                ),
+            matcherConfidence =
+                0.96,
+            originalDecisionType =
+                "MATCH",
+            originalDecisionReason =
+                "Accepted match.",
+            originalValidationStatus =
+                "ACCEPTED",
+            originalValidationReason =
+                "Accepted.",
+            representativeDecisionType =
+                null,
+            representativeReasons =
+                emptyList(),
+            trainingWeight =
+                1.0,
+            provenance =
+                NutritionMatcherTrainingProvenance(
+                    sourceType =
+                        "TEST",
+                    candidateQualityFile =
+                        "candidate-quality.json",
+                    diagnosticsFile =
+                        "diagnostics.json",
+                    representativeValidationFile =
+                        "validation.json",
+                    sourceVersion =
+                        1,
+                    matcher =
+                        "test matcher",
+                    validator =
+                        "test validator"
+                )
+        )
+    }
+}

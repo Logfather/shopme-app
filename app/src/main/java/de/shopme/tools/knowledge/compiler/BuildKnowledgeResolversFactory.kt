@@ -31,8 +31,8 @@ import de.shopme.tools.knowledge.nutrition.DefaultNutritionFactsResolver
 import de.shopme.tools.knowledge.nutrition.NutritionFactsKnowledge
 import de.shopme.tools.knowledge.packaging.DefaultPackagingResolver
 import de.shopme.tools.knowledge.packaging.PackagingKnowledge
-import de.shopme.tools.knowledge.pesticide.DefaultPesticideResolver
-import de.shopme.tools.knowledge.pesticide.PesticideKnowledge
+import de.shopme.tools.knowledge.pesticides.DefaultPesticideResolver
+import de.shopme.tools.knowledge.pesticides.PesticideKnowledge
 import de.shopme.tools.knowledge.pollinator.DefaultPollinatorResolver
 import de.shopme.tools.knowledge.pollinator.PollinatorKnowledge
 import de.shopme.tools.knowledge.processing.DefaultProcessingResolver

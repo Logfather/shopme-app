@@ -12,7 +12,7 @@ class GlycemicIndexGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "glycemic_index.json",
+    KnowledgeAssets.RUNTIME_ROOT + "glycemic_index.json",
 
     GlycemicIndexKnowledge::class.java
 

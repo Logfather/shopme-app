@@ -8,5 +8,8 @@ data class CandidateMetadata(
 
     val confidence: Double,
 
-    val version: String?
+    val version: String?,
+
+    val attributes: Map<String, String> =
+        emptyMap()
 )

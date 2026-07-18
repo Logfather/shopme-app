@@ -12,7 +12,7 @@ class LocalityGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT +
+    KnowledgeAssets.RUNTIME_ROOT +
 
             "locality.json",
 

@@ -12,7 +12,7 @@ class BiodiversityGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT +
+    KnowledgeAssets.RUNTIME_ROOT +
 
             "biodiversity.json",
 

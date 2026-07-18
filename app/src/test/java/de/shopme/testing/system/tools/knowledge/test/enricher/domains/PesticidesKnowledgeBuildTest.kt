@@ -6,8 +6,8 @@ import de.shopme.tools.knowledge.compiler.passes.PesticideCompilerPass
 import de.shopme.tools.knowledge.compiler.writer.PesticidesKnowledgeWriter
 import de.shopme.tools.knowledge.foods.EmptyFoodLookup
 import de.shopme.tools.knowledge.loader.ResourceKnowledgeLoader
-import de.shopme.tools.knowledge.pesticide.DefaultPesticideResolver
-import de.shopme.tools.knowledge.pesticide.StringPesticideLoader
+import de.shopme.tools.knowledge.pesticides.DefaultPesticideResolver
+import de.shopme.tools.knowledge.pesticides.StringPesticideLoader
 import org.junit.Test
 
 class PesticidesKnowledgeBuildTest :

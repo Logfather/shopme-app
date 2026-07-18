@@ -12,7 +12,7 @@ class ProcessingGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT +
+    KnowledgeAssets.RUNTIME_ROOT +
 
             "processing.json",
 

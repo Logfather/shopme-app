@@ -12,7 +12,7 @@ class FairTradeGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "fair_trade.json",
+    KnowledgeAssets.RUNTIME_ROOT + "fair_trade.json",
 
     FairTradeKnowledge::class.java
 

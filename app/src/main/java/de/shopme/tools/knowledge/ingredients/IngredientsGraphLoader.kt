@@ -12,7 +12,7 @@ class IngredientsGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "ingredients.json",
+    KnowledgeAssets.RUNTIME_ROOT + "ingredients.json",
 
     IngredientsKnowledge::class.java
 

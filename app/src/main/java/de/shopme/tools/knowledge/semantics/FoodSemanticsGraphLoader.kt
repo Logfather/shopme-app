@@ -21,9 +21,7 @@ class FoodSemanticsGraphLoader(
             context.assets
 
                 .open(
-                    KnowledgeAssets.ROOT +
-                            "food_semantics.json"
-                )
+                    KnowledgeAssets.RUNTIME_ROOT + "food_semantics.json")
 
                 .bufferedReader()
 

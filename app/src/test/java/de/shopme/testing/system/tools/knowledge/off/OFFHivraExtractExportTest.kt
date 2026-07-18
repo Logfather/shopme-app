@@ -2,7 +2,7 @@ package de.shopme.testing.system.tools.knowledge.off
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
-import de.shopme.tools.data.KnowledgeDataDirectories
+import de.shopme.tools.knowledge.data.KnowledgeDataDirectories
 import de.shopme.tools.knowledge.off.OFFHivraExtractMapper
 import java.io.File
 import java.io.InputStreamReader

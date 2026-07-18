@@ -12,7 +12,7 @@ class CarbonGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "carbon_footprint.json",
+    KnowledgeAssets.RUNTIME_ROOT + "carbon_footprint.json",
 
     CarbonKnowledge::class.java
 

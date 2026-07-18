@@ -1,0 +1,18 @@
+package de.shopme.tools.knowledge.mapping.catalog
+
+enum class CatalogKnowledgeMappingValidationStatus {
+
+    ACCEPTED,
+
+    REJECTED_NO_MATCH,
+
+    REJECTED_LOW_CONFIDENCE,
+
+    REJECTED_MISSING_REQUEST,
+
+    REJECTED_SELECTED_KEY_NOT_CANDIDATE,
+
+    REJECTED_SELECTED_KEY_NOT_IN_SERVER_ARTIFACT,
+
+    REJECTED_EXISTING_EXACT_MAPPING
+}

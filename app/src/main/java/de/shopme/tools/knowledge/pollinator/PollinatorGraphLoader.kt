@@ -12,7 +12,7 @@ class PollinatorGraphLoader(
 
     context,
 
-    KnowledgeAssets.ROOT + "pollinator.json",
+    KnowledgeAssets.RUNTIME_ROOT + "pollinator.json",
 
     PollinatorKnowledge::class.java
 

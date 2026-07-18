@@ -14,7 +14,7 @@ class OFFCandidateMapper {
     ): CanonicalKnowledgeCandidate {
 
         return CanonicalKnowledgeCandidate(
-            canonicalId = candidate.catalogNormalizedName,
+            canonicalId = candidate.offProductName.normalizedCatalogName(),
             aliases = setOf(candidate.offProductName),
             dimensions = candidate.dimensions.map { dimensionId ->
 
@@ -37,4 +37,9 @@ class OFFCandidateMapper {
             )
         )
     }
+
+    private fun String.normalizedCatalogName(): String =
+        trim()
+            .lowercase()
+            .replace(Regex("\\s+"), " ")
 }

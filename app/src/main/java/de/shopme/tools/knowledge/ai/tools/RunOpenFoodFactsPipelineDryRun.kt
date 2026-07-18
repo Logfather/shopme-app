@@ -3,7 +3,7 @@ package de.shopme.tools.knowledge.ai.tools
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import de.shopme.domain.catalog.CatalogItem
-import de.shopme.tools.data.KnowledgeDataDirectories
+import de.shopme.tools.knowledge.data.KnowledgeDataDirectories
 import de.shopme.tools.knowledge.ai.builder.DefaultAIKnowledgeBuilderPipelineFactory
 import de.shopme.tools.knowledge.ai.sources.off.OFFAIImportAdapter
 import de.shopme.tools.knowledge.ai.sources.off.OFFJsonlPreviewReader

@@ -17,7 +17,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.firebase.auth.FirebaseAuth
 import de.shopme.auth.FirebaseAuthProvider
-import de.shopme.core.json.loadJsonMap
 import de.shopme.core.network.NetworkMonitor
 import de.shopme.core.sound.SoundPlayer
 import de.shopme.data.datasource.catalog.CatalogLoader
@@ -194,7 +193,7 @@ class MainActivity : ComponentActivity() {
 
             val quantityMapper = remember {
                 QuantityMapper(
-                    loadJsonMap(activityContext, "quantity_mapping.json")
+                    emptyMap()
                 )
             }
 

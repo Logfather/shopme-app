@@ -21,7 +21,7 @@ class NutritionAliasGraphLoader(
             context.assets
 
                 .open(
-                    KnowledgeAssets.ROOT +
+                    KnowledgeAssets.RUNTIME_ROOT +
                             "nutrition_alias.json"
                 )
 

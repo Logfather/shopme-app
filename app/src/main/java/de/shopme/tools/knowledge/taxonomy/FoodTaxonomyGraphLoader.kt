@@ -22,11 +22,7 @@ class FoodTaxonomyGraphLoader(
 
                 .open(
 
-                    KnowledgeAssets.ROOT +
-
-                            "food_taxonomy.json"
-
-                )
+                    KnowledgeAssets.RUNTIME_ROOT + "food_taxonomy.json")
 
                 .bufferedReader()
 
